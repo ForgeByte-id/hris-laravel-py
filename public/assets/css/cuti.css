@@ -1,0 +1,172 @@
+/* Container */
+.cuti-container {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+}
+
+/* Alert */
+.alert {
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid;
+}
+
+.alert-success {
+    background: #d4edda;
+    color: #155724;
+    border-color: #c3e6cb;
+}
+
+.alert-error {
+    background: #f8d7da;
+    color: #721c24;
+    border-color: #f5c6cb;
+}
+
+/* Card */
+.card .card-header.card-header-custom {
+    background: white !important;
+    color: black !important;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-title {
+    margin: 0;
+}
+
+.btn-primary-custom {
+    background: white;
+    color: #667eea;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+/* Body */
+.card-body-custom {
+    padding: 30px;
+}
+
+/* Summary */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.summary-card {
+    padding: 20px;
+    border-radius: 10px;
+    border-left: 4px solid;
+}
+
+.summary-blue {
+    background: #e7f3ff;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.summary-yellow {
+    background: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+}
+
+.summary-green {
+    background: #d4edda;
+    border-color: #28a745;
+    color: #155724;
+}
+
+.summary-red {
+    background: #f8d7da;
+    border-color: #dc3545;
+    color: #721c24;
+}
+
+/* Table */
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.cuti-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.cuti-table th {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 2px solid #dee2e6;
+    background: #f8f9fa;
+}
+
+.cuti-table td {
+    padding: 15px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* Status badge */
+.badge {
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.badge-approved {
+    background: #d4edda;
+    color: #155724;
+}
+
+.badge-rejected {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Action buttons */
+.action-group {
+    display: flex;
+    gap: 5px;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 5px;
+    color: white;
+    text-decoration: none;
+    font-size: 16px;
+}
+
+.btn-view {
+    background: #667eea;
+}
+
+.btn-delete {
+    background: #dc3545;
+    border: none;
+    cursor: pointer;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}

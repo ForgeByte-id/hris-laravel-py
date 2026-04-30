@@ -1,0 +1,62 @@
+services:
+    app:
+        build:
+            context: .
+            dockerfile: docker/php/Dockerfile
+        container_name: laravel_app
+        volumes:
+            - .:/var/www
+        depends_on:
+            - mysql
+        networks:
+            - hris
+
+    nginx:
+        build:
+            context: .
+            dockerfile: docker/nginx/Dockerfile
+        container_name: nginx
+        ports:
+            - "8085:80"
+        volumes:
+            - .:/var/www
+        depends_on:
+            - app
+        networks:
+            - hris
+
+    python:
+        build:
+            context: .
+            dockerfile: docker/python/Dockerfile
+        container_name: face_service
+        volumes:
+            - .:/app
+        ports:
+            - "5000:5000"
+        depends_on:
+            - mysql
+        env_file:
+            - face_recognition_service/.env
+        networks:
+            - hris
+
+    mysql:
+        image: mysql:8.0
+        container_name: mysql
+        restart: always
+        environment:
+            MYSQL_DATABASE: hris_db
+            MYSQL_ROOT_PASSWORD: root
+        ports:
+            - "3307:3306"
+        volumes:
+            - dbdata:/var/lib/mysql
+        networks:
+            - hris
+
+networks:
+    hris:
+
+volumes:
+    dbdata:
