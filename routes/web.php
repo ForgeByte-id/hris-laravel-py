@@ -7,6 +7,7 @@ use App\Http\Controllers\KaryawanController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\CutiController;
 use App\Http\Controllers\JadwalKerjaController;
+use App\Http\Controllers\ProfileController;
 
 
 Route::middleware(['guest'])->group(function () {
@@ -50,4 +51,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/jadwal/{id_jadwal}', [JadwalKerjaController::class, 'destroy'])->name('jadwal.destroy');
     Route::get('/jadwal/karyawan/{id_karyawan}', [JadwalKerjaController::class, 'show'])->name('jadwal.show');
     Route::post('/jadwal/libur-massal', [JadwalKerjaController::class, 'setLiburMassal'])->name('jadwal.libur-massal');
+
+    // Profile Routes
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
 });
