@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Devisi;
+use App\Models\Jabatan;
 use App\Models\Karyawan;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -10,8 +13,88 @@ class KaryawanController extends Controller
 {
     public function index()
     {
-        $karyawan = Karyawan::all();
+        $karyawan = Karyawan::with(['jabatan', 'devisi'])->get();
         return view('employees.karyawan_index', compact('karyawan'));
+    }
+
+    public function create()
+    {
+        $jabatanList = Jabatan::orderBy('nama_jabatan')->get();
+        $divisiList = Devisi::orderBy('nama_devisi')->get();
+        $userList = User::whereDoesntHave('karyawan')->get();
+        return view('employees.karyawan_create', compact('jabatanList', 'divisiList', 'userList'));
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'nama'          => 'required|string|max:255',
+            'id_jabatan'    => 'nullable|exists:jabatans,id',
+            'id_devisi'     => 'nullable|exists:devisis,id',
+            'tanggal_masuk' => 'nullable|date',
+            'id_user'       => 'nullable|exists:users,id_user',
+        ]);
+
+        Karyawan::create([
+            'nama'          => $request->nama,
+            'id_jabatan'    => $request->id_jabatan,
+            'id_devisi'     => $request->id_devisi,
+            'tanggal_masuk' => $request->tanggal_masuk,
+            'id_user'       => $request->id_user,
+        ]);
+
+        return redirect()->route('karyawan.index')
+            ->with('success', 'Karyawan berhasil ditambahkan.');
+    }
+
+    public function show($id_karyawan)
+    {
+        $karyawan = Karyawan::with(['jabatan', 'devisi', 'absensi', 'cuti'])->findOrFail($id_karyawan);
+        return view('employees.karyawan_show', compact('karyawan'));
+    }
+
+    public function edit($id_karyawan)
+    {
+        $karyawan = Karyawan::findOrFail($id_karyawan);
+        $jabatanList = Jabatan::orderBy('nama_jabatan')->get();
+        $divisiList = Devisi::orderBy('nama_devisi')->get();
+        $userList = User::whereDoesntHave('karyawan')
+            ->orWhere('id_user', $karyawan->id_user)
+            ->get();
+        return view('employees.karyawan_edit', compact('karyawan', 'jabatanList', 'divisiList', 'userList'));
+    }
+
+    public function update(Request $request, $id_karyawan)
+    {
+        $karyawan = Karyawan::findOrFail($id_karyawan);
+
+        $request->validate([
+            'nama'          => 'required|string|max:255',
+            'id_jabatan'    => 'nullable|exists:jabatans,id',
+            'id_devisi'     => 'nullable|exists:devisis,id',
+            'tanggal_masuk' => 'nullable|date',
+            'id_user'       => 'nullable|exists:users,id_user',
+        ]);
+
+        $karyawan->update([
+            'nama'          => $request->nama,
+            'id_jabatan'    => $request->id_jabatan,
+            'id_devisi'     => $request->id_devisi,
+            'tanggal_masuk' => $request->tanggal_masuk,
+            'id_user'       => $request->id_user,
+        ]);
+
+        return redirect()->route('karyawan.index')
+            ->with('success', 'Data karyawan berhasil diperbarui.');
+    }
+
+    public function destroy($id_karyawan)
+    {
+        $karyawan = Karyawan::findOrFail($id_karyawan);
+        $karyawan->delete();
+
+        return redirect()->route('karyawan.index')
+            ->with('success', 'Karyawan berhasil dihapus.');
     }
 
     public function registerFace($id_karyawan)

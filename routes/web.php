@@ -7,6 +7,11 @@ use App\Http\Controllers\KaryawanController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\CutiController;
 use App\Http\Controllers\JadwalKerjaController;
+use App\Http\Controllers\DivisiController;
+use App\Http\Controllers\JabatanController;
+use App\Http\Controllers\LaporanController;
+use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\PermissionController;
 
 
 
@@ -67,4 +72,37 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/jadwal/{id_jadwal}', [JadwalKerjaController::class, 'destroy'])->name('jadwal.destroy');
     Route::get('/jadwal/karyawan/{id_karyawan}', [JadwalKerjaController::class, 'show'])->name('jadwal.show');
     Route::post('/jadwal/libur-massal', [JadwalKerjaController::class, 'setLiburMassal'])->name('jadwal.libur-massal');
+
+    // Divisi Routes
+    Route::get('/divisi', [DivisiController::class, 'index'])->name('divisi.index');
+    Route::get('/divisi/create', [DivisiController::class, 'create'])->name('divisi.create');
+    Route::post('/divisi', [DivisiController::class, 'store'])->name('divisi.store');
+    Route::get('/divisi/{id}/edit', [DivisiController::class, 'edit'])->name('divisi.edit');
+    Route::put('/divisi/{id}', [DivisiController::class, 'update'])->name('divisi.update');
+    Route::delete('/divisi/{id}', [DivisiController::class, 'destroy'])->name('divisi.destroy');
+
+    // Jabatan Routes
+    Route::get('/jabatan', [JabatanController::class, 'index'])->name('jabatan.index');
+    Route::get('/jabatan/create', [JabatanController::class, 'create'])->name('jabatan.create');
+    Route::post('/jabatan', [JabatanController::class, 'store'])->name('jabatan.store');
+    Route::get('/jabatan/{id}/edit', [JabatanController::class, 'edit'])->name('jabatan.edit');
+    Route::put('/jabatan/{id}', [JabatanController::class, 'update'])->name('jabatan.update');
+    Route::delete('/jabatan/{id}', [JabatanController::class, 'destroy'])->name('jabatan.destroy');
+
+    // Laporan Routes
+    Route::get('/laporan', [LaporanController::class, 'index'])->name('laporan.index');
+
+    // Admin Routes
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
+        Route::get('/roles/{role}/edit', [RoleController::class, 'edit'])->name('roles.edit');
+        Route::put('/roles/{role}', [RoleController::class, 'update'])->name('roles.update');
+
+        Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
+        Route::get('/permissions/create', [PermissionController::class, 'create'])->name('permissions.create');
+        Route::post('/permissions', [PermissionController::class, 'store'])->name('permissions.store');
+        Route::get('/permissions/{permission}/edit', [PermissionController::class, 'edit'])->name('permissions.edit');
+        Route::put('/permissions/{permission}', [PermissionController::class, 'update'])->name('permissions.update');
+        Route::delete('/permissions/{permission}', [PermissionController::class, 'destroy'])->name('permissions.destroy');
+    });
 });
