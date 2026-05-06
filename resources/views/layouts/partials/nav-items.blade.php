@@ -1,103 +1,34 @@
-<ul class="nav flex-column gap-2">
-
-    {{-- Dashboard --}}
-    @php $active = request()->is('dashboard'); @endphp
-    <li class="nav-item">
-        <a class="nav-link d-flex align-items-center gap-3 px-3 py-2 rounded {{ $active ? 'active' : '' }}"
-           href="/dashboard">
-            <i class="bi bi-house-door-fill"></i>
-            <span class="flex-grow-1">Dashboard</span>
-            @if($active)
-                <i class="bi bi-check-circle-fill small"></i>
-            @endif
-        </a>
-    </li>
-
-    {{-- Cuti --}}
-    @php $active = request()->is('cuti*'); @endphp
-    <li class="nav-item">
-        <a class="nav-link d-flex align-items-center gap-3 px-3 py-2 rounded {{ $active ? 'active' : '' }}"
-           href="/cuti">
-            <i class="bi bi-calendar-event-fill"></i>
-            <span class="flex-grow-1">Cuti</span>
-            @if($active)
-                <i class="bi bi-check-circle-fill small"></i>
-            @endif
-        </a>
-    </li>
-
-    @if(auth()->user()?->hasRole('admin'))
-
-        {{-- Divider --}}
-        <li class="nav-item mt-3 mb-2">
-            <div class="border-top pt-2">
-                <span class="small text-muted px-3">ADMINISTRASI</span>
-            </div>
-        </li>
-
-        {{-- Role --}}
-        @php $active = request()->is('admin/roles*'); @endphp
-        <li class="nav-item">
-            <a class="nav-link {{ $active ? 'active' : '' }}" href="/admin/roles">
-                <i class="bi bi-shield-lock-fill"></i>
-                <span class="flex-grow-1">Role Management</span>
-            </a>
-        </li>
-
-        {{-- Permission --}}
-        @php $active = request()->is('admin/permissions*'); @endphp
-        <li class="nav-item">
-            <a class="nav-link {{ $active ? 'active' : '' }}" href="/admin/permissions">
-                <i class="bi bi-lock-fill"></i>
-                <span class="flex-grow-1">Hak Akses</span>
-            </a>
-        </li>
-
-        {{-- Jadwal --}}
-        @php $active = request()->is('jadwal*'); @endphp
-        <li class="nav-item">
-            <a class="nav-link {{ $active ? 'active' : '' }}" href="/jadwal">
-                <i class="bi bi-clock-fill"></i>
-                <span class="flex-grow-1">Jadwal Kerja</span>
-            </a>
-        </li>
-
-        {{-- Divisi --}}
-        @php $active = request()->is('divisi*'); @endphp
-        <li class="nav-item">
-            <a class="nav-link {{ $active ? 'active' : '' }}" href="/divisi">
-                <i class="bi bi-diagram-3-fill"></i>
-                <span class="flex-grow-1">Divisi</span>
-            </a>
-        </li>
-
-        {{-- Jabatan --}}
-        @php $active = request()->is('jabatan*'); @endphp
-        <li class="nav-item">
-            <a class="nav-link {{ $active ? 'active' : '' }}" href="/jabatan">
-                <i class="bi bi-briefcase-fill"></i>
-                <span class="flex-grow-1">Jabatan</span>
-            </a>
-        </li>
-
-        {{-- Karyawan --}}
-        @php $active = request()->is('karyawan*'); @endphp
-        <li class="nav-item">
-            <a class="nav-link {{ $active ? 'active' : '' }}" href="/karyawan">
-                <i class="bi bi-people-fill"></i>
-                <span class="flex-grow-1">Karyawan</span>
-            </a>
-        </li>
-
-        {{-- Laporan --}}
-        @php $active = request()->is('laporan*'); @endphp
-        <li class="nav-item">
-            <a class="nav-link {{ $active ? 'active' : '' }}" href="/laporan">
-                <i class="bi bi-bar-chart-fill"></i>
-                <span class="flex-grow-1">Laporan</span>
-            </a>
-        </li>
-
-    @endif
-
-</ul>
+<a href="/dashboard" class="item {{ request()->is('dashboard') ? 'active' : ''}}">
+    <div class="col">
+        <ion-icon name="home-outline" role="img" class="md hydrated"
+            aria-label="home full outline"></ion-icon>
+        <strong>Home</strong>
+    </div>
+</a>
+<a href="/jadwal" class="item {{ request()->is('jadwal*') ? 'active' : ''}}">
+    <div class="col">
+        <ion-icon name="calendar-outline" role="img" class="md hydrated"
+            aria-label="calendar outline"></ion-icon>
+        <strong>Schedule</strong>
+    </div>
+</a>
+<a href="/attendance" class="item">
+    <div class="col">
+        <div class="action-button large">
+            <ion-icon name="camera" role="img" class="md hydrated" aria-label="add outline"></ion-icon>
+        </div>
+    </div>
+</a>
+<a href="/cuti" class="item {{ request()->is('cuti*') ? 'active' : ''}}">
+    <div class="col">
+        <ion-icon name="document-text-outline" role="img" class="md hydrated"
+            aria-label="document text outline"></ion-icon>
+        <strong>Cuti</strong>
+    </div>
+</a>
+<a href="/profile" class="item {{ request()->is('profile*') ? 'active' : ''}}">
+    <div class="col">
+        <ion-icon name="people-outline" role="img" class="md hydrated" aria-label="people outline"></ion-icon>
+        <strong>Profile</strong>
+    </div>
+</a>
