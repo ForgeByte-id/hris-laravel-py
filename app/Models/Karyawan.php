@@ -13,15 +13,29 @@ class Karyawan extends Authenticatable
 
     protected $table = "karyawan";
     protected $primaryKey = "id_karyawan";
+    public $incrementing = true;
+    protected $keyType = 'int';
 
     protected $fillable = [
         'id_user',
         'nama',
-        'jabatan',
-        'divisi',
+        'id_jabatan',
+        'id_devisi',
         'tanggal_masuk',
         'face_embedding',
     ];
+
+    // Relationship ke Jabatan
+    public function jabatan()
+    {
+        return $this->belongsTo(Jabatan::class, 'id_jabatan', 'id');
+    }
+
+    // Relationship ke Devisi
+    public function devisi()
+    {
+        return $this->belongsTo(Devisi::class, 'id_devisi', 'id');
+    }
 
     // Relationship ke User
     public function user()
@@ -62,8 +76,8 @@ class Karyawan extends Authenticatable
     // Set face encoding dari array
     public function setFaceEncodingAttribute($value)
     {
-        $this->attributes['face_embedding'] = is_array($value) 
-            ? json_encode($value) 
+        $this->attributes['face_embedding'] = is_array($value)
+            ? json_encode($value)
             : $value;
     }
 }

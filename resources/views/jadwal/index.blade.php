@@ -1,41 +1,37 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container" style="max-width: 1400px; margin: 20px auto; padding: 20px;">
-    
+<div class="hris-container" style="max-width: 1400px;">
+
     @if(session('success'))
-    <div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+    <div class="alert alert-success">
         ✅ {{ session('success') }}
     </div>
     @endif
 
     @if(session('error'))
-    <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+    <div class="alert alert-danger">
         ❌ {{ session('error') }}
     </div>
     @endif
 
-    <div class="card">
-        <div class="card-header" style="background: white; color: white; padding: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <h2 style="margin: 0;">Jadwal Kerja Karyawan</h2>
-                <div style="display: flex; gap: 10px;">
-                    <a href="{{ route('jadwal.create') }}" 
-                       style="background: #1E74FD; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-                        Tambah Jadwal
-                    </a>
-                    <a href="{{ route('jadwal.bulk-create') }}" 
-                       style="background: #28a745; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-                        Input Massal
-                    </a>
-                </div>
+    <div class="hris-card">
+        <div class="hris-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h2 class="mb-0">Jadwal Kerja Karyawan</h2>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ route('jadwal.create') }}" class="btn btn-primary">
+                    Tambah Jadwal
+                </a>
+                <a href="{{ route('jadwal.bulk-create') }}" class="btn btn-success">
+                    Input Massal
+                </a>
             </div>
         </div>
 
-        <div class="card-body" style="padding: 30px;">
-            
+        <div class="hris-card-body">
+
             <!-- Debug Info (uncomment jika perlu debug) -->
-            {{-- 
+            {{--
             <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
                 <strong>Debug Info:</strong><br>
                 Total Karyawan: {{ $karyawanList->count() }}<br>
@@ -47,30 +43,24 @@
             --}}
 
             <!-- Filter Bulan -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px;">
-                <form method="GET" style="display: flex; gap: 10px; align-items: center;">
-                    <label style="font-weight: 600;">Pilih Bulan:</label>
-                    <input type="month" name="bulan" value="{{ $bulan }}" 
-                           style="padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
-                    <button type="submit" 
-                            style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                        Tampilkan
-                    </button>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                <form method="GET" class="d-flex flex-wrap gap-2 align-items-center">
+                    <label class="fw-semibold">Pilih Bulan:</label>
+                    <input type="month" name="bulan" value="{{ $bulan }}" class="form-control" style="max-width: 220px;">
+                    <button type="submit" class="btn btn-primary">Tampilkan</button>
                 </form>
 
-                <!-- Set Libur Massal -->
-                <button onclick="showLiburModal()" 
-                        style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                <button onclick="showLiburModal()" class="btn btn-danger">
                     Set Libur Massal
                 </button>
             </div>
 
             <!-- Legend -->
-            <div style="display: flex; gap: 20px; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; flex-wrap: wrap;">
-                <div><span style="background: #4CAF50; padding: 5px 10px; border-radius: 5px; color: white; font-weight: 600;">P</span> = Pagi (08:00-17:00)</div>
-                <div><span style="background: #FF9800; padding: 5px 10px; border-radius: 5px; color: white; font-weight: 600;">M</span> = Middle (11:00-20:00)</div>
-                <div><span style="background: #2196F3; padding: 5px 10px; border-radius: 5px; color: white; font-weight: 600;">S</span> = Siang (13:00-22:00)</div>
-                <div><span style="background: #f44336; padding: 5px 10px; border-radius: 5px; color: white; font-weight: 600;">L</span> = Libur</div>
+            <div class="d-flex flex-wrap gap-3 mb-3 p-3 bg-light rounded-3">
+                <div><span class="badge text-bg-success">P</span> = Pagi (08:00-17:00)</div>
+                <div><span class="badge text-bg-warning">M</span> = Middle (11:00-20:00)</div>
+                <div><span class="badge text-bg-primary">S</span> = Siang (13:00-22:00)</div>
+                <div><span class="badge text-bg-danger">L</span> = Libur</div>
             </div>
 
             <!-- Tabel Jadwal -->
@@ -101,7 +91,7 @@
                         <tr>
                             <td style="padding: 12px; border: 1px solid #dee2e6; position: sticky; left: 0; background: white; z-index: 9;">
                                 <strong>{{ $karyawan->nama }}</strong><br>
-                                <small style="color: #666;">{{ $karyawan->jabatan }}</small>
+                                <small style="color: #666;">{{ $karyawan->jabatan->nama_jabatan ?? '-'}}</small>
                             </td>
                             @php
                                 $jadwalKaryawan = $jadwalList->get($karyawan->id_karyawan, collect());
@@ -116,7 +106,7 @@
                                 @endphp
                                 <td style="padding: 5px; border: 1px solid #dee2e6; text-align: center; {{ $currentDate->isWeekend() ? 'background: #ffe0e0;' : '' }}">
                                     @if($jadwal)
-                                        <a href="{{ route('jadwal.edit', $jadwal->id_jadwal) }}" 
+                                        <a href="{{ route('jadwal.edit', $jadwal->id_jadwal) }}"
                                            title="{{ $jadwal->jam_kerja }}"
                                            style="display: block; text-decoration: none; color: white; background: {{ $jadwal->shift_color }}; padding: 8px; border-radius: 5px; font-weight: 600;">
                                             {{ $jadwal->shift_short }}
@@ -135,9 +125,9 @@
                 </table>
             </div>
             @else
-            <div style="text-align: center; padding: 60px 20px; color: #999;">
+            <div class="text-center py-5 text-muted">
                 <h3>Tidak Ada Data Karyawan</h3>
-                <p>Silakan tambahkan data karyawan terlebih dahulu</p>
+                <p class="mb-0">Silakan tambahkan data karyawan terlebih dahulu</p>
             </div>
             @endif
         </div>
@@ -152,20 +142,20 @@
             @csrf
             <div style="margin-bottom: 20px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600;">Tanggal Libur:</label>
-                <input type="date" name="tanggal" required 
+                <input type="date" name="tanggal" required
                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
             </div>
             <div style="margin-bottom: 20px;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 600;">Keterangan:</label>
-                <input type="text" name="keterangan" placeholder="Contoh: Hari Libur Nasional" 
+                <input type="text" name="keterangan" placeholder="Contoh: Hari Libur Nasional"
                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
             </div>
             <div style="display: flex; gap: 10px;">
-                <button type="submit" 
+                <button type="submit"
                         style="flex: 1; padding: 12px; background: #dc3545; color: white; border: none; border-radius: 8px; cursor: pointer;">
                     Set Libur
                 </button>
-                <button type="button" onclick="hideLiburModal()" 
+                <button type="button" onclick="hideLiburModal()"
                         style="flex: 1; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 8px; cursor: pointer;">
                     Batal
                 </button>
@@ -174,6 +164,9 @@
     </div>
 </div>
 
+@endsection
+
+@section('scripts')
 <script>
 function showLiburModal() {
     document.getElementById('liburModal').style.display = 'block';
@@ -183,7 +176,6 @@ function hideLiburModal() {
     document.getElementById('liburModal').style.display = 'none';
 }
 
-// Close modal when clicking outside
 document.getElementById('liburModal').addEventListener('click', function(e) {
     if (e.target === this) {
         hideLiburModal();

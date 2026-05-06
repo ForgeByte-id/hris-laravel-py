@@ -2,20 +2,50 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Absensi;
+use App\Services\FaceRecognitionService;
+use App\Services\AttendanceService;
+use App\Services\AuthorizationService;
 use App\Models\Karyawan;
+use App\Models\Absensi;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
-use Carbon\Carbon;
+use Illuminate\View\View;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class AttendanceController extends Controller
 {
-    public function index()
-    {
-        return view('absensi.attendance_index');
+    protected FaceRecognitionService $faceRecognitionService;
+    protected AttendanceService $attendanceService;
+    protected AuthorizationService $authorizationService;
+
+    public function __construct(
+        FaceRecognitionService $faceRecognitionService,
+        AttendanceService $attendanceService,
+        AuthorizationService $authorizationService
+    ) {
+        $this->faceRecognitionService = $faceRecognitionService;
+        $this->attendanceService = $attendanceService;
+        $this->authorizationService = $authorizationService;
     }
 
-    public function history(Request $request)
+    /**
+     * Show the attendance check-in page (camera interface)
+     */
+    public function index(): View
+    {
+        // Check if face recognition service is available
+        $serviceHealthy = $this->faceRecognitionService->healthCheck();
+
+        return view('absensi.attendance_index', [
+            'serviceHealthy' => $serviceHealthy,
+        ]);
+    }
+
+    /**
+     * Show attendance history
+     */
+    public function history(Request $request): View
     {
         $query = Absensi::with('karyawan');
 
@@ -28,62 +58,53 @@ class AttendanceController extends Controller
         }
 
         $absensi = $query->orderBy('tanggal', 'desc')
-                         ->orderBy('jam_masuk', 'desc')
-                         ->paginate(20);
+            ->orderBy('jam_masuk', 'desc')
+            ->paginate(20);
 
         $karyawanList = Karyawan::all();
 
-        return view(
-            'absensi.attendance_history', 
-            compact('absensi', 'karyawanList')
-        );
+        return view('absensi.attendance_history', compact('absensi', 'karyawanList'));
     }
 
-    public function checkIn(Request $request)
+    /**
+     * Process face recognition and attendance (auto-detect masuk/pulang)
+     *
+     * System-driven: Backend determines whether it's clock-in or clock-out
+     * based on current attendance state, not user input
+     */
+    public function checkIn(Request $request): JsonResponse
     {
         $request->validate([
             'photo' => 'required|string',
-            'type' => 'required|in:masuk,pulang',
         ]);
 
         try {
+            // Decode base64 image
             $imageData = $request->photo;
             $imageData = str_replace('data:image/jpeg;base64,', '', $imageData);
             $imageData = str_replace(' ', '+', $imageData);
             $imageBinary = base64_decode($imageData);
 
-            // Simpan foto sementara
+            // Save temporary image
             $tempPath = storage_path('app/temp_attendance.jpg');
             file_put_contents($tempPath, $imageBinary);
 
-            // Kirim ke Python service untuk face recognition
-            $response = Http::timeout(30)->post(
-                'http://localhost:5000/api/recognize-face',
-                ['image_path' => $tempPath]
-            );
+            // Recognize the face
+            $recognitionResult = $this->faceRecognitionService->recognizeFace($tempPath);
 
-            // Hapus file temporary
+            // Clean up temp file
             if (file_exists($tempPath)) {
                 unlink($tempPath);
             }
 
-            if (!$response->successful()) {
+            if (!$recognitionResult['matched']) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Gagal deteksi wajah. Pastikan wajah jelas.'
-                ], 400);
-            }
-
-            $responseData = $response->json();
-
-            if (!isset($responseData['matched']) || !$responseData['matched']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Wajah tidak dikenali. Daftar dulu.'
+                    'message' => $recognitionResult['error'] ?? 'Wajah tidak dikenali. Daftar dulu.'
                 ], 404);
             }
 
-            $idKaryawan = $responseData['id_karyawan'];
+            $idKaryawan = $recognitionResult['id_karyawan'];
             $karyawan = Karyawan::find($idKaryawan);
 
             if (!$karyawan) {
@@ -93,68 +114,140 @@ class AttendanceController extends Controller
                 ], 404);
             }
 
-            $today = Carbon::today();
-            $currentTime = Carbon::now();
+            // Auto-detect and process attendance (system decides, not user)
+            $result = $this->attendanceService->processAutoAttendance($idKaryawan);
 
-            // Ambil atau buat record absensi hari ini
-            $absensi = Absensi::firstOrNew([
-                'id_karyawan' => $idKaryawan,
-                'tanggal' => $today,
-            ]);
-
-            if ($request->type === 'masuk') {
-                if ($absensi->jam_masuk) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Sudah absen masuk: ' . $absensi->jam_masuk
-                    ], 400);
-                }
-
-                $absensi->jam_masuk = $currentTime->format('H:i:s');
-
-                // Tentukan status (terlambat jika masuk setelah jam 08:00)
-                $jamMasukStandar = Carbon::parse('08:00:00');
-                if ($currentTime->greaterThan($jamMasukStandar)) {
-                    $absensi->status = 'terlambat';
-                } else {
-                    $absensi->status = 'hadir';
-                }
-
-            } else { // pulang
-                if (!$absensi->jam_masuk) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Belum absen masuk hari ini.'
-                    ], 400);
-                }
-
-                if ($absensi->jam_pulang) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Sudah absen pulang: ' . $absensi->jam_pulang
-                    ], 400);
-                }
-
-                $absensi->jam_pulang = $currentTime->format('H:i:s');
+            // Determine time field based on action
+            $timeField = null;
+            if ($result['action'] === 'clock_in') {
+                $timeField = $result['attendance']?->jam_masuk;
+            } elseif ($result['action'] === 'clock_out') {
+                $timeField = $result['attendance']?->jam_pulang;
             }
 
-            $absensi->save();
-
             return response()->json([
-                'success' => true,
-                'message' => 'Absen ' . $request->type . ' berhasil!',
+                'success' => $result['success'],
+                'action' => $result['action'],
+                'message' => $result['message'],
                 'data' => [
                     'nama' => $karyawan->nama,
-                    'waktu' => $currentTime->format('H:i:s'),
-                    'status' => $absensi->status,
-                    'confidence' => $responseData['confidence'] ?? 0,
+                    'waktu' => $timeField,
+                    'status' => $result['status'],
+                    'confidence' => round($recognitionResult['confidence'], 2),
                 ]
-            ]);
-
+            ], $result['success'] ? 200 : 422);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
+            Log::error("Attendance checkIn error: {$e->getMessage()}");
             return response()->json([
                 'success' => false,
                 'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get today's attendance summary (for dashboard/API)
+     *
+     * Authorization: Only admin can view global summary
+     * - Admin: returns total summary for entire organization
+     * - Others: returns 403 Forbidden
+     */
+    public function todaysSummary(): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            // Only admin can view global summary
+            if (!$this->authorizationService->canViewAttendanceSummary($user)) {
+                return response()->json([
+                    'error' => 'Unauthorized: Only admin can view attendance summary',
+                    'code' => 'UNAUTHORIZED_SUMMARY_ACCESS'
+                ], 403);
+            }
+
+            $summary = $this->attendanceService->getTodaysSummary();
+            return response()->json($summary);
+        } catch (\Exception $e) {
+            Log::error("Get todays summary error: {$e->getMessage()}");
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Get employee's current attendance status (for dashboard)
+     *
+     * Authorization:
+     * - Admin/HR: can view any employee
+     * - Regular employee: can only view their own
+     */
+    public function getCurrentStatus($idKaryawan): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            // Authorization check: Can user view this employee's data?
+            if (!$this->authorizationService->canViewAttendanceRecord($user, $idKaryawan)) {
+                return response()->json([
+                    'error' => 'Unauthorized: You can only view your own attendance record',
+                    'code' => 'UNAUTHORIZED_RECORD_ACCESS'
+                ], 403);
+            }
+
+            $karyawan = Karyawan::find($idKaryawan);
+            if (!$karyawan) {
+                return response()->json(['error' => 'Employee not found'], 404);
+            }
+
+            $attendance = $this->attendanceService->getAttendanceHistory($idKaryawan, 1)->first();
+
+            return response()->json([
+                'employee' => $karyawan->nama,
+                'clock_in' => $attendance?->jam_masuk,
+                'clock_out' => $attendance?->jam_pulang,
+                'status' => $attendance?->status,
+                'date' => $attendance?->tanggal,
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Get current status error: {$e->getMessage()}");
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function getHistory($idKaryawan): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            if (!$this->authorizationService->canViewAttendanceRecord($user, $idKaryawan)) {
+                return response()->json([
+                    'error' => 'Unauthorized',
+                    'code' => 'UNAUTHORIZED_RECORD_ACCESS'
+                ], 403);
+            }
+
+            $karyawan = Karyawan::find($idKaryawan);
+
+            if (!$karyawan) {
+                return response()->json(['error' => 'Employee not found'], 404);
+            }
+
+            $history = $this->attendanceService->getAttendanceHistory($idKaryawan);
+
+            return response()->json([
+                'employee' => $karyawan->nama,
+                'data' => $history
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Get history error: {$e->getMessage()}");
+
+            return response()->json([
+                'error' => $e->getMessage()
             ], 500);
         }
     }

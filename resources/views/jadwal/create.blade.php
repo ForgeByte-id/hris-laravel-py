@@ -1,61 +1,59 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container" style="max-width: 800px; margin: 20px auto; padding: 20px;">
-    
+<div class="hris-container">
     @if(session('error'))
-    <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+    <div class="alert alert-danger">
         ❌ {{ session('error') }}
     </div>
     @endif
 
-    <div class="card">
-        <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px;">
-            <h2 style="margin: 0;">Tambah Jadwal Kerja</h2>
-        </div>
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="hris-card">
+                <div class="hris-card-header">
+                    <h2 class="mb-0">Tambah Jadwal Kerja</h2>
+                </div>
 
-        <div class="card-body" style="padding: 30px;">
+                <div class="hris-card-body">
             <form action="{{ route('jadwal.store') }}" method="POST">
                 @csrf
 
                 <!-- Pilih Karyawan -->
-                <div style="margin-bottom: 20px;">
-                    <label style="font-weight: 600; margin-bottom: 8px; display: block;">
-                        Pilih Karyawan <span style="color: red;">*</span>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">
+                        Pilih Karyawan <span class="text-danger">*</span>
                     </label>
-                    <select name="id_karyawan" required 
-                            style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                    <select name="id_karyawan" required class="form-select">
                         <option value="">-- Pilih Karyawan --</option>
                         @foreach($karyawanList as $k)
                             <option value="{{ $k->id_karyawan }}" {{ old('id_karyawan') == $k->id_karyawan ? 'selected' : '' }}>
-                                {{ $k->nama }} - {{ $k->jabatan }}
+                                {{ $k->nama }} - {{ $k->jabatan->nama_jabatan }}
                             </option>
                         @endforeach
                     </select>
                     @error('id_karyawan')
-                        <small style="color: red;">{{ $message }}</small>
+                        <small class="text-danger">{{ $message }}</small>
                     @enderror
                 </div>
 
                 <!-- Tanggal -->
-                <div style="margin-bottom: 20px;">
-                    <label style="font-weight: 600; margin-bottom: 8px; display: block;">
-                        Tanggal <span style="color: red;">*</span>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">
+                        Tanggal <span class="text-danger">*</span>
                     </label>
-                    <input type="date" name="tanggal" required value="{{ old('tanggal') }}" 
-                           style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                    <input type="date" name="tanggal" required value="{{ old('tanggal') }}" class="form-control">
                     @error('tanggal')
-                        <small style="color: red;">{{ $message }}</small>
+                        <small class="text-danger">{{ $message }}</small>
                     @enderror
                 </div>
 
                 <!-- Jam Kerja -->
-                <div style="margin-bottom: 20px;">
-                    <label style="font-weight: 600; margin-bottom: 8px; display: block;">
-                        Jam Kerja / Shift <span style="color: red;">*</span>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">
+                        Jam Kerja / Shift <span class="text-danger">*</span>
                     </label>
-                    <select name="jam_kerja" required 
-                            style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                    <select name="jam_kerja" required class="form-select">
                         <option value="">-- Pilih Jam Kerja --</option>
                         @foreach($jamKerjaOptions as $option)
                             <option value="{{ $option }}" {{ old('jam_kerja') == $option ? 'selected' : '' }}>
@@ -64,41 +62,41 @@
                         @endforeach
                     </select>
                     @error('jam_kerja')
-                        <small style="color: red;">{{ $message }}</small>
+                        <small class="text-danger">{{ $message }}</small>
                     @enderror
                 </div>
 
                 <!-- Keterangan -->
-                <div style="margin-bottom: 20px;">
-                    <label style="font-weight: 600; margin-bottom: 8px; display: block;">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">
                         Keterangan (Optional)
                     </label>
-                    <textarea name="keterangan" rows="3" placeholder="Catatan tambahan..." 
-                              style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; resize: vertical;">{{ old('keterangan') }}</textarea>
+                    <textarea name="keterangan" rows="3" placeholder="Catatan tambahan..." class="form-control">{{ old('keterangan') }}</textarea>
                     @error('keterangan')
-                        <small style="color: red;">{{ $message }}</small>
+                        <small class="text-danger">{{ $message }}</small>
                     @enderror
                 </div>
 
                 <!-- Info Box -->
-                <div style="background: #e7f3ff; border-left: 4px solid #667eea; padding: 15px; border-radius: 5px; margin-bottom: 25px;">
-                    <p style="margin: 0; color: #333;">
-                        💡 <strong>Tips:</strong> Pastikan tidak ada duplikasi jadwal untuk karyawan yang sama di tanggal yang sama.
-                    </p>
+                <div class="alert alert-info d-flex gap-2 align-items-start my-3" role="alert">
+                    <span>💡</span>
+                    <div>
+                        <strong>Tips:</strong> Pastikan tidak ada duplikasi jadwal untuk karyawan yang sama di tanggal yang sama.
+                    </div>
                 </div>
 
                 <!-- Buttons -->
-                <div style="display: flex; gap: 10px;">
-                    <button type="submit" 
-                            style="flex: 1; padding: 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn hris-btn hris-btn-primary flex-fill">
                         Simpan Jadwal
                     </button>
-                    <a href="{{ route('jadwal.index') }}" 
-                       style="flex: 1; padding: 14px; background: #6c757d; color: white; border: none; border-radius: 8px; font-weight: 600; text-align: center; text-decoration: none; display: block;">
+                    <a href="{{ route('jadwal.index') }}" class="btn hris-btn hris-btn-secondary flex-fill">
                         Batal
                     </a>
                 </div>
             </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>

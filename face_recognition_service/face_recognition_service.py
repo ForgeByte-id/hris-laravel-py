@@ -8,15 +8,11 @@ import mysql.connector
 from mysql.connector import Error
 from dotenv import load_dotenv
 
-# load env
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-# ======================
-# DB CONFIG FROM ENV
-# ======================
 DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'mysql'),
     'port': int(os.getenv('DB_PORT', 3306)),
@@ -25,86 +21,42 @@ DB_CONFIG = {
     'password': os.getenv('DB_PASSWORD', 'root')
 }
 
+
 def get_db_connection():
     try:
-        connection = mysql.connector.connect(**DB_CONFIG)
-        return connection
+        return mysql.connector.connect(**DB_CONFIG)
     except Error as e:
-        print(f"Error connecting to database: {e}")
+        print(f"DB Error: {e}")
         return None
 
+
 def load_known_faces():
-    """Load face encodings dari kolom face_embedding tabel karyawan"""
-    connection = get_db_connection()
-    if not connection:
+    conn = get_db_connection()
+    if not conn:
         return [], []
 
     try:
-        cursor = connection.cursor(dictionary=True)
-        # Query dari tabel karyawan dengan kolom face_embedding
+        cursor = conn.cursor(dictionary=True)
         cursor.execute(
             "SELECT id_karyawan, face_embedding FROM karyawan WHERE face_embedding IS NOT NULL"
         )
-        results = cursor.fetchall()
+        rows = cursor.fetchall()
 
-        known_face_encodings = []
-        known_face_ids = []
+        encodings = []
+        ids = []
 
-        for row in results:
-            encoding = json.loads(row['face_embedding'])
-            known_face_encodings.append(np.array(encoding))
-            known_face_ids.append(row['id_karyawan'])
+        for row in rows:
+            encodings.append(np.array(json.loads(row['face_embedding'])))
+            ids.append(row['id_karyawan'])
 
-        print(f"Loaded {len(known_face_ids)} registered faces from database")
-        return known_face_encodings, known_face_ids
-
-    except Error as e:
-        print(f"Error loading faces: {e}")
-        return [], []
+        print(f"Loaded {len(ids)} faces")
+        return encodings, ids
 
     finally:
-        if connection.is_connected():
+        if conn.is_connected():
             cursor.close()
-            connection.close()
+            conn.close()
 
-@app.route('/api/encode-face', methods=['POST'])
-def encode_face():
-    try:
-        data = request.json
-        image_path = data.get('image_path')
-
-        if not image_path or not os.path.exists(image_path):
-            return jsonify({'error': 'Image not found'}), 400
-
-        image = face_recognition.load_image_file(image_path)
-        face_locations = face_recognition.face_locations(image)
-
-        if len(face_locations) == 0:
-            return jsonify({'error': 'No face detected'}), 400
-
-        if len(face_locations) > 1:
-            return jsonify({
-                'error': 'Multiple faces detected. Use single face.'
-            }), 400
-
-        face_encodings = face_recognition.face_encodings(
-            image,
-            face_locations
-        )
-
-        if len(face_encodings) == 0:
-            return jsonify({'error': 'Unable to encode face'}), 400
-
-        encoding_list = face_encodings[0].tolist()
-
-        return jsonify({
-            'success': True,
-            'encoding': encoding_list,
-            'face_location': face_locations[0]
-        })
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/recognize-face', methods=['POST'])
 def recognize_face():
@@ -112,74 +64,65 @@ def recognize_face():
         data = request.json
         image_path = data.get('image_path')
 
-        if not image_path or not os.path.exists(image_path):
+        print("REQUEST:", data)
+
+        if not image_path:
+            return jsonify({'error': 'Image path not provided'}), 400
+
+        if not os.path.exists(image_path):
+            print("FILE NOT FOUND:", image_path)
             return jsonify({'error': 'Image not found'}), 400
 
-        known_face_encodings, known_face_ids = load_known_faces()
+        known_encodings, known_ids = load_known_faces()
 
-        if len(known_face_encodings) == 0:
-            return jsonify({'error': 'No registered faces in database'}), 404
+        if not known_encodings:
+            return jsonify({'error': 'No registered faces'}), 404
 
         image = face_recognition.load_image_file(image_path)
-        face_locations = face_recognition.face_locations(image)
+        locations = face_recognition.face_locations(image)
 
-        if len(face_locations) == 0:
+        if not locations:
             return jsonify({'error': 'No face detected'}), 400
 
-        face_encodings = face_recognition.face_encodings(
-            image,
-            face_locations
-        )
+        encodings = face_recognition.face_encodings(image, locations)
 
-        if len(face_encodings) == 0:
-            return jsonify({'error': 'Unable to encode face'}), 400
+        if not encodings:
+            return jsonify({'error': 'Encoding failed'}), 400
 
-        face_encoding = face_encodings[0]
+        face_encoding = encodings[0]
 
-        face_distances = face_recognition.face_distance(
-            known_face_encodings,
-            face_encoding
-        )
+        distances = face_recognition.face_distance(known_encodings, face_encoding)
 
-        best_match_index = np.argmin(face_distances)
-        best_match_distance = face_distances[best_match_index]
+        best_index = np.argmin(distances)
+        best_distance = distances[best_index]
 
-        threshold = 0.6
+        if best_distance < 0.6:
+            matched_id = known_ids[best_index]
+            confidence = (1 - best_distance) * 100
 
-        if best_match_distance < threshold:
-            matched_id = known_face_ids[best_match_index]
-            confidence = (1 - best_match_distance) * 100
-
-            print(f"Face matched! ID: {matched_id}, Confidence: {confidence:.2f}%")
+            print(f"Matched ID: {matched_id} ({confidence:.2f}%)")
 
             return jsonify({
                 'matched': True,
                 'id_karyawan': int(matched_id),
-                'confidence': round(confidence, 2),
-                'distance': round(float(best_match_distance), 4)
+                'confidence': round(confidence, 2)
             })
-        else:
-            print(f"Face not recognized. Best distance: {best_match_distance:.4f}")
-            return jsonify({
-                'matched': False,
-                'message': 'Face not recognized',
-                'best_distance': round(float(best_match_distance), 4)
-            })
+
+        return jsonify({
+            'matched': False,
+            'message': 'Face not recognized'
+        })
 
     except Exception as e:
-        print(f"Error in recognize_face: {str(e)}")
+        print("ERROR:", e)
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/api/health', methods=['GET'])
-def health_check():
-    return jsonify({
-        'status': 'healthy',
-        'service': 'Face Recognition API'
-    })
+def health():
+    return jsonify({'status': 'ok'})
+
 
 if __name__ == '__main__':
-    print("=" * 50)
-    print("Starting Face Recognition Service...")
-    print("Service running on http://localhost:5000")
-    print("=" * 50)
+    print("Face Recognition Service running on port 5000")
     app.run(host='0.0.0.0', port=5000, debug=True)

@@ -28,6 +28,10 @@ return [
         'key' => env('RESEND_KEY'),
     ],
 
+    'face_recognition' => [
+        'url' => env('FACE_SERVICE_URL', 'http://localhost:5000'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
