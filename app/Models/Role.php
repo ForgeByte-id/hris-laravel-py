@@ -10,6 +10,6 @@ class Role extends SpatieRole
 {
     public function menus()
     {
-        return $this->belongsToMany(MenuItem::class, 'menu_item_role_permissions', 'role_id', 'menu_id');
+        return $this->belongsToMany(MenuItem::class, 'role_menu_permissions', 'role_id', 'menu_id');
     }
 }

@@ -2,12 +2,13 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use App\Models\Karyawan;
-use App\Models\Jabatan;
 use App\Models\Devisi;
-use Illuminate\Support\Facades\Hash;
+use App\Models\Jabatan;
+use App\Models\Karyawan;
+use App\Models\User;
+use Database\Seeders\MenuItemSeeder;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,6 +16,7 @@ class DatabaseSeeder extends Seeder
     {
         // Setup roles & jabatan & devisi dulu
         $this->call(RolePermissionSeeder::class);
+        $this->call(MenuItemSeeder::class);
         $this->call(JabatanSeeder::class);
         $this->call(DevisiSeeder::class);
 

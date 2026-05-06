@@ -195,6 +195,14 @@
         .nav-link {
             color: var(--hris-muted);
         }
+
+        .transition {
+            transition: all 0.2s ease;
+        }
+        .transition:hover {
+            border-color: var(--hris-primary);
+            background: #f5f7ff;
+        }
     </style>
     @yield('head')
     @yield('styles')

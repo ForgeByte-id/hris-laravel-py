@@ -38,6 +38,7 @@
         <div class="hris-card-header">
             <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>Daftar Permission</h5>
         </div>
+
         <div class="hris-card-body p-0">
             @if($permissions->count() > 0)
                 <div class="table-responsive">
@@ -58,7 +59,23 @@
                                     <code>{{ $permission->name }}</code>
                                 </td>
                                 <td class="align-middle">
-                                    <span class="badge bg-secondary">{{ $permission->guard_name }}</span>
+                                    @if($permission->guard_name === 'web')
+                                        <span class="badge bg-primary-subtle text-primary"
+                                            data-bs-toggle="tooltip"
+                                            title="Permission untuk akses dari web (UI)">
+                                            <i class="bi bi-globe me-1"></i> Web
+                                        </span>
+                                    @elseif($permission->guard_name === 'api')
+                                        <span class="badge bg-warning-subtle text-warning"
+                                            data-bs-toggle="tooltip"
+                                            title="Permission untuk API / backend service">
+                                            <i class="bi bi-cpu me-1"></i> API
+                                        </span>
+                                    @else
+                                        <span class="badge bg-secondary">
+                                            {{ $permission->guard_name }}
+                                        </span>
+                                    @endif
                                 </td>
                                 <td class="align-middle">
                                     <div class="btn-group btn-group-sm" role="group">
@@ -91,6 +108,19 @@
                 </div>
             @endif
         </div>
+        <div class="card-text">
+            <div class="mb-2 small text-muted p-2">
+                <i class="bi bi-globe text-primary"></i> Web = untuk user login via browser &nbsp;
+                <i class="bi bi-cpu text-warning"></i> API = untuk sistem / mobile / backend
+            </div>
+        </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el))
+</script>
 @endsection
