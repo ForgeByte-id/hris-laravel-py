@@ -41,7 +41,7 @@
         <div class="hris-card-body p-0">
             @if($permissions->count() > 0)
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
+                    <table class="table table-hover mb-0 datatable">
                         <thead class="table-light">
                             <tr>
                                 <th style="width: 50px;">No</th>
@@ -80,9 +80,6 @@
                             @endforeach
                         </tbody>
                     </table>
-                </div>
-                <div class="p-3">
-                    {{ $permissions->links() }}
                 </div>
             @else
                 <div class="text-center py-5">
