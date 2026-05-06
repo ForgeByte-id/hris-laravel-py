@@ -1,85 +1,83 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container" style="max-width: 1200px; margin: 20px auto; padding: 20px;">
-    
+<div class="hris-container">
     @if(session('success'))
-    <div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #c3e6cb;">
+    <div class="alert alert-success">
         ✅ {{ session('success') }}
     </div>
     @endif
 
-    <div class="card">
-        <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px;">
-            <h2 style="margin: 0;">Approval Pengajuan Cuti</h2>
+    <div class="hris-card">
+        <div class="hris-card-header">
+            <h2 class="mb-0">Approval Pengajuan Cuti</h2>
         </div>
 
-        <div class="card-body" style="padding: 30px;">
-            
+        <div class="hris-card-body">
+
             @if($cutiList->count() > 0)
-            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 5px; margin-bottom: 25px;">
-                <p style="margin: 0; color: #856404;">
-                    📋 Terdapat <strong>{{ $cutiList->count() }}</strong> pengajuan cuti yang menunggu persetujuan
-                </p>
+            <div class="alert alert-warning d-flex gap-2 align-items-start" role="alert">
+                <span>📋</span>
+                <div>
+                    Terdapat <strong>{{ $cutiList->count() }}</strong> pengajuan cuti yang menunggu persetujuan
+                </div>
             </div>
 
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse;">
+            <div class="table-responsive">
+                <table class="table table-hover hris-table align-middle">
                     <thead>
-                        <tr style="background: #f8f9fa;">
-                            <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">No</th>
-                            <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Nama Karyawan</th>
-                            <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Jabatan</th>
-                            <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Jenis Cuti</th>
-                            <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Tanggal</th>
-                            <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Durasi</th>
-                            <th style="padding: 15px; text-align: left; border-bottom: 2px solid #dee2e6;">Keterangan</th>
-                            <th style="padding: 15px; text-align: center; border-bottom: 2px solid #dee2e6;">Aksi</th>
+                        <tr>
+                            <th>No</th>
+                            <th>Nama Karyawan</th>
+                            <th>Jabatan</th>
+                            <th>Jenis Cuti</th>
+                            <th>Tanggal</th>
+                            <th>Durasi</th>
+                            <th>Keterangan</th>
+                            <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($cutiList as $index => $cuti)
-                        <tr style="border-bottom: 1px solid #dee2e6;">
-                            <td style="padding: 15px;">{{ $index + 1 }}</td>
-                            <td style="padding: 15px;">
+                        <tr>
+                            <td>{{ $index + 1 }}</td>
+                            <td>
                                 <strong>{{ $cuti->karyawan->nama }}</strong>
                             </td>
-                            <td style="padding: 15px;">
-                                {{ $cuti->karyawan->jabatan }}
+                            <td>
+                                {{ $cuti->karyawan->jabatan->nama_jabatan ?? '-' }}
                             </td>
-                            <td style="padding: 15px;">
-                                <span style="background: #e7f3ff; padding: 5px 10px; border-radius: 5px; font-size: 13px;">
+                            <td>
+                                <span class="badge text-bg-info">
                                     {{ $cuti->jenis_cuti }}
                                 </span>
                             </td>
-                            <td style="padding: 15px;">
+                            <td>
                                 {{ $cuti->tanggal_mulai->format('d/m/Y') }}<br>
-                                <small style="color: #666;">s/d {{ $cuti->tanggal_selesai->format('d/m/Y') }}</small>
+                                <small class="text-muted">s/d {{ $cuti->tanggal_selesai->format('d/m/Y') }}</small>
                             </td>
-                            <td style="padding: 15px;">
+                            <td>
                                 <strong>{{ $cuti->jumlah_hari }}</strong> hari
                             </td>
-                            <td style="padding: 15px; max-width: 200px;">
-                                <small>{{ $cuti->keterangan ?? '-' }}</small>
+                            <td class="text-truncate" style="max-width: 200px;">
+                                <small class="text-muted">{{ $cuti->keterangan ?? '-' }}</small>
                             </td>
-                            <td style="padding: 15px; text-align: center;">
-                                <form action="{{ route('cuti.update-status', $cuti->id_cuti) }}" method="POST" style="display: inline-block;">
+                            <td class="text-center">
+                                <form action="{{ route('cuti.update-status', $cuti->id_cuti) }}" method="POST" class="d-inline-block">
                                     @csrf
                                     @method('PATCH')
                                     <input type="hidden" name="status" value="approved">
-                                    <button type="submit" 
-                                            onclick="return confirm('Setujui pengajuan cuti ini?')"
-                                            style="background: #28a745; color: white; padding: 8px 15px; border-radius: 5px; border: none; cursor: pointer; font-size: 14px; margin: 2px;">
+                                    <button type="submit" class="btn btn-sm btn-success"
+                                            onclick="return confirm('Setujui pengajuan cuti ini?')">
                                         ✅ Setujui
                                     </button>
                                 </form>
-                                <form action="{{ route('cuti.update-status', $cuti->id_cuti) }}" method="POST" style="display: inline-block;">
+                                <form action="{{ route('cuti.update-status', $cuti->id_cuti) }}" method="POST" class="d-inline-block">
                                     @csrf
                                     @method('PATCH')
                                     <input type="hidden" name="status" value="rejected">
-                                    <button type="submit" 
-                                            onclick="return confirm('Tolak pengajuan cuti ini?')"
-                                            style="background: #dc3545; color: white; padding: 8px 15px; border-radius: 5px; border: none; cursor: pointer; font-size: 14px; margin: 2px;">
+                                    <button type="submit" class="btn btn-sm btn-danger"
+                                            onclick="return confirm('Tolak pengajuan cuti ini?')">
                                         ❌ Tolak
                                     </button>
                                 </form>
@@ -90,9 +88,9 @@
                 </table>
             </div>
             @else
-            <div style="text-align: center; padding: 60px 20px; color: #999;">
+            <div class="text-center py-5 text-muted">
                 <h3>✅ Tidak Ada Pengajuan Pending</h3>
-                <p>Semua pengajuan cuti sudah diproses</p>
+                <p class="mb-0">Semua pengajuan cuti sudah diproses</p>
             </div>
             @endif
         </div>

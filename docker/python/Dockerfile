@@ -13,6 +13,6 @@ COPY face_recognition_service/requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY face_recognition_service /app
+COPY face_recognition_service /app/face_recognition_service
 
-CMD ["python", "face_recognition_service.py"]
+CMD ["python", "face_recognition_service/face_recognition_service.py"]

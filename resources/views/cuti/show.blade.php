@@ -1,54 +1,80 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container cuti-container">
+<div class="hris-container cuti-container">
 
     @if(session('success'))
     <div class="alert alert-success">
-        ✅ {{ session('success') }}
+        <i class="bi bi-check-circle me-1"></i>
+        {{ session('success') }}
     </div>
     @endif
 
     @if(session('error'))
-    <div class="alert alert-error">
-        ❌ {{ session('error') }}
+    <div class="alert alert-danger">
+        <i class="bi bi-x-circle me-1"></i>
+        {{ session('error') }}
     </div>
     @endif
 
-    <div class="card">
-        <div class="card-header card-header-custom">
-            <h2 class="card-title">Pengajuan Cuti Saya</h2>
-            <a href="{{ route('cuti.create') }}" class="btn-primary-custom">
-                ➕ Ajukan Cuti Baru
+    <div class="card hris-card">
+
+        <div class="card-header card-header-custom hris-card-header d-flex justify-content-between align-items-center">
+            <h2 class="card-title mb-0">Pengajuan Cuti Saya</h2>
+
+            <a href="{{ route('cuti.create') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i>
+                Ajukan Cuti Baru
             </a>
         </div>
 
-        <div class="card-body card-body-custom">
+        <div class="card-body card-body-custom hris-card-body">
 
             <!-- Summary -->
-            <div class="summary-grid">
-                <div class="summary-card summary-blue">
-                    <h4>Total Pengajuan</h4>
-                    <h2>{{ $cutiList->count() }}</h2>
+            <div class="row g-3 mb-4">
+
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="p-3 rounded-3 bg-primary text-white shadow-sm">
+                        <h6 class="mb-1 opacity-75">Total Pengajuan</h6>
+                        <h2 class="mb-0 fw-bold">{{ $cutiList->count() }}</h2>
+                    </div>
                 </div>
-                <div class="summary-card summary-yellow">
-                    <h4>Menunggu</h4>
-                    <h2>{{ $cutiList->where('status_persetujuan', 'pending')->count() }}</h2>
+
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="p-3 rounded-3 bg-warning text-dark shadow-sm">
+                        <h6 class="mb-1 opacity-75">Menunggu</h6>
+                        <h2 class="mb-0 fw-bold">
+                            {{ $cutiList->where('status_persetujuan', 'pending')->count() }}
+                        </h2>
+                    </div>
                 </div>
-                <div class="summary-card summary-green">
-                    <h4>Disetujui</h4>
-                    <h2>{{ $cutiList->where('status_persetujuan', 'approved')->count() }}</h2>
+
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="p-3 rounded-3 bg-success text-white shadow-sm">
+                        <h6 class="mb-1 opacity-75">Disetujui</h6>
+                        <h2 class="mb-0 fw-bold">
+                            {{ $cutiList->where('status_persetujuan', 'approved')->count() }}
+                        </h2>
+                    </div>
                 </div>
-                <div class="summary-card summary-red">
-                    <h4>Ditolak</h4>
-                    <h2>{{ $cutiList->where('status_persetujuan', 'rejected')->count() }}</h2>
+
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="p-3 rounded-3 bg-danger text-white shadow-sm">
+                        <h6 class="mb-1 opacity-75">Ditolak</h6>
+                        <h2 class="mb-0 fw-bold">
+                            {{ $cutiList->where('status_persetujuan', 'rejected')->count() }}
+                        </h2>
+                    </div>
                 </div>
+
             </div>
 
             <!-- Table -->
             @if($cutiList->count() > 0)
-            <div class="table-wrapper">
-                <table class="cuti-table">
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle cuti-table">
+
                     <thead>
                         <tr>
                             <th>No</th>
@@ -59,53 +85,84 @@
                             <th>Aksi</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         @foreach($cutiList as $index => $cuti)
                         <tr>
+
                             <td>{{ $index + 1 }}</td>
-                            <td><strong>{{ $cuti->jenis_cuti }}</strong></td>
+
                             <td>
-                                {{ $cuti->tanggal_mulai->format('d/m/Y') }} - 
+                                <strong>{{ $cuti->jenis_cuti }}</strong>
+                            </td>
+
+                            <td>
+                                {{ $cuti->tanggal_mulai->format('d/m/Y') }} -
                                 {{ $cuti->tanggal_selesai->format('d/m/Y') }}
                             </td>
-                            <td>{{ $cuti->jumlah_hari }} hari</td>
+
+                            <td>
+                                {{ $cuti->jumlah_hari }} hari
+                            </td>
+
                             <td>
                                 @if($cuti->status_persetujuan === 'pending')
-                                    <span class="badge badge-pending">⏳ Menunggu</span>
+                                    <span class="badge text-bg-warning">
+                                        <i class="bi bi-hourglass-split me-1"></i>
+                                        Menunggu
+                                    </span>
                                 @elseif($cuti->status_persetujuan === 'approved')
-                                    <span class="badge badge-approved">✅ Disetujui</span>
+                                    <span class="badge text-bg-success">
+                                        <i class="bi bi-check-lg me-1"></i>
+                                        Disetujui
+                                    </span>
                                 @else
-                                    <span class="badge badge-rejected">❌ Ditolak</span>
+                                    <span class="badge text-bg-danger">
+                                        <i class="bi bi-x-lg me-1"></i>
+                                        Ditolak
+                                    </span>
                                 @endif
                             </td>
+
                             <td>
-                                <div class="action-group">
-                                    <a href="{{ route('cuti.show', $cuti->id_cuti) }}" class="action-btn btn-view">
-                                        👁️
+                                <div class="d-flex gap-2">
+
+                                    <a href="{{ route('cuti.show', $cuti->id_cuti) }}"
+                                       class="btn btn-sm btn-primary">
+                                        <i class="bi bi-eye"></i>
                                     </a>
 
                                     @if($cuti->status_persetujuan === 'pending')
                                     <form action="{{ route('cuti.cancel', $cuti->id_cuti) }}" method="POST">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="action-btn btn-delete"
-                                            onclick="return confirm('Yakin ingin membatalkan pengajuan ini?')">
-                                            🗑️
+
+                                        <button type="submit"
+                                                class="btn btn-sm btn-danger"
+                                                onclick="return confirm('Yakin ingin membatalkan pengajuan ini?')">
+                                            <i class="bi bi-trash"></i>
                                         </button>
                                     </form>
                                     @endif
+
                                 </div>
                             </td>
+
                         </tr>
                         @endforeach
                     </tbody>
+
                 </table>
             </div>
+
             @else
-            <div class="empty-state">
+
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                 <h3>Belum Ada Pengajuan Cuti</h3>
-                <p>Klik tombol "Ajukan Cuti Baru" untuk membuat pengajuan</p>
+                <p class="mb-0">Klik tombol "Ajukan Cuti Baru" untuk membuat pengajuan</p>
             </div>
+
             @endif
 
         </div>

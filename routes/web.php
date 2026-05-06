@@ -10,12 +10,23 @@ use App\Http\Controllers\JadwalKerjaController;
 use App\Http\Controllers\ProfileController;
 
 
+
+Route::middleware('auth')->prefix('api')->group(function () {
+    Route::post('/karyawan/register-face', [KaryawanController::class, 'storeFaceEncoding']);
+    Route::delete('/karyawan/{id_karyawan}/face', [KaryawanController::class, 'deleteFaceEncoding']);
+
+    Route::post('/attendance/check-in', [AttendanceController::class, 'checkIn']);
+    Route::get('/attendance/todays-summary', [AttendanceController::class, 'todaysSummary']);
+    Route::get('/attendance/current-status/{idKaryawan}', [AttendanceController::class, 'getCurrentStatus']);
+    Route::get('/attendance/history/{idKaryawan}', [AttendanceController::class, 'getHistory']);
+});
+
 Route::middleware(['guest'])->group(function () {
     Route::get('/', function () {
         return view('auth.login');
     })->name('login');
 
-    Route::post('/proseslogin', [AuthController::class, 'proseslogin']);
+    Route::post('/proseslogin', [AuthController::class, 'proseslogin'])->name('proseslogin');
 });
 
 Route::middleware(['auth'])->group(function () {
@@ -24,8 +35,14 @@ Route::middleware(['auth'])->group(function () {
 
     // Karyawan Routes
     Route::get('/karyawan', [KaryawanController::class, 'index'])->name('karyawan.index');
+    Route::get('/karyawan/create', [KaryawanController::class, 'create'])->name('karyawan.create');
+    Route::post('/karyawan', [KaryawanController::class, 'store'])->name('karyawan.store');
+    Route::get('/karyawan/{id_karyawan}', [KaryawanController::class, 'show'])->name('karyawan.show');
+    Route::get('/karyawan/{id_karyawan}/edit', [KaryawanController::class, 'edit'])->name('karyawan.edit');
+    Route::put('/karyawan/{id_karyawan}', [KaryawanController::class, 'update'])->name('karyawan.update');
+    Route::delete('/karyawan/{id_karyawan}', [KaryawanController::class, 'destroy'])->name('karyawan.destroy');
     Route::get('/karyawan/{id_karyawan}/register-face', [KaryawanController::class, 'registerFace'])->name('karyawan.register-face');
-    
+
     // Attendance Routes
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::get('/attendance/history', [AttendanceController::class, 'history'])->name('attendance.history');
@@ -40,7 +57,7 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/cuti/{id_cuti}/status', [CutiController::class, 'updateStatus'])->name('cuti.update-status');
     Route::get('/cuti/history/all', [CutiController::class, 'history'])->name('cuti.history');
 
-     // Jadwal Kerja Routes
+    // Jadwal Kerja Routes
     Route::get('/jadwal', [JadwalKerjaController::class, 'index'])->name('jadwal.index');
     Route::get('/jadwal/create', [JadwalKerjaController::class, 'create'])->name('jadwal.create');
     Route::post('/jadwal', [JadwalKerjaController::class, 'store'])->name('jadwal.store');

@@ -1,107 +1,106 @@
-<!doctype html>
-<html lang="en">
+@extends('layouts.app')
 
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#000000">
-    <title>HRIS</title>
-    <meta name="description" content="Mobilekit HTML Mobile UI Kit">
-    <meta name="keywords" content="bootstrap 4, mobile template, cordova, phonegap, mobile, html" />
-    <link rel="stylesheet" href="{{ asset('assets/css/style.css')}}">
-    <link rel="manifest" href="__manifest.json">
-  
-</head>
-<body class="bg-white">
+@section('title', 'HRIS - Login')
+@section('body_class', 'bg-light') {{-- Ubah ke light agar card lebih pop-out --}}
+@section('app_capsule_class', 'pt-0')
+@section('show_bottom_nav', '0')
+@section('include_default_scripts', '0')
+@section('show_chrome', '0')
+@section('show_loader', '0')
 
-    <!-- loader -->
-    <div id="loader">
-        <div class="spinner-border text-primary" role="status"></div>
-    </div>
-    <!-- * loader -->
+@section('content')
+<div class="container-fluid px-3">
+    <div class="row justify-content-center align-items-center min-vh-100">
+        <div class="col-12 col-md-5 col-lg-4">
 
-
-    <!-- App Capsule -->
-    <div id="appCapsule" class="pt-0">
-
-        <div class="login-form mt-1">
-            <div class="section">
-                <img src="{{ asset('assets/img/login/0903b5a53bd9344fc0737fcd41f56ff5.png') }}" alt="image" class="form-image">
+            <!-- Logo Section -->
+            <div class="text-center mb-4">
+                <img src="{{ asset('assets/img/login/0903b5a53bd9344fc0737fcd41f56ff5.png') }}"
+                     alt="Logo" class="img-fluid" style="max-height: 120px;">
             </div>
-            <div class="section mt-1">
-                <h1>HRIS</h1>
-                <h4>Fill the form to log in</h4>
-            </div>
-            <div class="section mt-1 mb-5">
-                <form action="/proseslogin" method="POST">
-                    @csrf
-                    <div class="form-group boxed">
-                        <div class="input-wrapper">
-                            <input type="text" name="username" class="form-control" id="username" placeholder="Username">
-                            <i class="clear-input">
-                                <ion-icon name="close-circle"></ion-icon>
-                            </i>
+
+            <!-- Login Card -->
+            <div class="card shadow-lg border-0" style="background: #f1f3f8;">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <h2 class="fw-bold text-primary">HRIS</h2>
+                        <p class="text-muted">Silakan masuk ke akun Anda</p>
+                    </div>
+
+                    <form action="{{ route('proseslogin') }}" method="POST" class="mt-3">
+                        @csrf
+
+                        <!-- Username -->
+                        <div class="input-group mb-3 shadow rounded-pill overflow-hidden">
+                            <span class="input-group-text bg-transparent border-0 px-3 d-flex align-items-center justify-content-center" id="username-addon">
+                                <i class="bi bi-person fs-5"></i>
+                            </span>
+                            <input type="text" name="username" class="form-control py-2 border-0"
+                                   id="username" placeholder="Masukkan username"
+                                   aria-label="Username" aria-describedby="username-addon" required>
                         </div>
-                    </div>
 
-                    <div class="form-group boxed">
-                        <div class="input-wrapper">
-                            <input type="password" class="form-control" id="password" name="password" placeholder="Password">
-                            <i class="clear-input">
-                                <ion-icon name="close-circle"></ion-icon>
-                            </i>
+                        <!-- Password -->
+                        <div class="input-group mb-3 shadow rounded-pill overflow-hidden">
+                            <span class="input-group-text bg-transparent border-0 px-3 d-flex align-items-center justify-content-center" id="password-addon">
+                                <i class="bi bi-lock fs-5"></i>
+                            </span>
+                            <input type="password" name="password" class="form-control py-2 border-0"
+                                   id="password" placeholder="Masukkan password"
+                                   aria-label="Password" aria-describedby="password-addon" required>
+                            <button type="button" class="btn btn-link text-muted px-3" id="toggle-password" aria-label="Toggle password visibility">
+                                <i class="bi bi-eye fs-5"></i>
+                            </button>
                         </div>
-                    </div>
 
-                    <div class="form-links mt-2">
-                        <div><a href="page-forgot-password.html" class="text-muted">Forgot Password?</a></div>
-                    </div>
+                        <div class="d-flex justify-content-end mb-4">
+                            <a href="page-forgot-password.html" class="small text-decoration-none text-muted">Lupa Password?</a>
+                        </div>
 
-                    <div class="form-button-group">
-                        <button type="submit" class="btn btn-primary btn-block btn-lg">Log in</button>
-                    </div>
-
-                </form>
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg shadow-sm">
+                                Masuk Sekarang
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
+
+            <!-- Footer Note -->
+            <div class="text-center mt-4">
+                <p class="small text-muted">&copy; {{ date('Y') }} HRIS System. All rights reserved.</p>
+            </div>
+
         </div>
-
-
     </div>
-    <!-- * App Capsule -->
+</div>
+@endsection
 
+@section('scripts')
+    <script>
+        const passwordInput = document.getElementById('password');
+        const togglePassword = document.getElementById('toggle-password');
+        const eyeIcon = togglePassword?.querySelector('i');
 
-
-    <!-- ///////////// Js Files ////////////////////  -->
-    <!-- Jquery -->
-    <script src="{{ asset('assets/js/lib/jquery-3.4.1.min.js') }}"></script>
-    <!-- Bootstrap-->
-    <script src="{{ asset('assets/js/lib/popper.min.js') }}"></script>
-    <script src="{{ asset('assets/js/lib/bootstrap.min.js') }}"></script>
-    <!-- Ionicons -->
-    <script type="module" src="https://unpkg.com/ionicons@5.0.0/dist/ionicons/ionicons.js"></script>
-    <!-- Owl Carousel -->
-    <script src="{{ asset('assets/js/plugins/owl-carousel/owl.carousel.min.js') }}"></script>
-    <!-- jQuery Circle Progress -->
-    <script src="{{ asset('assets/js/plugins/jquery-circle-progress/circle-progress.min.js') }}"></script>
-    <!-- Base Js File -->
-    <script src="{{ asset('assets/js/base.js') }}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        if (togglePassword && passwordInput && eyeIcon) {
+            togglePassword.addEventListener('click', () => {
+                const isHidden = passwordInput.type === 'password';
+                passwordInput.type = isHidden ? 'text' : 'password';
+                eyeIcon.classList.toggle('bi-eye');
+                eyeIcon.classList.toggle('bi-eye-slash');
+            });
+        }
+    </script>
     @if(session('error'))
         <script>
             Swal.fire({
                 icon: 'error',
-                title: 'Login Failed',
+                title: 'Login Gagal',
                 text: '{{ session('error') }}',
-                confirmButtonText: 'OK'
+                confirmButtonColor: '#3085d6',
+                confirmButtonText: 'Coba Lagi'
             });
         </script>
     @endif
-
-
-
-</body>
-
-</html>
+@endsection
