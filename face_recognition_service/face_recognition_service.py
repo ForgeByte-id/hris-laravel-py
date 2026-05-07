@@ -7,8 +7,14 @@ import json
 import mysql.connector
 from mysql.connector import Error
 from dotenv import load_dotenv
+import tempfile
+import logging
 
 load_dotenv()
+
+# Configure logging for security auditing
+logging.basicConfig(level=logging.WARNING)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)
@@ -21,12 +27,28 @@ DB_CONFIG = {
     'password': os.getenv('DB_PASSWORD', 'root')
 }
 
+def _resolve_allowed_dirs():
+    """
+    Build the list of allowed image directories at startup.
+    - ALLOWED_IMAGE_TMP_DIR defaults to /tmp (always available locally and in Docker).
+    - LARAVEL_STORAGE_PATH has NO default: it is only added when explicitly set
+      (e.g. in docker-compose or a production .env) AND the directory exists.
+    This prevents /var/www/html/... from being whitelisted on local dev machines.
+    """
+    candidates = [
+        os.getenv('ALLOWED_IMAGE_TMP_DIR', '/tmp'),
+        os.getenv('LARAVEL_STORAGE_PATH'),   # None when not set — skipped below
+    ]
+    return [os.path.realpath(path) for path in candidates if path]
+
+ALLOWED_IMAGE_DIRS = _resolve_allowed_dirs()
+
 
 def get_db_connection():
     try:
         return mysql.connector.connect(**DB_CONFIG)
     except Error as e:
-        print(f"DB Error: {e}")
+        logger.warning("DB connection failed")
         return None
 
 
@@ -46,8 +68,11 @@ def load_known_faces():
         ids = []
 
         for row in rows:
-            encodings.append(np.array(json.loads(row['face_embedding'])))
-            ids.append(row['id_karyawan'])
+            try:
+                encodings.append(np.array(json.loads(row['face_embedding'])))
+                ids.append(row['id_karyawan'])
+            except Exception:
+                continue
 
         print(f"Loaded {len(ids)} faces")
         return encodings, ids
@@ -58,36 +83,105 @@ def load_known_faces():
             conn.close()
 
 
-@app.route('/api/recognize-face', methods=['POST'])
-def recognize_face():
+def get_safe_image_path(image_path):
+    """
+    Safely validate and return image path. Prevents path traversal attacks.
+    Ensures file exists and is within allowed directories (no symlinks).
+    """
+    if not image_path:
+        return None
+
+    file_name = os.path.basename(image_path)
+    if not file_name:
+        return None
+
+    for allowed_dir in ALLOWED_IMAGE_DIRS:
+        candidate_path = os.path.realpath(os.path.join(allowed_dir, file_name))
+        
+        # Security check 1: Ensure path is within allowed directory
+        if not candidate_path.startswith(allowed_dir + os.sep):
+            continue
+        
+        # Security check 2: Ensure file exists
+        if not os.path.exists(candidate_path):
+            continue
+        
+        # Security check 3: Reject symbolic links (prevent access to unauthorized files)
+        if os.path.islink(candidate_path):
+            logger.warning(f"Rejected symlink attempt: {candidate_path}")
+            continue
+        
+        # Security check 4: Ensure it's a regular file
+        if not os.path.isfile(candidate_path):
+            continue
+        
+        return candidate_path
+
+    return None
+
+
+@app.route('/api/encode-face', methods=['POST'])
+def encode_face():
+    """
+    Encode a face image and return the face encoding vector.
+    Security: Validates file path, handles cleanup on error.
+    """
     try:
         data = request.json
-        image_path = data.get('image_path')
+        safe_image_path = get_safe_image_path(data.get('image_path'))
+        if not safe_image_path:
+            return jsonify({'error': 'Invalid image path'}), 400
 
-        print("REQUEST:", data)
+        image = face_recognition.load_image_file(safe_image_path)
+        locations = face_recognition.face_locations(image)
 
-        if not image_path:
-            return jsonify({'error': 'Image path not provided'}), 400
+        if not locations:
+            return jsonify({'error': 'No face detected in image'}), 400
 
-        if not os.path.exists(image_path):
-            print("FILE NOT FOUND:", image_path)
-            return jsonify({'error': 'Image not found'}), 400
+        encodings = face_recognition.face_encodings(image, locations)
+        if not encodings:
+            return jsonify({'error': 'Face encoding failed'}), 400
+
+        face_encoding = encodings[0]
+
+        return jsonify({
+            'encoding': face_encoding.tolist(),
+            'face_location': locations[0]
+        })
+
+    except Exception as e:
+        logger.warning("Face encoding error occurred")
+        return jsonify({'error': 'Face encoding service error'}), 500
+
+
+@app.route('/api/recognize-face', methods=['POST'])
+def recognize_face():
+    """
+    Recognize a face by comparing against known face encodings.
+    Security: Validates file path, no sensitive info in errors.
+    """
+    try:
+        data = request.json
+        safe_image_path = get_safe_image_path(data.get('image_path'))
+
+        if not safe_image_path:
+            return jsonify({'error': 'Invalid image path'}), 400
 
         known_encodings, known_ids = load_known_faces()
 
         if not known_encodings:
-            return jsonify({'error': 'No registered faces'}), 404
+            return jsonify({'error': 'No registered faces available'}), 404
 
-        image = face_recognition.load_image_file(image_path)
+        image = face_recognition.load_image_file(safe_image_path)
         locations = face_recognition.face_locations(image)
 
         if not locations:
-            return jsonify({'error': 'No face detected'}), 400
+            return jsonify({'error': 'No face detected in image'}), 400
 
         encodings = face_recognition.face_encodings(image, locations)
 
         if not encodings:
-            return jsonify({'error': 'Encoding failed'}), 400
+            return jsonify({'error': 'Face encoding failed'}), 400
 
         face_encoding = encodings[0]
 
@@ -114,15 +208,16 @@ def recognize_face():
         })
 
     except Exception as e:
-        print("ERROR:", e)
-        return jsonify({'error': str(e)}), 500
+        logger.warning("Face recognition error occurred")
+        return jsonify({'error': 'Face recognition service error'}), 500
 
 
 @app.route('/api/health', methods=['GET'])
 def health():
+    """Health check endpoint for monitoring."""
     return jsonify({'status': 'ok'})
 
 
 if __name__ == '__main__':
     print("Face Recognition Service running on port 5000")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)

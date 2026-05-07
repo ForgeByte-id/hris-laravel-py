@@ -7,8 +7,8 @@
         <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center;">
             <h2 style="margin: 0;">Riwayat Semua Cuti</h2>
             <a href="{{ route('cuti.approval') }}"
-               style="background: white; color: #667eea; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-                📋 Approval Pending
+               style="background: white; color: #667eea; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                <i class="bi bi-clipboard-check" style="font-size: 1rem;"></i> Approval Pending
             </a>
         </div>
 
@@ -59,12 +59,12 @@
 
                 <div style="display: flex; gap: 8px;">
                     <button type="submit"
-                            style="padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                        🔍 Cari
+                            style="padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                        <i class="bi bi-search" style="font-size: 0.95rem;"></i> Cari
                     </button>
                     <a href="{{ route('cuti.history') }}"
-                       style="padding: 10px 20px; background: #6c757d; color: white; border-radius: 6px; text-decoration: none; font-weight: 600;">
-                        ↩ Reset
+                       style="padding: 10px 20px; background: #6c757d; color: white; border-radius: 6px; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                        <i class="bi bi-arrow-clockwise" style="font-size: 0.95rem;"></i> Reset
                     </a>
                 </div>
             </form>
@@ -124,17 +124,17 @@
                             <td style="padding: 14px;"><strong>{{ $cuti->jumlah_hari }}</strong> hari</td>
                             <td style="padding: 14px;">
                                 @if($cuti->status_persetujuan === 'pending')
-                                    <span style="background: #fff3cd; color: #856404; padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: 600;">⏳ Menunggu</span>
+                                    <span style="background: #fff3cd; color: #856404; padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-hourglass-split" style="font-size: 0.9rem;"></i> Menunggu</span>
                                 @elseif($cuti->status_persetujuan === 'approved')
-                                    <span style="background: #d4edda; color: #155724; padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: 600;">✅ Disetujui</span>
+                                    <span style="background: #d4edda; color: #155724; padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-check-circle-fill" style="font-size: 0.9rem;"></i> Disetujui</span>
                                 @else
-                                    <span style="background: #f8d7da; color: #721c24; padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: 600;">❌ Ditolak</span>
+                                    <span style="background: #f8d7da; color: #721c24; padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-x-circle-fill" style="font-size: 0.9rem;"></i> Ditolak</span>
                                 @endif
                             </td>
                             <td style="padding: 14px;">
                                 <a href="{{ route('cuti.show', $cuti->id_cuti) }}"
-                                   style="background: #667eea; color: white; padding: 7px 14px; border-radius: 5px; text-decoration: none; font-size: 13px;">
-                                    👁️ Detail
+                                   style="background: #667eea; color: white; padding: 7px 14px; border-radius: 5px; text-decoration: none; font-size: 13px; display: inline-flex; align-items: center; gap: 4px;">
+                                    <i class="bi bi-eye-fill" style="font-size: 0.9rem;"></i> Detail
                                 </a>
                             </td>
                         </tr>

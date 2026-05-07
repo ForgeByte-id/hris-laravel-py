@@ -7,7 +7,7 @@
     <div class="card" style="border-radius: 15px; overflow: hidden; margin-bottom: 20px;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center;">
             <div style="width: 80px; height: 80px; background: rgba(255,255,255,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px auto; font-size: 36px;">
-                👤
+                <i class="bi bi-person-fill" style="color: white; font-size: 2.5rem;"></i>
             </div>
             <h2 style="color: white; margin: 0 0 6px 0; font-size: 22px;">
                 {{ $karyawan?->nama ?? $user->username }}

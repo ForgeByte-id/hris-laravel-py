@@ -65,6 +65,10 @@
                                 <span class="badge bg-warning">Belum Daftar</span>
                             @endif
                         </div>
+                        <div class="mt-2 d-flex justify-content-between">
+                            <span class="text-muted small">Kuota Cuti</span>
+                            <span class="fw-semibold small">{{ $karyawan->remaining_leave_quota ?? 0 }}/{{ $karyawan->yearly_leave_quota ?? 0 }} hari</span>
+                        </div>
                     </div>
 
                     <div class="mt-4">
@@ -183,7 +187,7 @@
 
 @section('scripts')
 <script>
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
     async function deleteFace(idKaryawan) {
         if (!confirm('Yakin ingin menghapus data wajah karyawan ini?')) return;

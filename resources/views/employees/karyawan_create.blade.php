@@ -19,6 +19,13 @@
                     </a>
                 </div>
                 <div class="hris-card-body">
+
+                    @if(session('error'))
+                        <div class="alert alert-danger mb-3">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ session('error') }}
+                        </div>
+                    @endif
+
                     <form action="{{ route('karyawan.store') }}" method="POST">
                         @csrf
 
@@ -68,30 +75,87 @@
                             </div>
                         </div>
 
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Tanggal Masuk</label>
+                            <input type="date" name="tanggal_masuk"
+                                   class="form-control @error('tanggal_masuk') is-invalid @enderror"
+                                   value="{{ old('tanggal_masuk') }}">
+                            @error('tanggal_masuk')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        {{-- Akun Login --}}
+                        <hr class="my-4">
+                        <h6 class="fw-bold mb-3 text-primary">
+                            <i class="bi bi-person-lock me-2"></i>Akun Login Karyawan
+                        </h6>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                Username <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="username"
+                                   class="form-control @error('username') is-invalid @enderror"
+                                   value="{{ old('username') }}"
+                                   placeholder="Contoh: budi.santoso" autocomplete="off" required>
+                            @error('username')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Email</label>
+                            <input type="email" name="email"
+                                   class="form-control @error('email') is-invalid @enderror"
+                                   value="{{ old('email') }}"
+                                   placeholder="Opsional">
+                            @error('email')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Password <span class="text-danger">*</span>
+                                </label>
+                                <input type="password" name="password"
+                                       class="form-control @error('password') is-invalid @enderror"
+                                       placeholder="Minimal 6 karakter" autocomplete="new-password" required>
+                                @error('password')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Konfirmasi Password <span class="text-danger">*</span>
+                                </label>
+                                <input type="password" name="password_confirmation"
+                                       class="form-control"
+                                       placeholder="Ulangi password" autocomplete="new-password" required>
+                            </div>
+                        </div>
+
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label fw-semibold">Tanggal Masuk</label>
-                                    <input type="date" name="tanggal_masuk"
-                                           class="form-control @error('tanggal_masuk') is-invalid @enderror"
-                                           value="{{ old('tanggal_masuk') }}">
-                                    @error('tanggal_masuk')
+                                    <label class="form-label fw-semibold">Kuota Cuti Tahunan</label>
+                                    <input type="number" name="yearly_leave_quota" min="0" max="365"
+                                           class="form-control @error('yearly_leave_quota') is-invalid @enderror"
+                                           value="{{ old('yearly_leave_quota', 12) }}">
+                                    @error('yearly_leave_quota')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label fw-semibold">Akun User</label>
-                                    <select name="id_user" class="form-select @error('id_user') is-invalid @enderror">
-                                        <option value="">-- Pilih User (Opsional) --</option>
-                                        @foreach($userList as $user)
-                                            <option value="{{ $user->id_user }}" {{ old('id_user') == $user->id_user ? 'selected' : '' }}>
-                                                {{ $user->username }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('id_user')
+                                    <label class="form-label fw-semibold">Sisa Kuota Cuti</label>
+                                    <input type="number" name="remaining_leave_quota" min="0" max="365"
+                                           class="form-control @error('remaining_leave_quota') is-invalid @enderror"
+                                           value="{{ old('remaining_leave_quota', 12) }}">
+                                    @error('remaining_leave_quota')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>

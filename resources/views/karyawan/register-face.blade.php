@@ -1,190 +1,238 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/absensi.css') }}">
-    <title>Registrasi Wajah - {{ $karyawan->nama }}</title>
-    <style>
-        .karyawan-info {
-            background: #e7f3ff;
-            border-left: 4px solid #667eea;
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        .karyawan-info h3 {
-            margin: 0 0 6px 0;
-            color: #333;
-        }
-        .karyawan-info p {
-            margin: 3px 0;
-            color: #555;
-            font-size: 14px;
-        }
-        .status-registered-badge {
-            background: #d4edda;
-            color: #155724;
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: bold;
-            display: inline-block;
-            margin-top: 6px;
-        }
-        .status-not-registered-badge {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: bold;
-            display: inline-block;
-            margin-top: 6px;
-        }
-        .btn-register-face {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 15px;
-        }
-        .btn-register-face:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-        .instructions {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 12px 16px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            font-size: 14px;
-            color: #856404;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <button class="btn-back" onclick="window.location.href='/karyawan'">← Kembali ke Daftar Karyawan</button>
+@extends('layouts.app')
 
-        <h1>📸 Registrasi Wajah</h1>
+@section('title', 'Registrasi Wajah - ' . $karyawan->nama)
 
-        <div class="karyawan-info">
-            <h3>{{ $karyawan->nama }}</h3>
-            <p><strong>Jabatan:</strong> {{ $karyawan->jabatan ?? '-' }}</p>
-            <p><strong>Divisi:</strong> {{ $karyawan->divisi ?? '-' }}</p>
-            @if($karyawan->face_embedding)
-                <span class="status-registered-badge">✓ Wajah Sudah Terdaftar</span>
-            @else
-                <span class="status-not-registered-badge">✗ Belum Ada Data Wajah</span>
-            @endif
-        </div>
+@section('styles')
+<style>
+    #video  { width: 100%; display: block; transform: scaleX(-1); border-radius: 10px; }
+    #canvas { display: none; }
+    .camera-wrap {
+        position: relative;
+        background: #111;
+        border-radius: 10px;
+        overflow: hidden;
+        aspect-ratio: 4/3;
+        max-width: 480px;
+        margin: 0 auto;
+    }
+    #cameraOverlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 12px;
+        border-radius: 10px;
+    }
+    #cameraOverlay.active { display: flex; }
+</style>
+@endsection
 
-        <div class="instructions">
-            ⚠️ <strong>Petunjuk:</strong> Pastikan wajah menghadap kamera dengan pencahayaan yang cukup.
-            Posisikan wajah di tengah frame kamera, lalu klik tombol "Daftarkan Wajah".
-        </div>
+@section('content')
+<div class="hris-container">
 
-        <div class="camera-container">
-            <video id="video" autoplay playsinline></video>
-        </div>
-        <canvas id="canvas"></canvas>
-
-        <button class="btn-register-face" id="btnRegister" onclick="registerFace()">
-            📸 Daftarkan Wajah
-        </button>
-
-        <div id="statusMessage" class="status-message" style="display:none;"></div>
+    <div class="mb-3">
+        <a href="{{ route('karyawan.index') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Kembali ke Daftar Karyawan
+        </a>
     </div>
 
-    <script>
-        const video   = document.getElementById('video');
-        const canvas  = document.getElementById('canvas');
-        const context = canvas.getContext('2d');
-        const btnRegister   = document.getElementById('btnRegister');
-        const statusMessage = document.getElementById('statusMessage');
-        const csrfToken     = document.querySelector('meta[name="csrf-token"]').content;
-        const idKaryawan    = {{ $karyawan->id_karyawan }};
+    <div class="row g-3">
 
-        async function startCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: 640, height: 480, facingMode: 'user' }
-                });
-                video.srcObject = stream;
-            } catch (err) {
-                showMessage('error', 'Tidak dapat mengakses kamera: ' + err.message);
-            }
+        {{-- LEFT: employee info + instructions --}}
+        <div class="col-lg-4 d-flex flex-column gap-3">
+
+            <div class="hris-card">
+                <div class="hris-card-header">
+                    <h6 class="mb-0 fw-semibold">
+                        <i class="bi bi-person-badge-fill me-2 text-primary"></i>Data Karyawan
+                    </h6>
+                </div>
+                <div class="hris-card-body">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0"
+                             style="width:48px;height:48px;font-size:1.25rem;">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <div>
+                            <div class="fw-semibold">{{ $karyawan->nama }}</div>
+                            <div class="small text-muted">
+                                {{ $karyawan->jabatan->nama_jabatan ?? '-' }}
+                                @if($karyawan->devisi)
+                                    &mdash; {{ $karyawan->devisi->nama_devisi ?? '-'}}
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    @if($karyawan->face_embedding)
+                        <div class="alert alert-success py-2 mb-0 small">
+                            <i class="bi bi-check-circle-fill me-1"></i>
+                            <strong>Wajah sudah terdaftar.</strong>
+                            Mendaftarkan ulang akan mengganti data sebelumnya.
+                        </div>
+                    @else
+                        <div class="alert alert-warning py-2 mb-0 small">
+                            <i class="bi bi-exclamation-circle-fill me-1"></i>
+                            Wajah belum terdaftar.
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <div class="hris-card">
+                <div class="hris-card-header">
+                    <h6 class="mb-0 fw-semibold">
+                        <i class="bi bi-info-circle-fill me-2 text-warning"></i>Petunjuk
+                    </h6>
+                </div>
+                <div class="hris-card-body">
+                    <ol class="small text-muted ps-3 mb-0" style="line-height:1.9;">
+                        <li>Pastikan pencahayaan <strong>cukup terang</strong></li>
+                        <li>Posisikan wajah di <strong>tengah</strong> frame</li>
+                        <li>Hadap kamera secara <strong>langsung</strong></li>
+                        <li>Hindari kacamata hitam atau masker</li>
+                        <li>Klik <strong>"Daftarkan Wajah"</strong> saat siap</li>
+                    </ol>
+                </div>
+            </div>
+
+        </div>
+
+        {{-- RIGHT: camera + action --}}
+        <div class="col-lg-8">
+            <div class="hris-card h-100">
+                <div class="hris-card-header d-flex align-items-center justify-content-between">
+                    <h6 class="mb-0 fw-semibold">
+                        <i class="bi bi-camera-video-fill me-2 text-primary"></i>Kamera
+                    </h6>
+                    <span id="cameraStatus" class="badge bg-secondary">Memuat kamera&hellip;</span>
+                </div>
+                <div class="hris-card-body d-flex flex-column gap-3">
+
+                    <div class="camera-wrap">
+                        <video id="video" autoplay playsinline></video>
+                        <canvas id="canvas"></canvas>
+                        <div id="cameraOverlay">
+                            <div class="spinner-border text-white" role="status"></div>
+                            <span class="text-white small fw-semibold">Memproses wajah&hellip;</span>
+                        </div>
+                    </div>
+
+                    <div id="statusMessage" style="display:none;"></div>
+
+                    <button class="btn btn-primary btn-lg w-100" id="btnRegister">
+                        <i class="bi bi-camera-fill me-2"></i>Daftarkan Wajah
+                    </button>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+@endsection
+
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+const video         = document.getElementById('video');
+const canvas        = document.getElementById('canvas');
+const btnRegister   = document.getElementById('btnRegister');
+const statusMsg     = document.getElementById('statusMessage');
+const cameraOverlay = document.getElementById('cameraOverlay');
+const cameraStatus  = document.getElementById('cameraStatus');
+const csrfToken     = document.querySelector('meta[name="csrf-token"]')?.content;
+const idKaryawan    = @json($karyawan->id_karyawan);
+
+async function startCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
+        });
+        video.srcObject = stream;
+        video.onloadedmetadata = () => {
+            cameraStatus.className   = 'badge bg-success';
+            cameraStatus.textContent = 'Kamera Aktif';
+        };
+    } catch (err) {
+        cameraStatus.className   = 'badge bg-danger';
+        cameraStatus.textContent = 'Kamera Tidak Tersedia';
+        btnRegister.disabled     = true;
+        showMessage('error', 'Tidak dapat mengakses kamera: ' + err.message);
+    }
+}
+
+function capturePhoto() {
+    const ctx = canvas.getContext('2d');
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.save();
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0);
+    ctx.restore();
+    return canvas.toDataURL('image/jpeg', 0.9);
+}
+
+async function registerFace() {
+    const photo = capturePhoto();
+    btnRegister.disabled  = true;
+    btnRegister.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Memproses&hellip;';
+    cameraOverlay.classList.add('active');
+    statusMsg.style.display = 'none';
+
+    try {
+        const res  = await fetch('/api/karyawan/register-face', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+            body:    JSON.stringify({ id_karyawan: idKaryawan, photo }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            showMessage('success',
+                '<div class="d-flex align-items-start gap-2">' +
+                '  <i class="bi bi-check-circle-fill text-success fs-5 mt-1"></i>' +
+                '  <div>' +
+                '    <div class="fw-semibold">' + data.message + '</div>' +
+                '    <a href="/karyawan" class="small text-success fw-semibold mt-1 d-inline-block">' +
+                '      <i class="bi bi-arrow-left me-1"></i>Kembali ke Daftar Karyawan' +
+                '    </a>' +
+                '  </div>' +
+                '</div>'
+            );
+        } else {
+            showMessage('error',
+                '<div class="d-flex align-items-start gap-2">' +
+                '  <i class="bi bi-x-circle-fill text-danger fs-5 mt-1"></i>' +
+                '  <div class="fw-semibold">' + data.message + '</div>' +
+                '</div>'
+            );
+            btnRegister.disabled  = false;
+            btnRegister.innerHTML = '<i class="bi bi-camera-fill me-2"></i>Coba Lagi';
         }
+    } catch (err) {
+        showMessage('error', 'Terjadi kesalahan: ' + err.message);
+        btnRegister.disabled  = false;
+        btnRegister.innerHTML = '<i class="bi bi-camera-fill me-2"></i>Coba Lagi';
+    } finally {
+        cameraOverlay.classList.remove('active');
+    }
+}
 
-        function capturePhoto() {
-            canvas.width  = video.videoWidth;
-            canvas.height = video.videoHeight;
-            context.setTransform(1, 0, 0, 1, 0, 0);
-            context.translate(canvas.width, 0);
-            context.scale(-1, 1);
-            context.drawImage(video, 0, 0);
-            return canvas.toDataURL('image/jpeg', 0.9);
-        }
+function showMessage(type, html) {
+    statusMsg.style.display = 'block';
+    statusMsg.className     = type === 'success' ? 'alert alert-success' : 'alert alert-danger';
+    statusMsg.innerHTML     = html;
+}
 
-        async function registerFace() {
-            const photo = capturePhoto();
+btnRegister.addEventListener('click', registerFace);
+startCamera();
 
-            btnRegister.disabled = true;
-            showMessage('info', '<div class="spinner"></div><p>Memproses wajah Anda...</p>');
-
-            try {
-                const response = await fetch('/api/karyawan/register-face', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken
-                    },
-                    body: JSON.stringify({
-                        id_karyawan: idKaryawan,
-                        photo: photo
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showMessage('success', '✅ ' + data.message + '<br><br><a href="/karyawan" style="color:#155724;font-weight:600;">← Kembali ke Daftar Karyawan</a>');
-                } else {
-                    showMessage('error', '❌ ' + data.message);
-                    btnRegister.disabled = false;
-                }
-            } catch (error) {
-                showMessage('error', 'Terjadi kesalahan: ' + error.message);
-                btnRegister.disabled = false;
-            }
-        }
-
-        function showMessage(type, message) {
-            statusMessage.style.display = 'block';
-            statusMessage.className     = 'status-message';
-
-            if (type === 'success') {
-                statusMessage.classList.add('status-success');
-            } else if (type === 'error') {
-                statusMessage.classList.add('status-error');
-            } else {
-                statusMessage.style.background = '#fff3cd';
-                statusMessage.style.color      = '#856404';
-                statusMessage.style.border     = '1px solid #ffeeba';
-            }
-
-            statusMessage.innerHTML = message;
-        }
-
-        startCamera();
-    </script>
-</body>
-</html>
+}); // DOMContentLoaded
+</script>
+@endsection

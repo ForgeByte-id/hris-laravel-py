@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\JadwalKerja;
 use App\Models\Karyawan;
+use App\Models\Absensi;
+use App\Models\Cuti;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -26,12 +28,26 @@ class JadwalKerjaController extends Controller
                                 ->get()
                                 ->groupBy('id_karyawan');
 
+        $absensiList = Absensi::whereDate('tanggal', '>=', $tanggalAwal->format('Y-m-d'))
+            ->whereDate('tanggal', '<=', $tanggalAkhir->format('Y-m-d'))
+            ->get()
+            ->groupBy('id_karyawan');
+
+        $cutiList = Cuti::with('karyawan')
+            ->where('status_persetujuan', 'approved')
+            ->whereDate('tanggal_mulai', '<=', $tanggalAkhir->format('Y-m-d'))
+            ->whereDate('tanggal_selesai', '>=', $tanggalAwal->format('Y-m-d'))
+            ->get()
+            ->groupBy('id_karyawan');
+
         // Debug - uncomment jika perlu cek data
         // dd($jadwalList->toArray());
 
         return view('jadwal.index', compact(
             'karyawanList', 
             'jadwalList', 
+            'absensiList',
+            'cutiList',
             'bulan',
             'tanggalAwal',
             'tanggalAkhir'

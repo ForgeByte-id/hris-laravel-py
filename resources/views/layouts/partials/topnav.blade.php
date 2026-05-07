@@ -15,12 +15,37 @@
                     </div>
                 </div>
             </div>
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-3">
                 <span class="small hris-muted"><i class="bi bi-calendar3"></i> {{ now()->format('d M Y') }}</span>
-                <a href="/proseslogout" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-2">
-                    <i class="bi bi-box-arrow-right"></i>
-                    <span>Logout</span>
-                </a>
+                
+                <!-- User Profile Dropdown Menu -->
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2 dropdown-toggle" type="button" id="userProfileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-person-circle"></i>
+                        <span class="d-none d-sm-inline">{{ auth()->user()->username ?? 'Pengguna' }}</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userProfileDropdown">
+                        <li>
+                            <h6 class="dropdown-header">
+                                {{ auth()->user()->username ?? 'Pengguna' }}
+                            </h6>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('profile.index') }}">
+                                <i class="bi bi-person-fill"></i>
+                                <span>Profil</span>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2 text-danger" href="/proseslogout">
+                                <i class="bi bi-box-arrow-right"></i>
+                                <span>Keluar</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
     @endif
