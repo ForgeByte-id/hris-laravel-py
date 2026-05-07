@@ -14,11 +14,24 @@ class MenuItem extends Model
         return $this->belongsToMany(Role::class, 'role_menu_permissions', 'menu_id', 'role_id');
     }
 
-    public function isAccessibleByRole(Role $role): bool
+    public function isAccessibleByRole(?Role $role): bool
     {
+        // Admin-only items: only the admin role may see them
         if ($this->is_admin_only) {
-            return $role->name === 'admin';
+            return $role?->name === 'admin';
         }
+
+        // If no roles are explicitly assigned in the pivot, treat the item
+        // as visible to every authenticated user (open/public menu item).
+        if ($this->roles()->count() === 0) {
+            return true;
+        }
+
+        // Otherwise restrict to the explicitly assigned roles
+        if (!$role) {
+            return false;
+        }
+
         return $this->roles()->where('role_id', $role->id)->exists();
     }
 }

@@ -21,10 +21,17 @@ Route::middleware('auth')->prefix('api')->group(function () {
     Route::post('/karyawan/register-face', [KaryawanController::class, 'storeFaceEncoding']);
     Route::delete('/karyawan/{id_karyawan}/face', [KaryawanController::class, 'deleteFaceEncoding']);
 
-    Route::post('/attendance/check-in', [AttendanceController::class, 'checkIn']);
-    Route::get('/attendance/todays-summary', [AttendanceController::class, 'todaysSummary']);
-    Route::get('/attendance/current-status/{idKaryawan}', [AttendanceController::class, 'getCurrentStatus']);
-    Route::get('/attendance/history/{idKaryawan}', [AttendanceController::class, 'getHistory']);
+    // Attendance API routes — admin only
+    Route::middleware('is_admin')->group(function () {
+        Route::post('/attendance/check-in', [AttendanceController::class, 'checkIn']);
+        Route::post('/attendance/verify-face', [AttendanceController::class, 'verifyFace']);
+        Route::post('/attendance/admin-record', [AttendanceController::class, 'adminRecord']);
+        Route::get('/attendance/todays-summary', [AttendanceController::class, 'todaysSummary']);
+        // Static routes must come before wildcard {idKaryawan}
+        Route::get('/attendance/recent-all', [AttendanceController::class, 'recentAll']);
+        Route::get('/attendance/current-status/{idKaryawan}', [AttendanceController::class, 'getCurrentStatus']);
+        Route::get('/attendance/history/{idKaryawan}', [AttendanceController::class, 'getHistory']);
+    });
 });
 
 Route::middleware(['guest'])->group(function () {
@@ -49,9 +56,11 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/karyawan/{id_karyawan}', [KaryawanController::class, 'destroy'])->name('karyawan.destroy');
     Route::get('/karyawan/{id_karyawan}/register-face', [KaryawanController::class, 'registerFace'])->name('karyawan.register-face');
 
-    // Attendance Routes
-    Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
-    Route::get('/attendance/history', [AttendanceController::class, 'history'])->name('attendance.history');
+    // Attendance Routes — admin only
+    Route::middleware('is_admin')->group(function () {
+        Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+        Route::get('/attendance/history', [AttendanceController::class, 'history'])->name('attendance.history');
+    });
 
     // Cuti Routes
     Route::get('/cuti', [CutiController::class, 'index'])->name('cuti.index');

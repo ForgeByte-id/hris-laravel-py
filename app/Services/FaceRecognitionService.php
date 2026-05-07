@@ -12,7 +12,44 @@ class FaceRecognitionService
 
     public function __construct()
     {
-        $this->serviceUrl = config('services.face_recognition.url', 'http://localhost:5000');
+        // Strip any accidental trailing slash so URLs like "http://face-service:5000/"
+        // don't produce double-slash paths (e.g. "http://face-service:5000//api/encode-face").
+        $this->serviceUrl = rtrim(
+            config('services.face_recognition.url', 'http://localhost:5000'),
+            '/'
+        );
+    }
+
+    /**
+     * Return a unique temp file path for a face image.
+     *
+     * Directory resolution order:
+     *   1. FACE_TEMP_DIR env var        — explicit override in .env
+     *   2. storage_path('app/temp')     — project storage dir (default)
+     *
+     * Without Docker (local dev):
+     *   Leave FACE_TEMP_DIR unset in Laravel .env.
+     *   PHP resolves to {project}/storage/app/temp.
+     *   Set ALLOWED_IMAGE_TMP_DIR to the same absolute path in
+     *   face_recognition_service/.env so Python can find the file.
+     *
+     * With Docker:
+     *   FACE_TEMP_DIR is set to /var/www/html/storage/app/temp via docker-compose.yml.
+     *   storage_path() resolves to the same path inside the container anyway,
+     *   so the env var is just an explicit safety net.
+     *   Python's ALLOWED_IMAGE_TMP_DIR is set to the same path in docker-compose.yml.
+     *   Both containers mount ./storage at /var/www/html/storage, so the
+     *   file written by PHP is immediately visible to Python.
+     */
+    public function makeTempPath(string $prefix = 'face_'): string
+    {
+        $dir = rtrim((string) env('FACE_TEMP_DIR', storage_path('app/temp')), '/\\');
+
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        return $dir . DIRECTORY_SEPARATOR . $prefix . uniqid() . '.jpg';
     }
 
     /**
@@ -42,12 +79,17 @@ class FaceRecognitionService
             );
 
             if (!$response->successful()) {
-                $error = $response->json('error', 'Unknown error');
-                Log::warning("Face encoding failed: {$error}");
-                return [
-                    'success' => false,
-                    'error' => $error,
-                ];
+                $error = $response->json('error')
+                      ?? $response->json('message')
+                      ?? substr($response->body(), 0, 300)
+                      ?? 'Unknown error';
+                Log::warning('Face encoding failed', [
+                    'endpoint'    => "{$this->serviceUrl}/api/encode-face",
+                    'http_status' => $response->status(),
+                    'error'       => $error,
+                    'image_path'  => $imagePath,
+                ]);
+                return ['success' => false, 'error' => $error];
             }
 
             $data = $response->json();
@@ -94,14 +136,17 @@ class FaceRecognitionService
             );
 
             if (!$response->successful()) {
-                $error = $response->json('error', 'Unknown error');
-                Log::warning("Face recognition failed: {$error}");
-                return [
-                    'matched' => false,
-                    'id_karyawan' => null,
-                    'confidence' => 0,
-                    'error' => $error,
-                ];
+                $error = $response->json('error')
+                      ?? $response->json('message')
+                      ?? substr($response->body(), 0, 300)
+                      ?? 'Unknown error';
+                Log::warning('Face recognition failed', [
+                    'endpoint'    => "{$this->serviceUrl}/api/recognize-face",
+                    'http_status' => $response->status(),
+                    'error'       => $error,
+                    'image_path'  => $imagePath,
+                ]);
+                return ['matched' => false, 'id_karyawan' => null, 'confidence' => 0, 'error' => $error];
             }
 
             $data = $response->json();

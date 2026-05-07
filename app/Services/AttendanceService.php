@@ -309,4 +309,88 @@ class AttendanceService
             'date' => $today->format('Y-m-d'),
         ];
     }
+
+    /**
+     * Record attendance by admin (admin-controlled flow).
+     *
+     * @param int   $idKaryawan
+     * @param array $data  Keys: status, jam_masuk, recorded_by, face_verified,
+     *                     face_confidence, photo_hash, gps_lat, gps_lng,
+     *                     device_info, ip_address
+     * @return array ['success' => bool, 'message' => string, 'attendance' => Absensi|null]
+     */
+    public function adminRecord(int $idKaryawan, array $data): array
+    {
+        try {
+            $karyawan = Karyawan::find($idKaryawan);
+            if (!$karyawan) {
+                return ['success' => false, 'message' => 'Karyawan tidak ditemukan.', 'attendance' => null];
+            }
+
+            $today = Carbon::today();
+
+            // Prevent duplicate / editing locked records
+            $existing = Absensi::where('id_karyawan', $idKaryawan)
+                ->whereDate('tanggal', $today)
+                ->first();
+
+            if ($existing && $existing->is_locked) {
+                return [
+                    'success'    => false,
+                    'message'    => 'Absensi hari ini sudah dikunci dan tidak dapat diubah.',
+                    'attendance' => $existing,
+                ];
+            }
+
+            $status   = $data['status'];
+            $jamMasuk = null;
+
+            // Only set jam_masuk for statuses where employee is present/working
+            if (in_array($status, ['hadir', 'terlambat', 'remote'])) {
+                $jamMasuk = $data['jam_masuk'] ?? Carbon::now()->format('H:i:s');
+                // Normalise H:i → H:i:s
+                if (strlen($jamMasuk) === 5) {
+                    $jamMasuk .= ':00';
+                }
+            }
+
+            $attendance = Absensi::updateOrCreate(
+                ['id_karyawan' => $idKaryawan, 'tanggal' => $today],
+                [
+                    'jam_masuk'       => $jamMasuk,
+                    'jam_pulang'      => null,
+                    'status'          => $status,
+                    'recorded_by'     => $data['recorded_by'],
+                    'face_verified'   => $data['face_verified'] ?? false,
+                    'face_confidence' => $data['face_confidence'] ?? null,
+                    'photo_hash'      => $data['photo_hash'] ?? null,
+                    'gps_lat'         => $data['gps_lat'] ?? null,
+                    'gps_lng'         => $data['gps_lng'] ?? null,
+                    'device_info'     => $data['device_info'] ?? null,
+                    'ip_address'      => $data['ip_address'] ?? null,
+                    'is_locked'       => true,
+                ]
+            );
+
+            Log::info("Admin attendance recorded", [
+                'id_karyawan' => $idKaryawan,
+                'status'      => $status,
+                'recorded_by' => $data['recorded_by'],
+                'face_verified' => $data['face_verified'] ?? false,
+            ]);
+
+            return [
+                'success'    => true,
+                'message'    => 'Absensi berhasil dicatat.',
+                'attendance' => $attendance,
+            ];
+        } catch (\Exception $e) {
+            Log::error("Admin record attendance error: {$e->getMessage()}");
+            return [
+                'success'    => false,
+                'message'    => 'Terjadi kesalahan saat mencatat absensi.',
+                'attendance' => null,
+            ];
+        }
+    }
 }

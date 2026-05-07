@@ -32,15 +32,9 @@
                         </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2" href="#" title="Profile settings not yet available">
+                            <a class="dropdown-item d-flex align-items-center gap-2" href="{{ route('profile.index') }}">
                                 <i class="bi bi-person-fill"></i>
                                 <span>Profil</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2" href="#" title="Settings not yet available">
-                                <i class="bi bi-gear-fill"></i>
-                                <span>Pengaturan</span>
                             </a>
                         </li>
                         <li><hr class="dropdown-divider"></li>

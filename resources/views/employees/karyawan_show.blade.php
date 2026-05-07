@@ -187,7 +187,7 @@
 
 @section('scripts')
 <script>
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
     async function deleteFace(idKaryawan) {
         if (!confirm('Yakin ingin menghapus data wajah karyawan ini?')) return;

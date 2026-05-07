@@ -11,12 +11,17 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#000000">
     <title>@yield('title', 'HRIS')</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="@yield('meta_description', 'Mobilekit HTML Mobile UI Kit')">
     <meta name="keywords" content="@yield('meta_keywords', 'bootstrap 4, mobile template, cordova, phonegap, mobile, html, hris')" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.13.1/font/bootstrap-icons.min.css" integrity="sha512-t7Few9xlddEmgd3oKZQahkNI4dS6l80+eGEzFQiqtyVYdvcSG2D3Iub77R20BdotfRPA9caaRkg1tyaJiPmO0g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     {{-- datatable --}}
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+    {{-- leaflet --}}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
     @php($includeDefaultStyles = trim($__env->yieldContent('include_default_styles', '1')) === '1')
     @if ($includeDefaultStyles)
         <link rel="stylesheet" href="{{ asset('assets/css/cuti.css') }}">

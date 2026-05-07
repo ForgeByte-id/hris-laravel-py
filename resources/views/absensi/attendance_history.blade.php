@@ -50,6 +50,9 @@
                     <th>Jam Masuk</th>
                     <th>Jam Pulang</th>
                     <th>Status</th>
+                    <th>Dicatat Oleh</th>
+                    <th>Verifikasi</th>
+                    <th>GPS</th>
                 </tr>
             </thead>
             <tbody>
@@ -61,8 +64,33 @@
                     <td>{{ $abs->jam_pulang ?? '-' }}</td>
                     <td>
                         <span class="status-badge status-{{ $abs->status }}">
-                            {{ ucfirst($abs->status ?? 'hadir') }}
+                            {{ $abs->status_label ?? ucfirst($abs->status ?? 'hadir') }}
                         </span>
+                        @if($abs->is_locked)
+                            <i class="bi bi-lock-fill text-muted ms-1" title="Terkunci"></i>
+                        @endif
+                    </td>
+                    <td class="small text-muted">{{ $abs->recorder?->username ?? '-' }}</td>
+                    <td>
+                        @if($abs->face_verified)
+                            <span class="badge bg-success" title="Akurasi: {{ $abs->face_confidence }}%">
+                                <i class="bi bi-check-circle-fill me-1"></i>{{ number_format($abs->face_confidence, 1) }}%
+                            </span>
+                        @elseif($abs->status === 'tidak_hadir')
+                            <span class="badge bg-secondary">N/A</span>
+                        @else
+                            <span class="badge bg-warning text-dark">Tidak Diverifikasi</span>
+                        @endif
+                    </td>
+                    <td class="small">
+                        @if($abs->gps_lat && $abs->gps_lng)
+                            <a href="https://maps.google.com/?q={{ $abs->gps_lat }},{{ $abs->gps_lng }}"
+                               target="_blank" class="text-decoration-none" title="{{ $abs->gps_lat }}, {{ $abs->gps_lng }}">
+                                <i class="bi bi-geo-alt-fill text-success"></i>
+                            </a>
+                        @else
+                            <span class="text-muted">-</span>
+                        @endif
                     </td>
                 </tr>
                 @endforeach

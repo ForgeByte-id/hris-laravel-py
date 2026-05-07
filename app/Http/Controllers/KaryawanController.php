@@ -7,6 +7,7 @@ use App\Models\Jabatan;
 use App\Models\Karyawan;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Services\FaceRecognitionService;
 
 class KaryawanController extends Controller
@@ -20,38 +21,63 @@ class KaryawanController extends Controller
     public function create()
     {
         $jabatanList = Jabatan::orderBy('nama_jabatan')->get();
-        $divisiList = Devisi::orderBy('nama_devisi')->get();
-        $userList = User::whereDoesntHave('karyawan')->get();
-        return view('employees.karyawan_create', compact('jabatanList', 'divisiList', 'userList'));
+        $divisiList  = Devisi::orderBy('nama_devisi')->get();
+        return view('employees.karyawan_create', compact('jabatanList', 'divisiList'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'nama'          => 'required|string|max:255',
-            'id_jabatan'    => 'nullable|exists:jabatans,id',
-            'id_devisi'     => 'nullable|exists:devisis,id',
-            'tanggal_masuk' => 'nullable|date',
-            'id_user'       => 'nullable|exists:users,id_user',
-            'yearly_leave_quota' => 'nullable|integer|min:0|max:365',
+            // Karyawan fields
+            'nama'                  => 'required|string|max:255',
+            'id_jabatan'            => 'nullable|exists:jabatans,id',
+            'id_devisi'             => 'nullable|exists:devisis,id',
+            'tanggal_masuk'         => 'nullable|date',
+            'yearly_leave_quota'    => 'nullable|integer|min:0|max:365',
             'remaining_leave_quota' => 'nullable|integer|min:0|max:365',
+            // New user account fields
+            'username'              => 'required|string|max:255|unique:users,username',
+            'email'                 => 'nullable|email|max:255|unique:users,email',
+            'password'              => 'required|string|min:6|confirmed',
         ]);
 
-        $yearlyLeaveQuota = $request->yearly_leave_quota ?? 12;
-        $remainingLeaveQuota = $request->remaining_leave_quota ?? $yearlyLeaveQuota;
+        DB::beginTransaction();
+        try {
+            // 1. Create the login account first
+            $user = User::create([
+                'username' => $request->username,
+                'email'    => $request->email ?: null,
+                'password' => $request->password,   // hashed automatically by User model cast
+                'role'     => 'karyawan',
+            ]);
 
-        Karyawan::create([
-            'nama'          => $request->nama,
-            'id_jabatan'    => $request->id_jabatan,
-            'id_devisi'     => $request->id_devisi,
-            'tanggal_masuk' => $request->tanggal_masuk,
-            'id_user'       => $request->id_user,
-            'yearly_leave_quota' => $yearlyLeaveQuota,
-            'remaining_leave_quota' => min($remainingLeaveQuota, $yearlyLeaveQuota),
-        ]);
+            // Assign Spatie role so permissions work correctly
+            $user->assignRole('karyawan');
 
-        return redirect()->route('karyawan.index')
-            ->with('success', 'Karyawan berhasil ditambahkan.');
+            // 2. Create karyawan linked to the new user
+            $yearlyLeaveQuota    = $request->yearly_leave_quota ?? 12;
+            $remainingLeaveQuota = $request->remaining_leave_quota ?? $yearlyLeaveQuota;
+
+            Karyawan::create([
+                'nama'                  => $request->nama,
+                'id_jabatan'            => $request->id_jabatan,
+                'id_devisi'             => $request->id_devisi,
+                'tanggal_masuk'         => $request->tanggal_masuk,
+                'id_user'               => $user->id_user,
+                'yearly_leave_quota'    => $yearlyLeaveQuota,
+                'remaining_leave_quota' => min($remainingLeaveQuota, $yearlyLeaveQuota),
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('karyawan.index')
+                ->with('success', "Karyawan '{$request->nama}' dan akun login berhasil dibuat.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()
+                ->with('error', 'Gagal membuat karyawan: ' . $e->getMessage());
+        }
     }
 
     public function show($id_karyawan)
@@ -130,8 +156,8 @@ class KaryawanController extends Controller
             $imageData = str_replace(' ', '+', $imageData);
             $imageBinary = base64_decode($imageData);
 
-            // Simpan foto sementara
-            $tempPath = storage_path('app/temp_face_' . uniqid() . '.jpg');
+            // Simpan foto sementara di direktori yang bisa diakses Python service
+            $tempPath = $faceRecognitionService->makeTempPath('temp_face_');
             file_put_contents($tempPath, $imageBinary);
 
             // Kirim ke Python service untuk generate encoding

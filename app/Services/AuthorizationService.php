@@ -14,6 +14,18 @@ use App\Models\User;
 class AuthorizationService
 {
     /**
+     * Check if user can perform ANY attendance action (create, update, view, check-in).
+     * Centralised rule: attendance management is exclusively for admins.
+     *
+     * @param User $user
+     * @return bool
+     */
+    public function canManageAttendance(User $user): bool
+    {
+        return $user->hasRole('admin');
+    }
+
+    /**
      * Check if user can view attendance summary
      * Only admin can view global summary
      *

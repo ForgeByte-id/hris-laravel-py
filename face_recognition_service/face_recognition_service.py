@@ -27,10 +27,21 @@ DB_CONFIG = {
     'password': os.getenv('DB_PASSWORD', 'root')
 }
 
-ALLOWED_IMAGE_DIRS = [
-    os.path.realpath(os.getenv('ALLOWED_IMAGE_TMP_DIR', '/tmp')),
-    os.path.realpath(os.getenv('LARAVEL_STORAGE_PATH', '/var/www/html/storage/app')),
-]
+def _resolve_allowed_dirs():
+    """
+    Build the list of allowed image directories at startup.
+    - ALLOWED_IMAGE_TMP_DIR defaults to /tmp (always available locally and in Docker).
+    - LARAVEL_STORAGE_PATH has NO default: it is only added when explicitly set
+      (e.g. in docker-compose or a production .env) AND the directory exists.
+    This prevents /var/www/html/... from being whitelisted on local dev machines.
+    """
+    candidates = [
+        os.getenv('ALLOWED_IMAGE_TMP_DIR', '/tmp'),
+        os.getenv('LARAVEL_STORAGE_PATH'),   # None when not set — skipped below
+    ]
+    return [os.path.realpath(path) for path in candidates if path]
+
+ALLOWED_IMAGE_DIRS = _resolve_allowed_dirs()
 
 
 def get_db_connection():
