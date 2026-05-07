@@ -20,11 +20,11 @@
     <div class="hris-card">
 
         <div class="hris-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <h2 class="mb-0">Pengajuan Cuti Saya</h2>
+            <h2 class="mb-0">{{ $isAdmin ? 'Manajemen Cuti Karyawan' : 'Pengajuan Cuti Saya' }}</h2>
 
-            <a href="{{ route('cuti.create') }}" class="btn hris-btn hris-btn-primary">
+            <a href="{{ route('cuti.create', $isAdmin ? ['mode' => 'admin'] : []) }}" class="btn hris-btn hris-btn-primary">
                 <i class="bi bi-plus-circle me-1"></i>
-                Ajukan Cuti Baru
+                {{ $isAdmin ? 'Buat Cuti Karyawan' : 'Ajukan Cuti Baru' }}
             </a>
         </div>
 
@@ -66,6 +66,14 @@
                         </h3>
                     </div>
                 </div>
+                @if(!$isAdmin)
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="p-3 rounded-3 bg-info text-white shadow-sm">
+                        <h6 class="mb-1 opacity-75">Sisa Kuota Cuti</h6>
+                        <h3 class="mb-0 fw-bold">{{ $karyawan->remaining_leave_quota ?? 0 }} hari</h3>
+                    </div>
+                </div>
+                @endif
 
             </div>
 
@@ -78,6 +86,9 @@
                     <thead>
                         <tr>
                             <th>No</th>
+                            @if($isAdmin)
+                                <th>Karyawan</th>
+                            @endif
                             <th>Jenis Cuti</th>
                             <th>Tanggal</th>
                             <th>Durasi</th>
@@ -90,6 +101,9 @@
                         @foreach($cutiList as $index => $cuti)
                         <tr>
                             <td>{{ $index + 1 }}</td>
+                            @if($isAdmin)
+                                <td><strong>{{ $cuti->karyawan->nama ?? '-' }}</strong></td>
+                            @endif
 
                             <td>
                                 <strong>{{ $cuti->jenis_cuti }}</strong>

@@ -61,7 +61,19 @@
                 <div><span class="badge text-bg-warning">M</span> = Middle (11:00-20:00)</div>
                 <div><span class="badge text-bg-primary">S</span> = Siang (13:00-22:00)</div>
                 <div><span class="badge text-bg-danger">L</span> = Libur</div>
+                <div><span class="badge text-bg-secondary">C</span> = Cuti</div>
+                <div><span class="badge text-bg-dark">H</span> = Hadir</div>
             </div>
+
+            @php
+                $cutiAktif = $cutiList->flatten();
+            @endphp
+            @if($cutiAktif->count() > 0)
+                <div class="alert alert-info">
+                    <strong>Karyawan Cuti Bulan Ini:</strong>
+                    {{ $cutiAktif->map(fn($cuti) => ($cuti->karyawan->nama ?? '-') . ' (' . $cuti->tanggal_mulai->format('d/m') . ' - ' . $cuti->tanggal_selesai->format('d/m') . ')')->implode(', ') }}
+                </div>
+            @endif
 
             <!-- Tabel Jadwal -->
             @if($karyawanList->count() > 0)
@@ -95,6 +107,8 @@
                             </td>
                             @php
                                 $jadwalKaryawan = $jadwalList->get($karyawan->id_karyawan, collect());
+                                $absensiKaryawan = $absensiList->get($karyawan->id_karyawan, collect());
+                                $cutiKaryawan = $cutiList->get($karyawan->id_karyawan, collect());
                                 $currentDate = $tanggalAwal->copy();
                             @endphp
                             @while($currentDate->lte($tanggalAkhir))
@@ -103,14 +117,29 @@
                                     $jadwal = $jadwalKaryawan->first(function($item) use ($tanggalString) {
                                         return $item->tanggal->format('Y-m-d') === $tanggalString;
                                     });
+                                    $absensi = $absensiKaryawan->first(function($item) use ($tanggalString) {
+                                        return $item->tanggal->format('Y-m-d') === $tanggalString;
+                                    });
+                                    $cuti = $cutiKaryawan->first(function($item) use ($tanggalString) {
+                                        return $item->tanggal_mulai->format('Y-m-d') <= $tanggalString
+                                            && $item->tanggal_selesai->format('Y-m-d') >= $tanggalString;
+                                    });
                                 @endphp
                                 <td style="padding: 5px; border: 1px solid #dee2e6; text-align: center; {{ $currentDate->isWeekend() ? 'background: #ffe0e0;' : '' }}">
-                                    @if($jadwal)
+                                    @if($cuti)
+                                        <span title="Cuti {{ $cuti->jenis_cuti }}" style="display: block; color: white; background: #6f42c1; padding: 8px; border-radius: 5px; font-weight: 600;">
+                                            C
+                                        </span>
+                                    @elseif($jadwal)
                                         <a href="{{ route('jadwal.edit', $jadwal->id_jadwal) }}"
                                            title="{{ $jadwal->jam_kerja }}"
                                            style="display: block; text-decoration: none; color: white; background: {{ $jadwal->shift_color }}; padding: 8px; border-radius: 5px; font-weight: 600;">
                                             {{ $jadwal->shift_short }}
                                         </a>
+                                    @elseif($absensi)
+                                        <span title="Absensi {{ $absensi->status }}" style="display: block; color: white; background: {{ $absensi->status === 'terlambat' ? '#ffc107' : '#212529' }}; padding: 8px; border-radius: 5px; font-weight: 600;">
+                                            H
+                                        </span>
                                     @else
                                         <span style="color: #ccc;">-</span>
                                     @endif

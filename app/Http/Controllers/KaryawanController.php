@@ -7,7 +7,7 @@ use App\Models\Jabatan;
 use App\Models\Karyawan;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use App\Services\FaceRecognitionService;
 
 class KaryawanController extends Controller
 {
@@ -33,7 +33,12 @@ class KaryawanController extends Controller
             'id_devisi'     => 'nullable|exists:devisis,id',
             'tanggal_masuk' => 'nullable|date',
             'id_user'       => 'nullable|exists:users,id_user',
+            'yearly_leave_quota' => 'nullable|integer|min:0|max:365',
+            'remaining_leave_quota' => 'nullable|integer|min:0|max:365',
         ]);
+
+        $yearlyLeaveQuota = $request->yearly_leave_quota ?? 12;
+        $remainingLeaveQuota = $request->remaining_leave_quota ?? $yearlyLeaveQuota;
 
         Karyawan::create([
             'nama'          => $request->nama,
@@ -41,6 +46,8 @@ class KaryawanController extends Controller
             'id_devisi'     => $request->id_devisi,
             'tanggal_masuk' => $request->tanggal_masuk,
             'id_user'       => $request->id_user,
+            'yearly_leave_quota' => $yearlyLeaveQuota,
+            'remaining_leave_quota' => min($remainingLeaveQuota, $yearlyLeaveQuota),
         ]);
 
         return redirect()->route('karyawan.index')
@@ -74,7 +81,12 @@ class KaryawanController extends Controller
             'id_devisi'     => 'nullable|exists:devisis,id',
             'tanggal_masuk' => 'nullable|date',
             'id_user'       => 'nullable|exists:users,id_user',
+            'yearly_leave_quota' => 'nullable|integer|min:0|max:365',
+            'remaining_leave_quota' => 'nullable|integer|min:0|max:365',
         ]);
+
+        $yearlyLeaveQuota = $request->yearly_leave_quota ?? $karyawan->yearly_leave_quota ?? 12;
+        $remainingLeaveQuota = $request->remaining_leave_quota ?? $karyawan->remaining_leave_quota ?? $yearlyLeaveQuota;
 
         $karyawan->update([
             'nama'          => $request->nama,
@@ -82,6 +94,8 @@ class KaryawanController extends Controller
             'id_devisi'     => $request->id_devisi,
             'tanggal_masuk' => $request->tanggal_masuk,
             'id_user'       => $request->id_user,
+            'yearly_leave_quota' => $yearlyLeaveQuota,
+            'remaining_leave_quota' => min($remainingLeaveQuota, $yearlyLeaveQuota),
         ]);
 
         return redirect()->route('karyawan.index')
@@ -103,7 +117,7 @@ class KaryawanController extends Controller
         return view('karyawan.register-face', compact('karyawan'));
     }
 
-    public function storeFaceEncoding(Request $request)
+    public function storeFaceEncoding(Request $request, FaceRecognitionService $faceRecognitionService)
     {
         $request->validate([
             'id_karyawan' => 'required|exists:karyawan,id_karyawan',
@@ -117,30 +131,25 @@ class KaryawanController extends Controller
             $imageBinary = base64_decode($imageData);
 
             // Simpan foto sementara
-            $tempPath = storage_path('app/temp_face.jpg');
+            $tempPath = storage_path('app/temp_face_' . uniqid() . '.jpg');
             file_put_contents($tempPath, $imageBinary);
 
             // Kirim ke Python service untuk generate encoding
-            $response = Http::timeout(30)->post(
-                'http://localhost:5000/api/encode-face',
-                ['image_path' => $tempPath]
-            );
+            $result = $faceRecognitionService->encodeFace($tempPath);
 
             // Hapus file temporary
             if (file_exists($tempPath)) {
                 unlink($tempPath);
             }
 
-            if (!$response->successful()) {
+            if (!$result['success']) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Gagal deteksi wajah. Pastikan wajah jelas.'
+                    'message' => $result['error'] ?? 'Gagal deteksi wajah. Pastikan wajah jelas.'
                 ], 400);
             }
 
-            $responseData = $response->json();
-
-            if (!isset($responseData['encoding'])) {
+            if (!isset($result['encoding'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Tidak ada wajah terdeteksi.'
@@ -149,7 +158,7 @@ class KaryawanController extends Controller
 
             // Update face_embedding di tabel karyawan
             $karyawan = Karyawan::find($request->id_karyawan);
-            $karyawan->face_embedding = json_encode($responseData['encoding']);
+            $karyawan->face_embedding = json_encode($result['encoding']);
             $karyawan->save();
 
             return response()->json([

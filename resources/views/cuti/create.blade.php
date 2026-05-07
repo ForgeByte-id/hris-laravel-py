@@ -12,13 +12,33 @@
             <form action="{{ route('cuti.store') }}" method="POST">
                 @csrf
 
-                <!-- Informasi Karyawan -->
-                <div class="p-3 bg-light border rounded-3 mb-4">
-                    <h5 class="mb-2">Informasi Karyawan</h5>
-                    <p class="mb-1"><strong>Nama:</strong> {{ $karyawan->nama }}</p>
-                    <p class="mb-1"><strong>Jabatan:</strong> {{ $karyawan->jabatan->nama_jabatan }}</p>
-                    <p class="mb-0"><strong>Divisi:</strong> {{ $karyawan->divisi }}</p>
-                </div>
+                @if($isAdmin)
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Pilih Karyawan <span class="text-danger">*</span>
+                        </label>
+                        <select name="id_karyawan" id="id_karyawan" class="form-select" required>
+                            <option value="">-- Pilih Karyawan --</option>
+                            @foreach($karyawanList as $item)
+                                <option value="{{ $item->id_karyawan }}" {{ old('id_karyawan') == $item->id_karyawan ? 'selected' : '' }}>
+                                    {{ $item->nama }} (Sisa Kuota: {{ $item->remaining_leave_quota ?? 0 }} hari)
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('id_karyawan')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
+                    </div>
+                @else
+                    <!-- Informasi Karyawan -->
+                    <div class="p-3 bg-light border rounded-3 mb-4">
+                        <h5 class="mb-2">Informasi Karyawan</h5>
+                        <p class="mb-1"><strong>Nama:</strong> {{ $karyawan->nama }}</p>
+                        <p class="mb-1"><strong>Jabatan:</strong> {{ $karyawan->jabatan->nama_jabatan ?? '-' }}</p>
+                        <p class="mb-1"><strong>Divisi:</strong> {{ $karyawan->devisi->nama_devisi ?? '-' }}</p>
+                        <p class="mb-0"><strong>Sisa Kuota Cuti:</strong> {{ $karyawan->remaining_leave_quota ?? 0 }} hari</p>
+                    </div>
+                @endif
 
                 <!-- Jenis Cuti -->
                 <div class="mb-3">
@@ -80,7 +100,12 @@
                 <div class="alert alert-warning d-flex gap-2 align-items-start my-3" role="alert">
                     <span>⚠️</span>
                     <div>
-                        <strong>Catatan:</strong> Pengajuan cuti akan diproses oleh atasan Anda.
+                        <strong>Catatan:</strong>
+                        @if($isAdmin)
+                            Pengajuan cuti yang dibuat oleh admin akan langsung disetujui.
+                        @else
+                            Pengajuan cuti akan diproses oleh atasan Anda.
+                        @endif
                         Pastikan semua data sudah benar sebelum submit.
                     </div>
                 </div>
@@ -104,10 +129,24 @@
 @endsection
 
 @section('scripts')
+@if($isAdmin)
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+@endif
 <script>
 // Auto-update tanggal selesai minimal sama dengan tanggal mulai
 document.querySelector('input[name="tanggal_mulai"]').addEventListener('change', function() {
     document.querySelector('input[name="tanggal_selesai"]').min = this.value;
 });
+
+@if($isAdmin)
+$(document).ready(function() {
+    $('#id_karyawan').select2({
+        width: '100%',
+        placeholder: '-- Pilih Karyawan --'
+    });
+});
+@endif
 </script>
 @endsection

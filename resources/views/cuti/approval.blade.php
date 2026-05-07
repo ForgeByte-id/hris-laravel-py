@@ -33,6 +33,7 @@
                             <th>Jenis Cuti</th>
                             <th>Tanggal</th>
                             <th>Durasi</th>
+                            <th>Kuota</th>
                             <th>Keterangan</th>
                             <th class="text-center">Aksi</th>
                         </tr>
@@ -58,6 +59,11 @@
                             </td>
                             <td>
                                 <strong>{{ $cuti->jumlah_hari }}</strong> hari
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    Sisa: {{ $cuti->karyawan->remaining_leave_quota ?? 0 }} hari
+                                </small>
                             </td>
                             <td class="text-truncate" style="max-width: 200px;">
                                 <small class="text-muted">{{ $cuti->keterangan ?? '-' }}</small>

@@ -102,6 +102,31 @@
                             </div>
                         </div>
 
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Kuota Cuti Tahunan</label>
+                                    <input type="number" name="yearly_leave_quota" min="0" max="365"
+                                           class="form-control @error('yearly_leave_quota') is-invalid @enderror"
+                                           value="{{ old('yearly_leave_quota', $karyawan->yearly_leave_quota ?? 12) }}">
+                                    @error('yearly_leave_quota')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Sisa Kuota Cuti</label>
+                                    <input type="number" name="remaining_leave_quota" min="0" max="365"
+                                           class="form-control @error('remaining_leave_quota') is-invalid @enderror"
+                                           value="{{ old('remaining_leave_quota', $karyawan->remaining_leave_quota ?? ($karyawan->yearly_leave_quota ?? 12)) }}">
+                                    @error('remaining_leave_quota')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary flex-fill">
                                 <i class="bi bi-check-circle me-2"></i>Update

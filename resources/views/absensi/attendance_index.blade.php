@@ -372,6 +372,12 @@
         </div>
 
         <div class="attendance-body">
+            @if(!$serviceHealthy)
+                <div class="status-message status-error" style="display:block; margin-bottom: 1rem;">
+                    Service face recognition sedang tidak tersedia. Silakan coba lagi beberapa saat.
+                </div>
+            @endif
+
             {{-- State Indicator --}}
             <div id="stateIndicator" class="state-indicator ready">
                 {{-- <div class="state-icon" id="stateIcon">🔵</div> --}}
@@ -424,8 +430,15 @@ const statusMessage = document.getElementById('statusMessage');
 const loadingOverlay = document.getElementById('loadingOverlay');
 
 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+const serviceHealthy = @json($serviceHealthy);
 
 async function startCamera() {
+    if (!serviceHealthy) {
+        btnCapture.disabled = true;
+        showMessage('error', 'Service face recognition tidak tersedia.');
+        return;
+    }
+
     try {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             throw new Error('Browser tidak support kamera');

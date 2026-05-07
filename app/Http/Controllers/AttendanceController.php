@@ -79,6 +79,13 @@ class AttendanceController extends Controller
         ]);
 
         try {
+            if (!Karyawan::whereNotNull('face_embedding')->exists()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Belum ada data wajah terdaftar. Silakan registrasi wajah karyawan terlebih dahulu.'
+                ], 422);
+            }
+
             // Decode base64 image
             $imageData = $request->photo;
             $imageData = str_replace('data:image/jpeg;base64,', '', $imageData);
@@ -86,7 +93,7 @@ class AttendanceController extends Controller
             $imageBinary = base64_decode($imageData);
 
             // Save temporary image
-            $tempPath = storage_path('app/temp_attendance.jpg');
+            $tempPath = storage_path('app/temp_attendance_' . uniqid() . '.jpg');
             file_put_contents($tempPath, $imageBinary);
 
             // Recognize the face
@@ -101,7 +108,7 @@ class AttendanceController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => $recognitionResult['error'] ?? 'Wajah tidak dikenali. Daftar dulu.'
-                ], 404);
+                ], 422);
             }
 
             $idKaryawan = $recognitionResult['id_karyawan'];
@@ -112,6 +119,13 @@ class AttendanceController extends Controller
                     'success' => false,
                     'message' => 'Data karyawan tidak ditemukan.'
                 ], 404);
+            }
+
+            if (empty($karyawan->face_embedding)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Wajah karyawan belum terdaftar. Silakan lakukan registrasi wajah.'
+                ], 422);
             }
 
             // Auto-detect and process attendance (system decides, not user)

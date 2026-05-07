@@ -22,7 +22,14 @@ class Karyawan extends Authenticatable
         'id_jabatan',
         'id_devisi',
         'tanggal_masuk',
+        'yearly_leave_quota',
+        'remaining_leave_quota',
         'face_embedding',
+    ];
+
+    protected $casts = [
+        'yearly_leave_quota' => 'integer',
+        'remaining_leave_quota' => 'integer',
     ];
 
     // Relationship ke Jabatan
