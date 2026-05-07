@@ -3,8 +3,9 @@
 @section('content')
 <div class="hris-container">
     @if(session('success'))
-    <div class="alert alert-success">
-        ✅ {{ session('success') }}
+    <div class="alert alert-success d-flex gap-2 align-items-start">
+        <i class="bi bi-check-circle-fill" style="font-size: 1.1rem; flex-shrink: 0;"></i>
+        <div>{{ session('success') }}</div>
     </div>
     @endif
 
@@ -17,7 +18,7 @@
 
             @if($cutiList->count() > 0)
             <div class="alert alert-warning d-flex gap-2 align-items-start" role="alert">
-                <span>📋</span>
+                <i class="bi bi-info-circle-fill" style="font-size: 1rem; flex-shrink: 0;"></i>
                 <div>
                     Terdapat <strong>{{ $cutiList->count() }}</strong> pengajuan cuti yang menunggu persetujuan
                 </div>
@@ -73,18 +74,18 @@
                                     @csrf
                                     @method('PATCH')
                                     <input type="hidden" name="status" value="approved">
-                                    <button type="submit" class="btn btn-sm btn-success"
+                                    <button type="submit" class="btn btn-sm btn-success d-flex align-items-center gap-2"
                                             onclick="return confirm('Setujui pengajuan cuti ini?')">
-                                        ✅ Setujui
+                                        <i class="bi bi-check-circle-fill"></i> Setujui
                                     </button>
                                 </form>
                                 <form action="{{ route('cuti.update-status', $cuti->id_cuti) }}" method="POST" class="d-inline-block">
                                     @csrf
                                     @method('PATCH')
                                     <input type="hidden" name="status" value="rejected">
-                                    <button type="submit" class="btn btn-sm btn-danger"
+                                    <button type="submit" class="btn btn-sm btn-danger d-flex align-items-center gap-2"
                                             onclick="return confirm('Tolak pengajuan cuti ini?')">
-                                        ❌ Tolak
+                                        <i class="bi bi-x-circle-fill"></i> Tolak
                                     </button>
                                 </form>
                             </td>
@@ -95,7 +96,7 @@
             </div>
             @else
             <div class="text-center py-5 text-muted">
-                <h3>✅ Tidak Ada Pengajuan Pending</h3>
+                <h3><i class="bi bi-check-circle-fill" style="color: #28a745; font-size: 2rem; display: block; margin-bottom: 0.5rem;"></i> Tidak Ada Pengajuan Pending</h3>
                 <p class="mb-0">Semua pengajuan cuti sudah diproses</p>
             </div>
             @endif

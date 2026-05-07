@@ -203,6 +203,46 @@
             border-color: var(--hris-primary);
             background: #f5f7ff;
         }
+
+        /* User profile dropdown styling */
+        .dropdown-menu {
+            border: 1px solid var(--hris-border);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+        }
+
+        .dropdown-header {
+            color: var(--hris-primary);
+            font-weight: 600;
+            font-size: 0.875rem;
+            padding: 0.75rem 1rem;
+        }
+
+        .dropdown-item {
+            padding: 0.5rem 1rem;
+            transition: background-color 0.15s ease-in-out;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f5f7fb;
+            color: var(--hris-primary);
+        }
+
+        .dropdown-item i {
+            color: var(--hris-muted);
+            font-size: 0.95rem;
+        }
+
+        .dropdown-item:hover i {
+            color: var(--hris-primary);
+        }
+
+        .dropdown-item.text-danger:hover {
+            background-color: #fee2e2;
+        }
+
+        .dropdown-item.text-danger:hover i {
+            color: #dc3545;
+        }
     </style>
     @yield('head')
     @yield('styles')

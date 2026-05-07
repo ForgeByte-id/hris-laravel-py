@@ -3,8 +3,9 @@
 @section('content')
 <div class="hris-container">
     @if(session('error'))
-    <div class="alert alert-danger">
-        ❌ {{ session('error') }}
+    <div class="alert alert-danger d-flex gap-2 align-items-start">
+        <i class="bi bi-x-circle-fill" style="font-size: 1.1rem; flex-shrink: 0;"></i>
+        <div>{{ session('error') }}</div>
     </div>
     @endif
 
@@ -19,7 +20,7 @@
 
             <!-- Info Karyawan -->
             <div class="p-3 bg-light border rounded-3 mb-4">
-                <h5 class="mb-2">👤 Karyawan</h5>
+                <h5 class="mb-2"><i class="bi bi-person-fill" style="margin-right: 0.5rem;"></i>Karyawan</h5>
                 <p class="mb-1"><strong>Nama:</strong> {{ $jadwal->karyawan->nama }}</p>
                 <p class="mb-1"><strong>Jabatan:</strong> {{ $jadwal->karyawan->jabatan->nama_jabatan ?? '-' }}</p>
                 <p class="mb-0"><strong>Divisi:</strong> {{ $jadwal->karyawan->divisi }}</p>

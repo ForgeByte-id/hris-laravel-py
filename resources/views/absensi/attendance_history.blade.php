@@ -38,7 +38,7 @@
                 </select>
             </div>
 
-            <button type="submit" class="btn-filter">🔍 Cari</button>
+            <button type="submit" class="btn-filter" style="display: flex; align-items: center; gap: 6px;"><i class="bi bi-search" style="font-size: 0.95rem;"></i> Cari</button>
         </form>
 
         @if($absensi->count() > 0)

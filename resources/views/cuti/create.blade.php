@@ -98,7 +98,7 @@
 
                 <!-- Info Box -->
                 <div class="alert alert-warning d-flex gap-2 align-items-start my-3" role="alert">
-                    <span>⚠️</span>
+                    <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.2rem; color: #856404; flex-shrink: 0;"></i>
                     <div>
                         <strong>Catatan:</strong>
                         @if($isAdmin)

@@ -4,14 +4,16 @@
 <div class="hris-container" style="max-width: 1400px;">
 
     @if(session('success'))
-    <div class="alert alert-success">
-        ✅ {{ session('success') }}
+    <div class="alert alert-success d-flex gap-2 align-items-start">
+        <i class="bi bi-check-circle-fill" style="font-size: 1.1rem; flex-shrink: 0;"></i>
+        <div>{{ session('success') }}</div>
     </div>
     @endif
 
     @if(session('error'))
-    <div class="alert alert-danger">
-        ❌ {{ session('error') }}
+    <div class="alert alert-danger d-flex gap-2 align-items-start">
+        <i class="bi bi-x-circle-fill" style="font-size: 1.1rem; flex-shrink: 0;"></i>
+        <div>{{ session('error') }}</div>
     </div>
     @endif
 

@@ -74,21 +74,21 @@
     <div class="container">
         <button class="btn-back" onclick="window.location.href='/karyawan'">← Kembali ke Daftar Karyawan</button>
 
-        <h1>📸 Registrasi Wajah</h1>
+        <h1><i class="bi bi-camera-fill" style="font-size: 1.8rem; margin-right: 0.5rem; color: #667eea;"></i>Registrasi Wajah</h1>
 
         <div class="karyawan-info">
             <h3>{{ $karyawan->nama }}</h3>
             <p><strong>Jabatan:</strong> {{ $karyawan->jabatan ?? '-' }}</p>
             <p><strong>Divisi:</strong> {{ $karyawan->divisi ?? '-' }}</p>
             @if($karyawan->face_embedding)
-                <span class="status-registered-badge">✓ Wajah Sudah Terdaftar</span>
+                <span class="status-registered-badge"><i class="bi bi-check-circle-fill" style="margin-right: 4px;"></i>Wajah Sudah Terdaftar</span>
             @else
-                <span class="status-not-registered-badge">✗ Belum Ada Data Wajah</span>
+                <span class="status-not-registered-badge"><i class="bi bi-x-circle-fill" style="margin-right: 4px;"></i>Belum Ada Data Wajah</span>
             @endif
         </div>
 
         <div class="instructions">
-            ⚠️ <strong>Petunjuk:</strong> Pastikan wajah menghadap kamera dengan pencahayaan yang cukup.
+            <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.1rem; color: #856404; margin-right: 0.5rem;"></i><strong>Petunjuk:</strong> Pastikan wajah menghadap kamera dengan pencahayaan yang cukup.
             Posisikan wajah di tengah frame kamera, lalu klik tombol "Daftarkan Wajah".
         </div>
 
@@ -98,7 +98,7 @@
         <canvas id="canvas"></canvas>
 
         <button class="btn-register-face" id="btnRegister" onclick="registerFace()">
-            📸 Daftarkan Wajah
+            <i class="bi bi-camera-fill" style="margin-right: 0.5rem;"></i>Daftarkan Wajah
         </button>
 
         <div id="statusMessage" class="status-message" style="display:none;"></div>
@@ -156,9 +156,9 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    showMessage('success', '✅ ' + data.message + '<br><br><a href="/karyawan" style="color:#155724;font-weight:600;">← Kembali ke Daftar Karyawan</a>');
+                    showMessage('success', '<i class="bi bi-check-circle-fill" style="margin-right: 6px; font-size: 1.1rem;"></i>' + data.message + '<br><br><a href="/karyawan" style="color:#155724;font-weight:600;"><i class="bi bi-arrow-left" style="margin-right: 4px;"></i>Kembali ke Daftar Karyawan</a>');
                 } else {
-                    showMessage('error', '❌ ' + data.message);
+                    showMessage('error', '<i class="bi bi-x-circle-fill" style="margin-right: 6px; font-size: 1.1rem;"></i>' + data.message);
                     btnRegister.disabled = false;
                 }
             } catch (error) {

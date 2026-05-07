@@ -380,7 +380,7 @@
 
             {{-- State Indicator --}}
             <div id="stateIndicator" class="state-indicator ready">
-                {{-- <div class="state-icon" id="stateIcon">🔵</div> --}}
+                {{-- <div class="state-icon" id="stateIcon"><i class="bi bi-circle-fill" style="color: #4a90e2;"></i></div> --}}
                 <div class="state-label ready" id="stateLabel">Siap Absen Masuk</div>
                 <div class="state-detail" id="stateDetail">Ambil foto wajah Anda untuk konfirmasi kehadiran</div>
             </div>
