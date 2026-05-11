@@ -42,12 +42,12 @@
                                 </td>
                                 <td>{{ $k->jabatan->nama_jabatan ?? '-' }}</td>
                                 <td>
-                                    <select name="jadwal[{{ $index }}][jam_kerja]" required class="form-select">
-                                        <option value="">-- Pilih --</option>
-                                        @foreach($jamKerjaOptions as $option)
-                                            <option value="{{ $option }}">{{ $option }}</option>
-                                        @endforeach
-                                    </select>
+                                     <select name="jadwal[{{ $index }}][kode_shift]" required class="form-select">
+                                         <option value="">-- Pilih --</option>
+                                         @foreach($jamKerjaOptions as $option)
+                                             <option value="{{ $option->kode_shift }}">{{ $option->kode_shift }} - {{ $option->label }}</option>
+                                         @endforeach
+                                     </select>
                                 </td>
                                 <td>
                                     <input type="text" name="jadwal[{{ $index }}][keterangan]"
@@ -63,16 +63,16 @@
                 <div class="mt-3 p-3 bg-light rounded-3">
                     <h6 class="mb-2">Quick Set (Set Semua Sekaligus):</h6>
                     <div class="d-flex flex-wrap gap-2">
-                        <button type="button" onclick="setAllShift('Pagi (08:00-17:00)')" class="btn btn-success">
+                        <button type="button" onclick="setAllShift('P')" class="btn btn-success">
                             Set Semua Pagi
                         </button>
-                        <button type="button" onclick="setAllShift('Middle (11:00-20:00)')" class="btn btn-warning">
+                        <button type="button" onclick="setAllShift('M')" class="btn btn-warning">
                             Set Semua Siang
                         </button>
-                        <button type="button" onclick="setAllShift('Siang (13:00-22:00)')" class="btn btn-primary">
+                        <button type="button" onclick="setAllShift('S')" class="btn btn-primary">
                             Set Semua Malam
                         </button>
-                        <button type="button" onclick="setAllShift('Libur')" class="btn btn-danger">
+                        <button type="button" onclick="setAllShift('L')" class="btn btn-danger">
                             Set Semua Libur
                         </button>
                     </div>
@@ -96,7 +96,7 @@
 @section('scripts')
 <script>
 function setAllShift(shift) {
-    const selects = document.querySelectorAll('select[name*="[jam_kerja]"]');
+    const selects = document.querySelectorAll('select[name*="[kode_shift]"]');
     selects.forEach(select => {
         select.value = shift;
     });

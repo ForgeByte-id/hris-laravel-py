@@ -59,7 +59,7 @@ class AttendanceService
             $expectedStartTime = '08:00:00'; // Default start time
 
             if ($schedule) {
-                $shiftTime = $this->extractShiftStartTime($schedule->jam_kerja);
+                $shiftTime = $this->extractShiftStartTime($schedule);
                 if ($shiftTime) {
                     $expectedStartTime = $shiftTime;
                     $isLate = $now->format('H:i:s') > $shiftTime;
@@ -135,6 +135,24 @@ class AttendanceService
                     'message' => 'Already clocked out today',
                     'attendance' => $attendance,
                 ];
+            }
+
+            $schedule = $this->getTodaySchedule($idKaryawan);
+            if ($schedule && !$schedule->isLibur()) {
+                $shiftEndTime = $this->extractShiftEndTime($schedule);
+                if ($shiftEndTime) {
+                    $allowedClockOutFrom = Carbon::today()
+                        ->setTimeFromTimeString($shiftEndTime)
+                        ->subMinutes(30);
+
+                    if (Carbon::now()->lt($allowedClockOutFrom)) {
+                        return [
+                            'success' => false,
+                            'message' => 'Belum mendekati jam pulang sesuai shift',
+                            'attendance' => $attendance,
+                        ];
+                    }
+                }
             }
 
             $jamPulang = Carbon::now()->format('H:i:s');
@@ -250,6 +268,7 @@ class AttendanceService
     {
         return JadwalKerja::where('id_karyawan', $idKaryawan)
             ->where('tanggal', Carbon::today())
+            ->with('shift')
             ->first();
     }
 
@@ -257,14 +276,33 @@ class AttendanceService
      * Extract start time from shift description
      * e.g., "Pagi (08:00-17:00)" → "08:00:00"
      *
-     * @param string $jamKerja
+     * @param JadwalKerja $schedule
      * @return string|null
      */
-    private function extractShiftStartTime(string $jamKerja): ?string
+    private function extractShiftStartTime(JadwalKerja $schedule): ?string
     {
+        if ($schedule->shift && $schedule->shift->jam_masuk) {
+            return $schedule->shift->jam_masuk;
+        }
+
+        $jamKerja = $schedule->jam_kerja;
         if (preg_match('/\((\d{2}):(\d{2})-/', $jamKerja, $matches)) {
             return "{$matches[1]}:{$matches[2]}:00";
         }
+        return null;
+    }
+
+    private function extractShiftEndTime(JadwalKerja $schedule): ?string
+    {
+        if ($schedule->shift && $schedule->shift->jam_pulang) {
+            return $schedule->shift->jam_pulang;
+        }
+
+        $jamKerja = $schedule->jam_kerja;
+        if (preg_match('/-(\d{2}):(\d{2})\)/', $jamKerja, $matches)) {
+            return "{$matches[1]}:{$matches[2]}:00";
+        }
+
         return null;
     }
 

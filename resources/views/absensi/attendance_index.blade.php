@@ -10,18 +10,6 @@
     .s2-employee-option { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
     .s2-employee-option .s2-no-face { font-size: 0.72rem; color: #f59e0b; font-weight: 600; }
     .s2-employee-option .s2-job     { font-size: 0.8rem;  color: #6b7280; }
-    .status-option {
-        cursor: pointer;
-        transition: background 0.15s, border-color 0.15s;
-        border-color: var(--hris-border) !important;
-    }
-    .status-option.selected {
-        background: #f0f4ff;
-        border-color: var(--hris-primary) !important;
-    }
-    .status-option:hover:not(.selected) {
-        background: #f8f9fa;
-    }
     #video {
         width: 100%;
         display: block;
@@ -137,36 +125,25 @@
                 </div>
             </div>
 
-            {{-- Step 2: Status --}}
+            {{-- Step 2: Status Otomatis --}}
             <div class="hris-card">
                 <div class="hris-card-header">
                     <h6 class="mb-0 fw-semibold"><span class="badge bg-primary me-2">2</span>Status Kehadiran</h6>
                 </div>
-                <div class="hris-card-body d-flex flex-column gap-2">
-                    @foreach(['hadir' => ['success','Hadir','Kehadiran normal'], 'terlambat' => ['warning','Terlambat','Masuk setelah jam kerja'], 'remote' => ['info','Remote / WFH','Bekerja dari rumah'], 'tidak_hadir' => ['danger','Tidak Hadir','Alpha / tidak masuk']] as $val => [$color, $label, $hint])
-                    <label class="d-flex align-items-center gap-2 p-2 rounded border status-option {{ $val === 'hadir' ? 'selected' : '' }}"
-                           data-status="{{ $val }}" onclick="selectStatus('{{ $val }}')">
-                        <input type="radio" name="status" value="{{ $val }}" {{ $val === 'hadir' ? 'checked' : '' }} class="d-none">
-                        <span class="badge bg-{{ $color }} {{ $color === 'warning' ? 'text-dark' : '' }}" style="min-width:90px;text-align:center;">
-                            {{ $label }}
-                        </span>
-                        <span class="small text-muted">{{ $hint }}</span>
-                    </label>
-                    @endforeach
+                <div class="hris-card-body">
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-robot me-1"></i>
+                        Status absensi ditentukan otomatis berdasarkan jadwal shift (masuk/pulang), tidak dipilih manual.
+                    </div>
                 </div>
             </div>
 
-            {{-- Step 3: Time + GPS --}}
+            {{-- Step 3: Lokasi --}}
             <div class="hris-card">
                 <div class="hris-card-header">
-                    <h6 class="mb-0 fw-semibold"><span class="badge bg-primary me-2">3</span>Waktu &amp; Lokasi</h6>
+                    <h6 class="mb-0 fw-semibold"><span class="badge bg-primary me-2">3</span>Lokasi</h6>
                 </div>
                 <div class="hris-card-body">
-                    <div class="mb-3" id="timeInputWrap">
-                        <label class="form-label small fw-semibold">Jam Masuk</label>
-                        <input type="time" id="jamMasuk" class="form-control" value="{{ now()->setTimezone('Asia/Singapore')->format('H:i') }}">
-                        <div class="form-text">Biarkan kosong untuk menggunakan waktu saat ini</div>
-                    </div>
                     <div>
                         <div class="d-flex align-items-center justify-content-between mb-1">
                             <label class="form-label small fw-semibold mb-0">GPS Lokasi</label>
@@ -215,13 +192,6 @@
                         <p class="text-muted small text-center mt-2 mb-0">
                             <i class="bi bi-info-circle me-1"></i>Pastikan wajah karyawan terlihat jelas dan pencahayaan cukup
                         </p>
-                    </div>
-
-                    {{-- Tidak Hadir placeholder --}}
-                    <div id="noPhotoSection" style="display:none;" class="text-center py-5">
-                        <i class="bi bi-person-x text-danger" style="font-size:3.5rem;"></i>
-                        <p class="fw-semibold mt-3 mb-1">Status: Tidak Hadir</p>
-                        <p class="text-muted small">Verifikasi wajah tidak diperlukan untuk status ini.</p>
                     </div>
 
                     {{-- Verification result --}}
@@ -285,19 +255,8 @@ const serviceOk = @json($serviceHealthy);
 // ── Timezone ────────────────────────────────────────────────────────────────────
 const TZ = 'Asia/Singapore'; // GMT+8 — covers WIB+1, WITA, WIT, SGT, MYT
 
-/** Returns the current wall-clock time in GMT+8 as an HH:mm string for <input type="time">. */
-function currentTimeGMT8() {
-    const parts = new Intl.DateTimeFormat('en-GB', {
-        timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false,
-    }).formatToParts(new Date());
-    const h = parts.find(p => p.type === 'hour')?.value   ?? '00';
-    const m = parts.find(p => p.type === 'minute')?.value ?? '00';
-    return `${h}:${m}`;
-}
-
 // ── State ────────────────────────────────────────────────────────────────────
 let selectedEmployee = null; // { id, nama, hasFace }
-let currentStatus    = 'hadir';
 let faceVerified     = false;
 let capturedPhoto    = null;
 
@@ -305,8 +264,6 @@ let capturedPhoto    = null;
 document.addEventListener('DOMContentLoaded', () => {
     updateTime();
     setInterval(updateTime, 1000);
-    // Override the PHP-rendered initial value with the client-side GMT+8 time
-    document.getElementById('jamMasuk').value = currentTimeGMT8();
     captureDeviceInfo();
     captureGPS();
     if (serviceOk) startCamera();
@@ -385,29 +342,6 @@ function goToRegisterFace() {
     if (selectedEmployee?.registerUrl) {
         window.open(selectedEmployee.registerUrl, '_blank', 'noopener');
     }
-}
-
-// ── Status selection ──────────────────────────────────────────────────────────
-function selectStatus(status) {
-    currentStatus = status;
-    faceVerified  = false;
-    capturedPhoto = null;
-    setVerificationUI('idle');
-
-    document.querySelectorAll('.status-option').forEach(el => {
-        const active = el.dataset.status === status;
-        el.classList.toggle('selected', active);
-    });
-
-    const isAbsent = status === 'tidak_hadir';
-    document.getElementById('cameraSection').style.display   = isAbsent ? 'none' : 'block';
-    document.getElementById('noPhotoSection').style.display  = isAbsent ? 'block' : 'none';
-    document.getElementById('timeInputWrap').style.display   = isAbsent ? 'none' : 'block';
-    document.getElementById('verificationResult').style.display = 'none';
-
-    if (isAbsent) faceVerified = true; // No face required
-
-    updateButtons();
 }
 
 // ── Camera ────────────────────────────────────────────────────────────────────
@@ -522,7 +456,7 @@ function setVerificationUI(state, confidence = 0, message = '') {
 // ── Save attendance ───────────────────────────────────────────────────────────
 async function saveAttendance() {
     if (!selectedEmployee) return alert('Pilih karyawan terlebih dahulu.');
-    if (!faceVerified && currentStatus !== 'tidak_hadir') return alert('Selesaikan verifikasi wajah terlebih dahulu.');
+    if (!faceVerified) return alert('Selesaikan verifikasi wajah terlebih dahulu.');
 
     const btnSave = document.getElementById('btnSave');
     btnSave.disabled = true;
@@ -530,24 +464,20 @@ async function saveAttendance() {
 
     try {
         const payload = {
-            id_karyawan: selectedEmployee.id,
-            status:      currentStatus,
-            jam_masuk:   document.getElementById('jamMasuk').value || null,
-            gps_lat:     document.getElementById('gpsLat').value   || null,
-            gps_lng:     document.getElementById('gpsLng').value   || null,
-            device_info: navigator.userAgent.substring(0, 500),
+            photo: capturedPhoto || captureFrame(),
         };
-        if (capturedPhoto && currentStatus !== 'tidak_hadir') {
-            payload.photo = capturedPhoto;
+
+        if (!payload.photo) {
+            throw new Error('Kamera belum siap. Coba ulangi verifikasi.');
         }
 
-        const res = await apiPost('/api/attendance/admin-record', payload);
+        const res = await apiPost('/api/attendance/check-in', payload);
 
         if (res.success) {
+            const actionLabel = res.action === 'clock_out' ? 'Pulang' : 'Masuk';
             showToast(
                 'Absensi Berhasil Dicatat',
-                `${res.employee_name} — ${statusLabel(currentStatus)} — ${document.getElementById('jamMasuk').value || 'waktu sekarang'}`
-                + (res.face_verified ? ` — Wajah ✓ (${res.face_confidence?.toFixed(1)}%)` : '')
+                `${res.data?.nama || '-'} — ${actionLabel} — ${res.data?.waktu || 'waktu sekarang'}`
             );
             resetForm();
         } else {
@@ -564,13 +494,12 @@ async function saveAttendance() {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function updateButtons() {
     const hasEmp   = !!selectedEmployee;
-    const needFace = currentStatus !== 'tidak_hadir';
 
     document.getElementById('btnVerify').disabled =
-        !hasEmp || !needFace || !selectedEmployee?.hasFace || !serviceOk;
+        !hasEmp || !selectedEmployee?.hasFace || !serviceOk;
 
     document.getElementById('btnSave').disabled =
-        !hasEmp || (needFace && !faceVerified);
+        !hasEmp || !faceVerified;
 }
 
 function setLoading(on) {
@@ -644,10 +573,6 @@ function captureDeviceInfo() {
     document.getElementById('auditDevice').innerHTML = `<i class="bi bi-laptop"></i> ${short}`;
 }
 
-function statusLabel(s) {
-    return { hadir: 'Hadir', terlambat: 'Terlambat', remote: 'Remote / WFH', tidak_hadir: 'Tidak Hadir' }[s] || s;
-}
-
 async function apiPost(url, data) {
     const res  = await fetch(url, {
         method:  'POST',
@@ -678,10 +603,7 @@ function resetForm() {
     selectedEmployee = null;
     faceVerified     = false;
     capturedPhoto    = null;
-    currentStatus    = 'hadir';
     document.getElementById('faceWarning').style.display = 'none';
-    document.getElementById('jamMasuk').value = currentTimeGMT8(); // reset to current GMT+8 time
-    selectStatus('hadir');
     setVerificationUI('idle');
     updateButtons();
 }

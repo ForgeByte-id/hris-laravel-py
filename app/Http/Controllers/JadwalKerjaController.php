@@ -6,6 +6,7 @@ use App\Models\JadwalKerja;
 use App\Models\Karyawan;
 use App\Models\Absensi;
 use App\Models\Cuti;
+use App\Models\Shift;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -58,13 +59,8 @@ class JadwalKerjaController extends Controller
     public function create()
     {
         $karyawanList = Karyawan::orderBy('nama')->get();
-        
-        $jamKerjaOptions = [
-            'Pagi (07:00-15:00)',
-            'Siang (15:00-23:00)',
-            'Malam (23:00-07:00)',
-            'Libur',
-        ];
+
+        $jamKerjaOptions = $this->getScheduleShiftOptions();
 
         return view('jadwal.create', compact('karyawanList', 'jamKerjaOptions'));
     }
@@ -75,7 +71,7 @@ class JadwalKerjaController extends Controller
         $request->validate([
             'id_karyawan' => 'required|exists:karyawan,id_karyawan',
             'tanggal' => 'required|date',
-            'jam_kerja' => 'required|string',
+            'kode_shift' => 'required|exists:shifts,kode_shift',
             'keterangan' => 'nullable|string|max:500',
         ]);
 
@@ -90,11 +86,14 @@ class JadwalKerjaController extends Controller
                            ->with('error', 'Jadwal untuk karyawan ini di tanggal tersebut sudah ada!');
         }
 
+        $shift = Shift::where('kode_shift', $request->kode_shift)->firstOrFail();
+
         // Create jadwal
         $jadwal = JadwalKerja::create([
             'id_karyawan' => $request->id_karyawan,
             'tanggal' => $request->tanggal,
-            'jam_kerja' => $request->jam_kerja,
+            'jam_kerja' => $shift->label,
+            'kode_shift' => $shift->kode_shift,
             'keterangan' => $request->keterangan,
         ]);
 
@@ -109,13 +108,8 @@ class JadwalKerjaController extends Controller
     public function bulkCreate()
     {
         $karyawanList = Karyawan::orderBy('nama')->get();
-        
-        $jamKerjaOptions = [
-            'Pagi (08:00-17:00)',
-            'Middle (11:00-20:00)',
-            'Siang (13:00-22:00)',
-            'Libur',
-        ];
+
+        $jamKerjaOptions = $this->getScheduleShiftOptions();
 
         return view('jadwal.bulk_create', compact('karyawanList', 'jamKerjaOptions'));
     }
@@ -127,15 +121,21 @@ class JadwalKerjaController extends Controller
             'tanggal' => 'required|date',
             'jadwal' => 'required|array',
             'jadwal.*.id_karyawan' => 'required|exists:karyawan,id_karyawan',
-            'jadwal.*.jam_kerja' => 'required|string',
+            'jadwal.*.kode_shift' => 'required|exists:shifts,kode_shift',
         ]);
 
         $sukses = 0;
         $duplikat = 0;
+        $shiftMap = Shift::get()->keyBy('kode_shift');
 
         foreach ($request->jadwal as $item) {
-            // Skip jika jam_kerja kosong
-            if (empty($item['jam_kerja'])) {
+            // Skip jika kode_shift kosong
+            if (empty($item['kode_shift'])) {
+                continue;
+            }
+
+            $shift = $shiftMap->get($item['kode_shift']);
+            if (!$shift) {
                 continue;
             }
 
@@ -152,7 +152,8 @@ class JadwalKerjaController extends Controller
             JadwalKerja::create([
                 'id_karyawan' => $item['id_karyawan'],
                 'tanggal' => $request->tanggal,
-                'jam_kerja' => $item['jam_kerja'],
+                'jam_kerja' => $shift->label,
+                'kode_shift' => $shift->kode_shift,
                 'keterangan' => $item['keterangan'] ?? null,
             ]);
 
@@ -175,13 +176,8 @@ class JadwalKerjaController extends Controller
     public function edit($id_jadwal)
     {
         $jadwal = JadwalKerja::with('karyawan')->findOrFail($id_jadwal);
-        
-        $jamKerjaOptions = [
-            'Pagi (08:00-17:00)',
-            'Middle (11:00-20:00)',
-            'Siang (13:00-22:00)',
-            'Libur',
-        ];
+
+        $jamKerjaOptions = $this->getScheduleShiftOptions();
 
         return view('jadwal.edit', compact('jadwal', 'jamKerjaOptions'));
     }
@@ -191,7 +187,7 @@ class JadwalKerjaController extends Controller
     {
         $request->validate([
             'tanggal' => 'required|date',
-            'jam_kerja' => 'required|string',
+            'kode_shift' => 'required|exists:shifts,kode_shift',
             'keterangan' => 'nullable|string|max:500',
         ]);
 
@@ -209,9 +205,12 @@ class JadwalKerjaController extends Controller
                            ->with('error', 'Jadwal sudah ada di tanggal tersebut!');
         }
 
+        $shift = Shift::where('kode_shift', $request->kode_shift)->firstOrFail();
+
         $jadwal->update([
             'tanggal' => $request->tanggal,
-            'jam_kerja' => $request->jam_kerja,
+            'jam_kerja' => $shift->label,
+            'kode_shift' => $shift->kode_shift,
             'keterangan' => $request->keterangan,
         ]);
 
@@ -279,6 +278,7 @@ class JadwalKerjaController extends Controller
                 // Update jadi libur
                 $existing->update([
                     'jam_kerja' => 'Libur',
+                    'kode_shift' => 'L',
                     'keterangan' => $request->keterangan,
                 ]);
                 $updated++;
@@ -288,6 +288,7 @@ class JadwalKerjaController extends Controller
                     'id_karyawan' => $karyawan->id_karyawan,
                     'tanggal' => $request->tanggal,
                     'jam_kerja' => 'Libur',
+                    'kode_shift' => 'L',
                     'keterangan' => $request->keterangan,
                 ]);
                 $sukses++;
@@ -301,5 +302,12 @@ class JadwalKerjaController extends Controller
 
         return redirect()->route('jadwal.index', ['bulan' => $bulan])
                         ->with('success', $message);
+    }
+
+    private function getScheduleShiftOptions()
+    {
+        return Shift::whereIn('kode_shift', ['P', 'M', 'S', 'L'])
+            ->orderByRaw("CASE kode_shift WHEN 'P' THEN 1 WHEN 'M' THEN 2 WHEN 'S' THEN 3 WHEN 'L' THEN 4 ELSE 5 END")
+            ->get();
     }
 }

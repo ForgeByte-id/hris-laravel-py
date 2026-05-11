@@ -47,16 +47,16 @@
                     <label class="form-label fw-semibold">
                         Jam Kerja / Shift <span class="text-danger">*</span>
                     </label>
-                    <select name="jam_kerja" required class="form-select">
+                    <select name="kode_shift" required class="form-select">
                         <option value="">-- Pilih Jam Kerja --</option>
                         @foreach($jamKerjaOptions as $option)
-                            <option value="{{ $option }}"
-                                {{ old('jam_kerja', $jadwal->jam_kerja) == $option ? 'selected' : '' }}>
-                                {{ $option }}
+                            <option value="{{ $option->kode_shift }}"
+                                {{ old('kode_shift', $jadwal->kode_shift) == $option->kode_shift ? 'selected' : '' }}>
+                                {{ $option->kode_shift }} - {{ $option->label }}
                             </option>
                         @endforeach
                     </select>
-                    @error('jam_kerja')
+                    @error('kode_shift')
                         <small class="text-danger">{{ $message }}</small>
                     @enderror
                 </div>
