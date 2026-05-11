@@ -415,7 +415,7 @@ class AttendanceController extends Controller
             $result = $this->attendanceService->adminRecord($idKaryawan, [
                 'status'          => $status,
                 'jam_masuk'       => $request->jam_masuk,
-                'recorded_by'     => Auth::id(),
+                'recorded_by'     => Auth::user()->id,
                 'face_verified'   => $faceVerified,
                 'face_confidence' => $faceConfidence,
                 'photo_hash'      => $photoHash,

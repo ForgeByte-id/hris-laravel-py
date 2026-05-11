@@ -112,8 +112,12 @@
                     <select id="employeeSelect" class="form-select">
                         <option value="">-- Pilih Karyawan --</option>
                         @foreach($karyawanList as $k)
+                            @php
+                                // Prefer model helper if available; fall back to properties that may exist
+                                $hasFace = (method_exists($k, 'hasFaceRegistered') ? $k->hasFaceRegistered() : null) ?? ($k->face_registered ?? ($k->face_verified ?? false));
+                            @endphp
                             <option value="{{ $k->id_karyawan }}"
-                                    data-face="{{ $k->hasFaceRegistered() ? '1' : '0' }}"
+                                    data-face="{{ $hasFace ? '1' : '0' }}"
                                     data-nama="{{ $k->nama }}"
                                     data-jabatan="{{ $k->jabatan?->nama_jabatan ?? '' }}"
                                     data-register-url="{{ route('karyawan.register-face', $k->id_karyawan) }}">
