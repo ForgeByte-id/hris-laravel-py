@@ -187,9 +187,10 @@ class AttendanceService
      * - Both exist → ALREADY COMPLETED (reject)
      *
      * @param int $idKaryawan
+     * @param string|null $preferredAction 'clock_in'|'clock_out' or null for auto
      * @return array ['success' => bool, 'action' => 'clock_in'|'clock_out', 'message' => string, 'attendance' => Absensi|null, 'status' => string|null]
      */
-    public function processAutoAttendance(int $idKaryawan): array
+    public function processAutoAttendance(int $idKaryawan, ?string $preferredAction = null): array
     {
         try {
             $karyawan = Karyawan::find($idKaryawan);
@@ -223,6 +224,19 @@ class AttendanceService
                     'success' => false,
                     'action' => null,
                     'message' => 'Attendance already completed for today',
+                    'attendance' => $todayAttendance,
+                    'status' => null,
+                ];
+            }
+
+            if ($preferredAction && $preferredAction !== $action) {
+                $expectedLabel = $action === 'clock_in' ? 'masuk' : 'pulang';
+                $selectedLabel = $preferredAction === 'clock_in' ? 'masuk' : 'pulang';
+
+                return [
+                    'success' => false,
+                    'action' => $action,
+                    'message' => "Aksi {$selectedLabel} belum sesuai. Silakan lakukan absen {$expectedLabel}.",
                     'attendance' => $todayAttendance,
                     'status' => null,
                 ];

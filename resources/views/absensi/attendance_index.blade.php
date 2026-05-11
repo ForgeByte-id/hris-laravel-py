@@ -128,12 +128,25 @@
             {{-- Step 2: Status Otomatis --}}
             <div class="hris-card">
                 <div class="hris-card-header">
-                    <h6 class="mb-0 fw-semibold"><span class="badge bg-primary me-2">2</span>Status Kehadiran</h6>
+                    <h6 class="mb-0 fw-semibold"><span class="badge bg-primary me-2">2</span>Aksi Absensi</h6>
                 </div>
                 <div class="hris-card-body">
-                    <div class="alert alert-info mb-0">
-                        <i class="bi bi-robot me-1"></i>
-                        Status absensi ditentukan otomatis berdasarkan jadwal shift (masuk/pulang), tidak dipilih manual.
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold mb-2">Pilih aksi</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <label class="btn btn-outline-primary active">
+                                <input type="radio" class="d-none" name="attendance_action" value="masuk" checked onchange="setAttendanceAction('masuk')">
+                                Masuk
+                            </label>
+                            <label class="btn btn-outline-primary">
+                                <input type="radio" class="d-none" name="attendance_action" value="pulang" onchange="setAttendanceAction('pulang')">
+                                Pulang
+                            </label>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mb-0 small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Pilihan ini memperjelas flow. Sistem tetap validasi apakah aksi sesuai kondisi absensi hari ini.
                     </div>
                 </div>
             </div>
@@ -259,6 +272,7 @@ const TZ = 'Asia/Singapore'; // GMT+8 — covers WIB+1, WITA, WIT, SGT, MYT
 let selectedEmployee = null; // { id, nama, hasFace }
 let faceVerified     = false;
 let capturedPhoto    = null;
+let selectedAttendanceAction = 'masuk';
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -342,6 +356,21 @@ function goToRegisterFace() {
     if (selectedEmployee?.registerUrl) {
         window.open(selectedEmployee.registerUrl, '_blank', 'noopener');
     }
+}
+
+function setAttendanceAction(action) {
+    selectedAttendanceAction = action;
+    document.querySelectorAll('input[name="attendance_action"]').forEach((input) => {
+        const wrap = input.closest('label.btn');
+        if (!wrap) return;
+        if (input.value === action) {
+            input.checked = true;
+            wrap.classList.add('active');
+        } else {
+            input.checked = false;
+            wrap.classList.remove('active');
+        }
+    });
 }
 
 // ── Camera ────────────────────────────────────────────────────────────────────
@@ -465,6 +494,7 @@ async function saveAttendance() {
     try {
         const payload = {
             photo: capturedPhoto || captureFrame(),
+            attendance_action: selectedAttendanceAction,
         };
 
         if (!payload.photo) {
@@ -603,7 +633,9 @@ function resetForm() {
     selectedEmployee = null;
     faceVerified     = false;
     capturedPhoto    = null;
+    selectedAttendanceAction = 'masuk';
     document.getElementById('faceWarning').style.display = 'none';
+    setAttendanceAction('masuk');
     setVerificationUI('idle');
     updateButtons();
 }

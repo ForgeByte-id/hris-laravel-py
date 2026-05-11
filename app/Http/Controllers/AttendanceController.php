@@ -97,6 +97,7 @@ class AttendanceController extends Controller
 
         $request->validate([
             'photo' => 'required|string',
+            'attendance_action' => 'nullable|in:masuk,pulang',
         ]);
 
         try {
@@ -149,8 +150,14 @@ class AttendanceController extends Controller
                 ], 422);
             }
 
-            // Auto-detect and process attendance (system decides, not user)
-            $result = $this->attendanceService->processAutoAttendance($idKaryawan);
+            $preferredAction = match ($request->input('attendance_action')) {
+                'masuk' => 'clock_in',
+                'pulang' => 'clock_out',
+                default => null,
+            };
+
+            // Auto-detect and process attendance, with optional user-selected intent
+            $result = $this->attendanceService->processAutoAttendance($idKaryawan, $preferredAction);
 
             // Determine time field based on action
             $timeField = null;
