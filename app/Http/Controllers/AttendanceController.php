@@ -175,6 +175,7 @@ class AttendanceController extends Controller
                     'nama' => $karyawan->nama,
                     'waktu' => $timeField,
                     'status' => $result['status'],
+                    'menit_terlambat' => $result['attendance']?->menit_terlambat,
                     'confidence' => round($recognitionResult['confidence'], 2),
                 ]
             ], $result['success'] ? 200 : 422);
@@ -228,13 +229,37 @@ class AttendanceController extends Controller
                 ->whereDate('tanggal', Carbon::today())
                 ->first();
 
+            $clockInAt = $attendance?->jam_masuk
+                ? Carbon::today()->setTimeFromTimeString($attendance->jam_masuk)
+                : null;
+            $minimumClockOutAt = $clockInAt ? (clone $clockInAt)->addHours(5) : null;
+            $canClockOut = (bool) (
+                $attendance?->jam_masuk
+                && !$attendance?->jam_pulang
+                && $minimumClockOutAt
+                && Carbon::now()->gte($minimumClockOutAt)
+            );
+
+            $clockOutReason = null;
+            if (!$attendance || !$attendance->jam_masuk) {
+                $clockOutReason = 'Belum ada data absen masuk hari ini.';
+            } elseif ($attendance->jam_pulang) {
+                $clockOutReason = 'Absen pulang hari ini sudah tercatat.';
+            } elseif ($minimumClockOutAt && Carbon::now()->lt($minimumClockOutAt)) {
+                $remaining = Carbon::now()->diffInMinutes($minimumClockOutAt);
+                $clockOutReason = "Absen pulang aktif minimal 5 jam setelah jam masuk. Sisa {$remaining} menit.";
+            }
+
             return response()->json([
                 'employee' => $karyawan->nama,
                 'clock_in' => $attendance?->jam_masuk,
                 'clock_out' => $attendance?->jam_pulang,
                 'status' => $attendance?->status,
+                'menit_terlambat' => $attendance?->menit_terlambat,
                 'date' => $attendance?->tanggal,
-                'can_clock_out' => (bool) ($attendance?->jam_masuk && !$attendance?->jam_pulang),
+                'can_clock_out' => $canClockOut,
+                'clock_out_available_at' => $minimumClockOutAt?->format('H:i:s'),
+                'clock_out_reason' => $clockOutReason,
             ]);
         } catch (\Exception $e) {
             Log::error("Get current status error: {$e->getMessage()}");

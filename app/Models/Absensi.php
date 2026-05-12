@@ -19,6 +19,7 @@ class Absensi extends Model
         'jam_masuk',
         'jam_pulang',
         'status',
+        'menit_terlambat',
         // audit fields
         'recorded_by',
         'face_verified',
@@ -33,6 +34,7 @@ class Absensi extends Model
 
     protected $casts = [
         'tanggal'          => 'date',
+        'menit_terlambat'  => 'integer',
         'face_verified'    => 'boolean',
         'face_confidence'  => 'float',
         'gps_lat'          => 'float',

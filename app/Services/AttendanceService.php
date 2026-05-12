@@ -56,17 +56,26 @@ class AttendanceService
 
             // Check if late
             $isLate = false;
+            $lateMinutes = 0;
             $expectedStartTime = '08:00:00'; // Default start time
 
             if ($schedule) {
                 $shiftTime = $this->extractShiftStartTime($schedule);
                 if ($shiftTime) {
                     $expectedStartTime = $shiftTime;
-                    $isLate = $now->format('H:i:s') > $shiftTime;
+                    $expectedStart = Carbon::today()->setTimeFromTimeString($shiftTime);
+                    if ($now->gt($expectedStart)) {
+                        $isLate = true;
+                        $lateMinutes = $expectedStart->diffInMinutes($now);
+                    }
                 }
             } else {
                 // No schedule found, allow check-in but mark as potentially flexible
-                $isLate = $now->format('H:i:s') > '09:00:00';
+                $fallbackStart = Carbon::today()->setTimeFromTimeString('09:00:00');
+                if ($now->gt($fallbackStart)) {
+                    $isLate = true;
+                    $lateMinutes = $fallbackStart->diffInMinutes($now);
+                }
             }
 
             // Create or update attendance record
@@ -78,6 +87,7 @@ class AttendanceService
                 [
                     'jam_masuk' => $jamMasuk,
                     'status' => $isLate ? 'terlambat' : 'tepat_waktu',
+                    'menit_terlambat' => $isLate ? $lateMinutes : 0,
                 ]
             );
 
@@ -133,6 +143,25 @@ class AttendanceService
                 return [
                     'success' => false,
                     'message' => 'Already clocked out today',
+                    'attendance' => $attendance,
+                ];
+            }
+
+            if (!$attendance->jam_masuk) {
+                return [
+                    'success' => false,
+                    'message' => 'Jam masuk belum tersedia, belum bisa absen pulang.',
+                    'attendance' => $attendance,
+                ];
+            }
+
+            $clockInAt = Carbon::today()->setTimeFromTimeString($attendance->jam_masuk);
+            $minimumClockOutAt = (clone $clockInAt)->addHours(5);
+            if (Carbon::now()->lt($minimumClockOutAt)) {
+                $remainingMinutes = Carbon::now()->diffInMinutes($minimumClockOutAt);
+                return [
+                    'success' => false,
+                    'message' => "Absen pulang tersedia minimal 5 jam setelah jam masuk. Sisa {$remainingMinutes} menit lagi.",
                     'attendance' => $attendance,
                 ];
             }

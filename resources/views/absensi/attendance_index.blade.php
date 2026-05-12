@@ -323,6 +323,7 @@ let selectedEmployee = null; // { id, nama, hasFace }
 let faceVerified     = false;
 let capturedPhoto    = null;
 let selectedAttendanceAction = 'masuk';
+let clockOutRestrictionReason = 'Absen pulang aktif setelah karyawan absen masuk hari ini.';
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -388,10 +389,12 @@ function updateActionUI() {
     alertBox.style.display = 'block';
 
     if (action === 'masuk') {
-        alertText.textContent = "Status 'Telat' akan dihitung otomatis oleh sistem.";
+        alertText.textContent = "Status 'Telat' akan dihitung otomatis oleh sistem." +
+            (clockOutRestrictionReason ? ` ${clockOutRestrictionReason}` : '');
         alertBox.style.borderLeftColor = "#22c55e"; // Success Green
     } else {
-        alertText.textContent = "Pastikan semua laporan pekerjaan hari ini sudah di-upload.";
+        alertText.textContent = "Pastikan semua laporan pekerjaan hari ini sudah di-upload." +
+            (clockOutRestrictionReason ? ` ${clockOutRestrictionReason}` : '');
         alertBox.style.borderLeftColor = "#ef4444"; // Danger Red
     }
 }
@@ -472,36 +475,40 @@ function setAttendanceAction(action) {
     updateActionUI();
 }
 
-function setPulangAvailability(canClockOut) {
+function setPulangAvailability(canClockOut, reason = '') {
     const pulangInput = document.getElementById('btnPulang');
     const pulangLabel = document.querySelector('label[for="btnPulang"]');
     if (!pulangInput || !pulangLabel) return;
 
+    clockOutRestrictionReason = canClockOut ? '' : (reason || 'Absen pulang aktif setelah karyawan absen masuk hari ini.');
     pulangInput.disabled = !canClockOut;
     pulangLabel.classList.toggle('opacity-50', !canClockOut);
     pulangLabel.style.cursor = canClockOut ? 'pointer' : 'not-allowed';
     pulangLabel.style.pointerEvents = canClockOut ? 'auto' : 'none';
-    pulangLabel.title = canClockOut ? '' : 'Absen pulang aktif setelah karyawan absen masuk hari ini.';
+    pulangLabel.title = canClockOut ? '' : clockOutRestrictionReason;
 }
 
 async function loadEmployeeCurrentStatus() {
     if (!selectedEmployee?.id) {
-        setPulangAvailability(false);
+        setPulangAvailability(false, 'Belum ada data absen masuk hari ini.');
         setAttendanceAction('masuk');
         return;
     }
 
     try {
         const response = await fetch(`/api/attendance/current-status/${selectedEmployee.id}`);
+        if (!response.ok) throw new Error('Gagal memuat status absensi');
         const data = await response.json();
         const canClockOut = Boolean(data.can_clock_out);
-        setPulangAvailability(canClockOut);
+        setPulangAvailability(canClockOut, data.clock_out_reason || '');
 
         if (!canClockOut && selectedAttendanceAction === 'pulang') {
             setAttendanceAction('masuk');
+        } else {
+            updateActionUI();
         }
     } catch (error) {
-        setPulangAvailability(false);
+        setPulangAvailability(false, 'Gagal memuat status absensi karyawan.');
         setAttendanceAction('masuk');
     }
 }
@@ -638,9 +645,12 @@ async function saveAttendance() {
 
         if (res.success) {
             const actionLabel = res.action === 'clock_out' ? 'Pulang' : 'Masuk';
+            const lateInfo = res.action === 'clock_in' && Number(res.data?.menit_terlambat || 0) > 0
+                ? ` — Terlambat ${res.data.menit_terlambat} menit`
+                : '';
             showToast(
                 'Absensi Berhasil Dicatat',
-                `${res.data?.nama || '-'} — ${actionLabel} — ${res.data?.waktu || 'waktu sekarang'}`
+                `${res.data?.nama || '-'} — ${actionLabel} — ${res.data?.waktu || 'waktu sekarang'}${lateInfo}`
             );
             resetForm();
         } else {
