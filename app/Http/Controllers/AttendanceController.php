@@ -224,7 +224,9 @@ class AttendanceController extends Controller
                 return response()->json(['error' => 'Employee not found'], 404);
             }
 
-            $attendance = $this->attendanceService->getAttendanceHistory($idKaryawan, 1)->first();
+            $attendance = Absensi::where('id_karyawan', $idKaryawan)
+                ->whereDate('tanggal', Carbon::today())
+                ->first();
 
             return response()->json([
                 'employee' => $karyawan->nama,
@@ -232,6 +234,7 @@ class AttendanceController extends Controller
                 'clock_out' => $attendance?->jam_pulang,
                 'status' => $attendance?->status,
                 'date' => $attendance?->tanggal,
+                'can_clock_out' => (bool) ($attendance?->jam_masuk && !$attendance?->jam_pulang),
             ]);
         } catch (\Exception $e) {
             Log::error("Get current status error: {$e->getMessage()}");

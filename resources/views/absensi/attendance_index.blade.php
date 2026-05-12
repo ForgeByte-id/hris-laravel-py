@@ -164,7 +164,7 @@
 
                         {{-- Absen Masuk --}}
                         <div class="flex-grow-1">
-                            <input type="radio" class="d-none" name="attendance_action" id="btnMasuk" value="masuk" checked onchange="updateActionUI()">
+                            <input type="radio" class="d-none" name="attendance_action" id="btnMasuk" value="masuk" checked onchange="setAttendanceAction('masuk')">
                             <label for="btnMasuk" class="attendance-card card-masuk d-flex flex-column align-items-center justify-content-center gap-2 p-3 rounded-3 border border-2 position-relative"
                                 style="cursor: pointer; transition: border-color .18s, background .18s, transform .12s;">
                                 <i class="bi bi-check-circle-fill check-indicator position-absolute top-0 end-0 mt-2 me-2 text-success" style="font-size: 15px; opacity: 0; transition: opacity .15s;"></i>
@@ -177,7 +177,7 @@
 
                         {{-- Absen Pulang --}}
                         <div class="flex-grow-1">
-                            <input type="radio" class="d-none" name="attendance_action" id="btnPulang" value="pulang" onchange="updateActionUI()">
+                            <input type="radio" class="d-none" name="attendance_action" id="btnPulang" value="pulang" onchange="setAttendanceAction('pulang')">
                             <label for="btnPulang" class="attendance-card card-pulang d-flex flex-column align-items-center justify-content-center gap-2 p-3 rounded-3 border border-2 position-relative"
                                 style="cursor: pointer; transition: border-color .18s, background .18s, transform .12s;">
                                 <i class="bi bi-check-circle-fill check-indicator position-absolute top-0 end-0 mt-2 me-2 text-danger" style="font-size: 15px; opacity: 0; transition: opacity .15s;"></i>
@@ -332,6 +332,8 @@ document.addEventListener('DOMContentLoaded', () => {
     captureGPS();
     if (serviceOk) startCamera();
     initSelect2();
+    setPulangAvailability(false);
+    setAttendanceAction('masuk');
     updateButtons();
 });
 
@@ -378,10 +380,11 @@ function updateTime() {
 
 // ── Employee selection ────────────────────────────────────────────────────────────────────
 function updateActionUI() {
-    const action = document.querySelector('input[name="attendance_action"]:checked').value;
+    const action = selectedAttendanceAction;
     const alertBox = document.getElementById('attendanceAlert');
     const alertText = document.getElementById('alertText');
 
+    alertBox.classList.remove('d-none');
     alertBox.style.display = 'block';
 
     if (action === 'masuk') {
@@ -394,7 +397,7 @@ function updateActionUI() {
 }
 
 // Update fungsi onEmployeeChange yang lama
-function onEmployeeChange() {
+async function onEmployeeChange() {
     const $sel = $('#employeeSelect');
     const val  = $sel.val();
 
@@ -406,6 +409,8 @@ function onEmployeeChange() {
 
     if (!val) {
         selectedEmployee = null;
+        setPulangAvailability(false);
+        setAttendanceAction('masuk');
         updateButtons();
         return;
     }
@@ -421,7 +426,8 @@ function onEmployeeChange() {
     selectedEmployee = {
         id: parseInt(val),
         nama: $opt.data('nama'),
-        hasFace: $opt.attr('data-face') == '1'
+        hasFace: $opt.attr('data-face') == '1',
+        registerUrl: $opt.data('register-url') || null
     };
 
     // Update UI Jadwal
@@ -439,6 +445,7 @@ function onEmployeeChange() {
 
     document.getElementById('faceWarning').style.display = selectedEmployee.hasFace ? 'none' : 'block';
 
+    await loadEmployeeCurrentStatus();
     updateActionUI();
     updateButtons();
 }
@@ -451,18 +458,52 @@ function goToRegisterFace() {
 }
 
 function setAttendanceAction(action) {
+    const target = document.querySelector(`input[name="attendance_action"][value="${action}"]`);
+    if (!target || target.disabled) {
+        action = 'masuk';
+    }
+
     selectedAttendanceAction = action;
-    document.querySelectorAll('input[name="attendance_action"]').forEach((input) => {
-        const wrap = input.closest('label.btn');
-        if (!wrap) return;
-        if (input.value === action) {
-            input.checked = true;
-            wrap.classList.add('active');
-        } else {
-            input.checked = false;
-            wrap.classList.remove('active');
+    const selectedInput = document.querySelector(`input[name="attendance_action"][value="${action}"]`);
+    if (selectedInput) {
+        selectedInput.checked = true;
+    }
+
+    updateActionUI();
+}
+
+function setPulangAvailability(canClockOut) {
+    const pulangInput = document.getElementById('btnPulang');
+    const pulangLabel = document.querySelector('label[for="btnPulang"]');
+    if (!pulangInput || !pulangLabel) return;
+
+    pulangInput.disabled = !canClockOut;
+    pulangLabel.classList.toggle('opacity-50', !canClockOut);
+    pulangLabel.style.cursor = canClockOut ? 'pointer' : 'not-allowed';
+    pulangLabel.style.pointerEvents = canClockOut ? 'auto' : 'none';
+    pulangLabel.title = canClockOut ? '' : 'Absen pulang aktif setelah karyawan absen masuk hari ini.';
+}
+
+async function loadEmployeeCurrentStatus() {
+    if (!selectedEmployee?.id) {
+        setPulangAvailability(false);
+        setAttendanceAction('masuk');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/attendance/current-status/${selectedEmployee.id}`);
+        const data = await response.json();
+        const canClockOut = Boolean(data.can_clock_out);
+        setPulangAvailability(canClockOut);
+
+        if (!canClockOut && selectedAttendanceAction === 'pulang') {
+            setAttendanceAction('masuk');
         }
-    });
+    } catch (error) {
+        setPulangAvailability(false);
+        setAttendanceAction('masuk');
+    }
 }
 
 // ── Camera ────────────────────────────────────────────────────────────────────
@@ -727,6 +768,7 @@ function resetForm() {
     capturedPhoto    = null;
     selectedAttendanceAction = 'masuk';
     document.getElementById('faceWarning').style.display = 'none';
+    setPulangAvailability(false);
     setAttendanceAction('masuk');
     setVerificationUI('idle');
     updateButtons();
