@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Devisi;
 use App\Models\Jabatan;
 use App\Models\Karyawan;
+use App\Models\Shift;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +23,8 @@ class KaryawanController extends Controller
     {
         $jabatanList = Jabatan::orderBy('nama_jabatan')->get();
         $divisiList  = Devisi::orderBy('nama_devisi')->get();
-        return view('employees.karyawan_create', compact('jabatanList', 'divisiList'));
+        $shiftList = Shift::orderBy('nama_shift')->get();
+        return view('employees.karyawan_create', compact('jabatanList', 'divisiList', 'shiftList'));
     }
 
     public function store(Request $request)
@@ -33,6 +35,7 @@ class KaryawanController extends Controller
             'id_jabatan'            => 'nullable|exists:jabatans,id',
             'id_devisi'             => 'nullable|exists:devisis,id',
             'tanggal_masuk'         => 'nullable|date',
+            'kode_shift'            => 'required|exists:shifts,kode_shift',
             'yearly_leave_quota'    => 'nullable|integer|min:0|max:365',
             'remaining_leave_quota' => 'nullable|integer|min:0|max:365',
             // New user account fields
@@ -62,6 +65,7 @@ class KaryawanController extends Controller
                 'nama'                  => $request->nama,
                 'id_jabatan'            => $request->id_jabatan,
                 'id_devisi'             => $request->id_devisi,
+                'kode_shift'            => $request->kode_shift,
                 'tanggal_masuk'         => $request->tanggal_masuk,
                 'id_user'               => $user->id_user,
                 'yearly_leave_quota'    => $yearlyLeaveQuota,
@@ -91,10 +95,11 @@ class KaryawanController extends Controller
         $karyawan = Karyawan::findOrFail($id_karyawan);
         $jabatanList = Jabatan::orderBy('nama_jabatan')->get();
         $divisiList = Devisi::orderBy('nama_devisi')->get();
+        $shiftList = Shift::orderBy('nama_shift')->get();
         $userList = User::whereDoesntHave('karyawan')
             ->orWhere('id_user', $karyawan->id_user)
             ->get();
-        return view('employees.karyawan_edit', compact('karyawan', 'jabatanList', 'divisiList', 'userList'));
+        return view('employees.karyawan_edit', compact('karyawan', 'jabatanList', 'divisiList', 'shiftList', 'userList'));
     }
 
     public function update(Request $request, $id_karyawan)
@@ -106,6 +111,7 @@ class KaryawanController extends Controller
             'id_jabatan'    => 'nullable|exists:jabatans,id',
             'id_devisi'     => 'nullable|exists:devisis,id',
             'tanggal_masuk' => 'nullable|date',
+            'kode_shift'    => 'required|exists:shifts,kode_shift',
             'id_user'       => 'nullable|exists:users,id_user',
             'yearly_leave_quota' => 'nullable|integer|min:0|max:365',
             'remaining_leave_quota' => 'nullable|integer|min:0|max:365',
@@ -118,6 +124,7 @@ class KaryawanController extends Controller
             'nama'          => $request->nama,
             'id_jabatan'    => $request->id_jabatan,
             'id_devisi'     => $request->id_devisi,
+            'kode_shift'    => $request->kode_shift,
             'tanggal_masuk' => $request->tanggal_masuk,
             'id_user'       => $request->id_user,
             'yearly_leave_quota' => $yearlyLeaveQuota,

@@ -21,6 +21,7 @@ class Karyawan extends Authenticatable
         'nama',
         'id_jabatan',
         'id_devisi',
+        'kode_shift',
         'tanggal_masuk',
         'yearly_leave_quota',
         'remaining_leave_quota',
@@ -48,6 +49,11 @@ class Karyawan extends Authenticatable
     public function user()
     {
         return $this->belongsTo(User::class, 'id_user', 'id_user');
+    }
+
+    public function shift()
+    {
+        return $this->belongsTo(Shift::class, 'kode_shift', 'kode_shift');
     }
 
     // Relationship ke Absensi

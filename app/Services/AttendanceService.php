@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Absensi;
 use App\Models\Karyawan;
 use App\Models\JadwalKerja;
+use App\Models\Shift;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -53,14 +54,15 @@ class AttendanceService
 
             $now = Carbon::now();
             $jamMasuk = $now->format('H:i:s');
+            $referenceShift = $this->resolveReferenceShift($karyawan, $schedule);
 
             // Check if late
             $isLate = false;
             $lateMinutes = 0;
             $expectedStartTime = '08:00:00'; // Default start time
 
-            if ($schedule) {
-                $shiftTime = $this->extractShiftStartTime($schedule);
+            if ($schedule || $referenceShift) {
+                $shiftTime = $this->extractShiftStartTime($schedule, $referenceShift);
                 if ($shiftTime) {
                     $expectedStartTime = $shiftTime;
                     $expectedStart = Carbon::today()->setTimeFromTimeString($shiftTime);
@@ -167,8 +169,9 @@ class AttendanceService
             }
 
             $schedule = $this->getTodaySchedule($idKaryawan);
+            $referenceShift = $this->resolveReferenceShift($karyawan, $schedule);
             if ($schedule && !$schedule->isLibur()) {
-                $shiftEndTime = $this->extractShiftEndTime($schedule);
+                $shiftEndTime = $this->extractShiftEndTime($schedule, $referenceShift);
                 if ($shiftEndTime) {
                     $allowedClockOutFrom = Carbon::today()
                         ->setTimeFromTimeString($shiftEndTime)
@@ -181,6 +184,18 @@ class AttendanceService
                             'attendance' => $attendance,
                         ];
                     }
+                }
+            } elseif ($referenceShift && $referenceShift->jam_pulang) {
+                $allowedClockOutFrom = Carbon::today()
+                    ->setTimeFromTimeString($referenceShift->jam_pulang)
+                    ->subMinutes(30);
+
+                if (Carbon::now()->lt($allowedClockOutFrom)) {
+                    return [
+                        'success' => false,
+                        'message' => 'Belum mendekati jam pulang sesuai shift',
+                        'attendance' => $attendance,
+                    ];
                 }
             }
 
@@ -322,31 +337,52 @@ class AttendanceService
      * @param JadwalKerja $schedule
      * @return string|null
      */
-    private function extractShiftStartTime(JadwalKerja $schedule): ?string
+    private function extractShiftStartTime(?JadwalKerja $schedule, ?Shift $referenceShift = null): ?string
     {
-        if ($schedule->shift && $schedule->shift->jam_masuk) {
+        if ($schedule && $schedule->shift && $schedule->shift->jam_masuk) {
             return $schedule->shift->jam_masuk;
         }
 
-        $jamKerja = $schedule->jam_kerja;
-        if (preg_match('/\((\d{2}):(\d{2})-/', $jamKerja, $matches)) {
+        if ($referenceShift && $referenceShift->jam_masuk) {
+            return $referenceShift->jam_masuk;
+        }
+
+        $jamKerja = $schedule?->jam_kerja;
+        if ($jamKerja && preg_match('/\((\d{2}):(\d{2})-/', $jamKerja, $matches)) {
             return "{$matches[1]}:{$matches[2]}:00";
         }
         return null;
     }
 
-    private function extractShiftEndTime(JadwalKerja $schedule): ?string
+    private function extractShiftEndTime(?JadwalKerja $schedule, ?Shift $referenceShift = null): ?string
     {
-        if ($schedule->shift && $schedule->shift->jam_pulang) {
+        if ($schedule && $schedule->shift && $schedule->shift->jam_pulang) {
             return $schedule->shift->jam_pulang;
         }
 
-        $jamKerja = $schedule->jam_kerja;
-        if (preg_match('/-(\d{2}):(\d{2})\)/', $jamKerja, $matches)) {
+        if ($referenceShift && $referenceShift->jam_pulang) {
+            return $referenceShift->jam_pulang;
+        }
+
+        $jamKerja = $schedule?->jam_kerja;
+        if ($jamKerja && preg_match('/-(\d{2}):(\d{2})\)/', $jamKerja, $matches)) {
             return "{$matches[1]}:{$matches[2]}:00";
         }
 
         return null;
+    }
+
+    private function resolveReferenceShift(Karyawan $karyawan, ?JadwalKerja $schedule): ?Shift
+    {
+        if ($schedule && $schedule->shift) {
+            return $schedule->shift;
+        }
+
+        if ($karyawan->relationLoaded('shift')) {
+            return $karyawan->shift;
+        }
+
+        return $karyawan->shift()->first();
     }
 
     /**

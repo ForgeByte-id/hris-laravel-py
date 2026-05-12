@@ -85,6 +85,23 @@
                             @enderror
                         </div>
 
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                Shift Default <span class="text-danger">*</span>
+                            </label>
+                            <select name="kode_shift" class="form-select @error('kode_shift') is-invalid @enderror" required>
+                                <option value="">-- Pilih Shift --</option>
+                                @foreach($shiftList as $shift)
+                                    <option value="{{ $shift->kode_shift }}" {{ old('kode_shift', 'P') === $shift->kode_shift ? 'selected' : '' }}>
+                                        {{ $shift->label }} [{{ $shift->kode_shift }}]
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('kode_shift')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
                         {{-- Akun Login --}}
                         <hr class="my-4">
                         <h6 class="fw-bold mb-3 text-primary">

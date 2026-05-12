@@ -85,6 +85,28 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
+                                    <label class="form-label fw-semibold">
+                                        Shift Default <span class="text-danger">*</span>
+                                    </label>
+                                    <select name="kode_shift" class="form-select @error('kode_shift') is-invalid @enderror" required>
+                                        <option value="">-- Pilih Shift --</option>
+                                        @foreach($shiftList as $shift)
+                                            <option value="{{ $shift->kode_shift }}"
+                                                {{ old('kode_shift', $karyawan->kode_shift) === $shift->kode_shift ? 'selected' : '' }}>
+                                                {{ $shift->label }} [{{ $shift->kode_shift }}]
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('kode_shift')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="mb-3">
                                     <label class="form-label fw-semibold">Akun User</label>
                                     <select name="id_user" class="form-select @error('id_user') is-invalid @enderror">
                                         <option value="">-- Pilih User (Opsional) --</option>
@@ -100,6 +122,7 @@
                                     @enderror
                                 </div>
                             </div>
+                            <div class="col-md-6"></div>
                         </div>
 
                         <div class="row g-3">
