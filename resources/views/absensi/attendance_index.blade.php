@@ -46,6 +46,26 @@
     .leaflet-control { z-index: 0 !important; }
     .leaflet-top,
     .leaflet-bottom { z-index: 1 !important; }
+
+   #btnMasuk:checked + .card-masuk {
+        border-color: #1D9E75 !important;
+        background-color: #E1F5EE !important;
+        transform: translateY(-1px);
+    }
+    #btnMasuk:checked + .card-masuk .check-indicator { opacity: 1 !important; }
+    #btnMasuk:checked + .card-masuk .action-icon-wrapper { background-color: #9FE1CB !important; color: #0F6E56; }
+    #btnMasuk:checked + .card-masuk .action-label { color: #0F6E56 !important; }
+
+    #btnPulang:checked + .card-pulang {
+        border-color: #D85A30 !important;
+        background-color: #FAECE7 !important;
+        transform: translateY(-1px);
+    }
+    #btnPulang:checked + .card-pulang .check-indicator { opacity: 1 !important; }
+    #btnPulang:checked + .card-pulang .action-icon-wrapper { background-color: #F5C4B3 !important; color: #993C1D; }
+    #btnPulang:checked + .card-pulang .action-label { color: #993C1D !important; }
+
+    .attendance-card:hover { background-color: #f8f9fa !important; }
 </style>
 @endsection
 
@@ -102,10 +122,14 @@
                         @foreach($karyawanList as $k)
                             @php
                                 // Prefer model helper if available; fall back to properties that may exist
-                                $hasFace = (method_exists($k, 'hasFaceRegistered') ? $k->hasFaceRegistered() : null) ?? ($k->face_registered ?? ($k->face_verified ?? false));
+                                $isRegistered = (method_exists($k, 'hasFaceRegistered') ? $k->hasFaceRegistered() : false)
+                                                || $k->face_registered
+                                                || $k->face_verified;
+
+                                $valFace = $isRegistered ? '1' : '0';
                             @endphp
                             <option value="{{ $k->id_karyawan }}"
-                                    data-face="{{ $hasFace ? '1' : '0' }}"
+                                    data-face="{{ $valFace }}"
                                     data-nama="{{ $k->nama }}"
                                     data-jabatan="{{ $k->jabatan?->nama_jabatan ?? '' }}"
                                     data-register-url="{{ route('karyawan.register-face', $k->id_karyawan) }}">
@@ -125,29 +149,55 @@
                 </div>
             </div>
 
-            {{-- Step 2: Status Otomatis --}}
+            {{-- Step 2: Status & Jadwal --}}
             <div class="hris-card">
-                <div class="hris-card-header">
-                    <h6 class="mb-0 fw-semibold"><span class="badge bg-primary me-2">2</span>Aksi Absensi</h6>
+                <div class="hris-card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-semibold d-flex align-items-center gap-2">
+                        <span class="badge rounded-pill bg-primary px-2 py-1" style="font-size: 11px;">2</span>
+                        Pilih Aksi
+                    </h6>
+                    <div id="liveShiftBadge"></div>
                 </div>
                 <div class="hris-card-body">
-                    <div class="mb-2">
-                        <label class="form-label small fw-semibold mb-2">Pilih aksi</label>
-                        <div class="d-flex flex-wrap gap-2">
-                            <label class="btn btn-outline-primary active">
-                                <input type="radio" class="d-none" name="attendance_action" value="masuk" checked onchange="setAttendanceAction('masuk')">
-                                Masuk
-                            </label>
-                            <label class="btn btn-outline-primary">
-                                <input type="radio" class="d-none" name="attendance_action" value="pulang" onchange="setAttendanceAction('pulang')">
-                                Pulang
+
+                    <div class="d-flex gap-3 mb-3">
+
+                        {{-- Absen Masuk --}}
+                        <div class="flex-grow-1">
+                            <input type="radio" class="d-none" name="attendance_action" id="btnMasuk" value="masuk" checked onchange="updateActionUI()">
+                            <label for="btnMasuk" class="attendance-card card-masuk d-flex flex-column align-items-center justify-content-center gap-2 p-3 rounded-3 border border-2 position-relative"
+                                style="cursor: pointer; transition: border-color .18s, background .18s, transform .12s;">
+                                <i class="bi bi-check-circle-fill check-indicator position-absolute top-0 end-0 mt-2 me-2 text-success" style="font-size: 15px; opacity: 0; transition: opacity .15s;"></i>
+                                <div class="action-icon-wrapper d-flex align-items-center justify-content-center rounded-circle bg-light" style="width: 44px; height: 44px; font-size: 22px;">
+                                    <i class="bi bi-box-arrow-in-right"></i>
+                                </div>
+                                <span class="action-label small fw-medium text-secondary">Absen Masuk</span>
                             </label>
                         </div>
+
+                        {{-- Absen Pulang --}}
+                        <div class="flex-grow-1">
+                            <input type="radio" class="d-none" name="attendance_action" id="btnPulang" value="pulang" onchange="updateActionUI()">
+                            <label for="btnPulang" class="attendance-card card-pulang d-flex flex-column align-items-center justify-content-center gap-2 p-3 rounded-3 border border-2 position-relative"
+                                style="cursor: pointer; transition: border-color .18s, background .18s, transform .12s;">
+                                <i class="bi bi-check-circle-fill check-indicator position-absolute top-0 end-0 mt-2 me-2 text-danger" style="font-size: 15px; opacity: 0; transition: opacity .15s;"></i>
+                                <div class="action-icon-wrapper d-flex align-items-center justify-content-center rounded-circle bg-light" style="width: 44px; height: 44px; font-size: 22px;">
+                                    <i class="bi bi-box-arrow-left"></i>
+                                </div>
+                                <span class="action-label small fw-medium text-secondary">Absen Pulang</span>
+                            </label>
+                        </div>
+
                     </div>
-                    <div class="alert alert-info mb-0 small">
-                        <i class="bi bi-info-circle me-1"></i>
-                        Pilihan ini memperjelas flow. Sistem tetap validasi apakah aksi sesuai kondisi absensi hari ini.
+
+                    {{-- Info Alert --}}
+                    <div id="attendanceAlert" class="rounded-3 p-2 small border-start border-4 d-none" style="background: #f8fafc;">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-info-circle-fill text-primary"></i>
+                            <span id="alertText" class="text-secondary"></span>
+                        </div>
                     </div>
+
                 </div>
             </div>
 
@@ -288,15 +338,20 @@ document.addEventListener('DOMContentLoaded', () => {
 // ── Select2 init ─────────────────────────────────────────────────────────────
 function initSelect2() {
     function formatOption(option) {
-        if (!option.id) return option.text; // placeholder
-        const $opt  = $(option.element);
-        const face  = $opt.data('face')  === '1';
-        const job   = $opt.data('jabatan') || '';
-        const warn  = face ? '' : '<span class="s2-no-face"><i class="bi bi-exclamation-triangle-fill"></i> Belum daftar wajah</span>';
+        if (!option.id) return option.text;
+
+        const $opt = $(option.element);
+        // Gunakan .attr() untuk mendapatkan string murni,
+        // atau gunakan == (double equals) agar tidak sensitif terhadap tipe data
+        const hasFace = $opt.attr('data-face') == '1';
+
+        const job  = $opt.data('jabatan') || '';
+        const warn = hasFace ? '' : '<span class="s2-no-face"><i class="bi bi-exclamation-triangle-fill"></i> Belum daftar wajah</span>';
+
         return $(`<span class="s2-employee-option">
                     <span>${option.text}${job ? ' <span class="s2-job">('+job+')</span>' : ''}</span>
                     ${warn}
-                  </span>`);
+                </span>`);
     }
 
     $('#employeeSelect').select2({
@@ -320,34 +375,71 @@ function updateTime() {
         now.toLocaleDateString('id-ID', { timeZone: TZ, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+
 // ── Employee selection ────────────────────────────────────────────────────────────────────
+function updateActionUI() {
+    const action = document.querySelector('input[name="attendance_action"]:checked').value;
+    const alertBox = document.getElementById('attendanceAlert');
+    const alertText = document.getElementById('alertText');
+
+    alertBox.style.display = 'block';
+
+    if (action === 'masuk') {
+        alertText.textContent = "Status 'Telat' akan dihitung otomatis oleh sistem.";
+        alertBox.style.borderLeftColor = "#22c55e"; // Success Green
+    } else {
+        alertText.textContent = "Pastikan semua laporan pekerjaan hari ini sudah di-upload.";
+        alertBox.style.borderLeftColor = "#ef4444"; // Danger Red
+    }
+}
+
+// Update fungsi onEmployeeChange yang lama
 function onEmployeeChange() {
     const $sel = $('#employeeSelect');
     const val  = $sel.val();
 
-    faceVerified  = false;
-    capturedPhoto = null;
+    // Reset UI
+    faceVerified = false;
+    document.getElementById('shiftDetailInfo').style.display = 'none';
+    document.getElementById('liveShiftBadge').innerHTML = '';
     setVerificationUI('idle');
 
     if (!val) {
         selectedEmployee = null;
-        document.getElementById('faceWarning').style.display = 'none';
         updateButtons();
         return;
     }
 
-    // Use .attr() — reads the HTML attribute directly, bypasses jQuery's data() cache
-    const $opt        = $sel.find('option[value="' + val + '"]');
-    const hasFace     = $opt.attr('data-face') === '1';
+    const $opt = $sel.find('option[value="' + val + '"]');
+
+    // Simulasi pengambilan data shift dari atribut option (Anda perlu menambahkannya di Blade)
+    // Misal: data-shift-name="Pagi" data-shift-hours="08:00 - 17:00" data-shift-code="P"
+    const shiftCode = $opt.data('shift-code') || 'P';
+    const shiftName = $opt.data('shift-name') || 'Pagi';
+    const shiftHours = $opt.data('shift-hours') || '08:00 - 17:00';
 
     selectedEmployee = {
-        id:          parseInt(val),
-        nama:        $opt.attr('data-nama'),
-        hasFace:     hasFace,
-        registerUrl: $opt.attr('data-register-url') || '/karyawan',
+        id: parseInt(val),
+        nama: $opt.data('nama'),
+        hasFace: $opt.attr('data-face') == '1'
     };
 
-    document.getElementById('faceWarning').style.display = hasFace ? 'none' : 'block';
+    // Update UI Jadwal
+    document.getElementById('shiftDetailInfo').style.display = 'block';
+    document.getElementById('shiftName').textContent = shiftName;
+    document.getElementById('shiftHours').textContent = shiftHours;
+
+    // Update Icon Shift secara dinamis (UX: Memberi kepastian visual)
+    const iconMap = {
+        'P': '<i class="bi bi-brightness-high-fill text-warning fs-5"></i>',
+        'M': '<i class="bi bi-clock-history text-primary fs-5"></i>',
+        'S': '<i class="bi bi-moon-stars-fill text-info fs-5"></i>'
+    };
+    document.getElementById('liveShiftBadge').innerHTML = iconMap[shiftCode] || '';
+
+    document.getElementById('faceWarning').style.display = selectedEmployee.hasFace ? 'none' : 'block';
+
+    updateActionUI();
     updateButtons();
 }
 
