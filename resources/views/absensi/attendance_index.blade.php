@@ -404,10 +404,20 @@ async function onEmployeeChange() {
     const $sel = $('#employeeSelect');
     const val  = $sel.val();
 
-    // Reset UI
     faceVerified = false;
-    document.getElementById('shiftDetailInfo').style.display = 'none';
-    document.getElementById('liveShiftBadge').innerHTML = '';
+    capturedPhoto = null;
+
+    const shiftDetailInfo = document.getElementById('shiftDetailInfo');
+    const liveShiftBadge  = document.getElementById('liveShiftBadge');
+
+    if (shiftDetailInfo) {
+        shiftDetailInfo.style.display = 'none';
+    }
+
+    if (liveShiftBadge) {
+        liveShiftBadge.innerHTML = '';
+    }
+
     setVerificationUI('idle');
 
     if (!val) {
@@ -420,12 +430,6 @@ async function onEmployeeChange() {
 
     const $opt = $sel.find('option[value="' + val + '"]');
 
-    // Simulasi pengambilan data shift dari atribut option (Anda perlu menambahkannya di Blade)
-    // Misal: data-shift-name="Pagi" data-shift-hours="08:00 - 17:00" data-shift-code="P"
-    const shiftCode = $opt.data('shift-code') || 'P';
-    const shiftName = $opt.data('shift-name') || 'Pagi';
-    const shiftHours = $opt.data('shift-hours') || '08:00 - 17:00';
-
     selectedEmployee = {
         id: parseInt(val),
         nama: $opt.data('nama'),
@@ -433,22 +437,43 @@ async function onEmployeeChange() {
         registerUrl: $opt.data('register-url') || null
     };
 
-    // Update UI Jadwal
-    document.getElementById('shiftDetailInfo').style.display = 'block';
-    document.getElementById('shiftName').textContent = shiftName;
-    document.getElementById('shiftHours').textContent = shiftHours;
+    const shiftCode  = $opt.data('shift-code') || 'P';
+    const shiftName  = $opt.data('shift-name') || 'Pagi';
+    const shiftHours = $opt.data('shift-hours') || '08:00 - 17:00';
 
-    // Update Icon Shift secara dinamis (UX: Memberi kepastian visual)
+    const shiftNameEl  = document.getElementById('shiftName');
+    const shiftHoursEl = document.getElementById('shiftHours');
+
+    if (shiftDetailInfo) {
+        shiftDetailInfo.style.display = 'block';
+    }
+
+    if (shiftNameEl) {
+        shiftNameEl.textContent = shiftName;
+    }
+
+    if (shiftHoursEl) {
+        shiftHoursEl.textContent = shiftHours;
+    }
+
     const iconMap = {
         'P': '<i class="bi bi-brightness-high-fill text-warning fs-5"></i>',
         'M': '<i class="bi bi-clock-history text-primary fs-5"></i>',
         'S': '<i class="bi bi-moon-stars-fill text-info fs-5"></i>'
     };
-    document.getElementById('liveShiftBadge').innerHTML = iconMap[shiftCode] || '';
 
-    document.getElementById('faceWarning').style.display = selectedEmployee.hasFace ? 'none' : 'block';
+    if (liveShiftBadge) {
+        liveShiftBadge.innerHTML = iconMap[shiftCode] || '';
+    }
+
+    const faceWarning = document.getElementById('faceWarning');
+
+    if (faceWarning) {
+        faceWarning.style.display = selectedEmployee.hasFace ? 'none' : 'block';
+    }
 
     await loadEmployeeCurrentStatus();
+
     updateActionUI();
     updateButtons();
 }
@@ -666,7 +691,15 @@ async function saveAttendance() {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function updateButtons() {
-    const hasEmp   = !!selectedEmployee;
+    const hasEmp = !!selectedEmployee;
+
+    console.log({
+        hasEmp,
+        selectedEmployee,
+        hasFace: selectedEmployee?.hasFace,
+        serviceOk,
+        faceVerified
+    });
 
     document.getElementById('btnVerify').disabled =
         !hasEmp || !selectedEmployee?.hasFace || !serviceOk;
