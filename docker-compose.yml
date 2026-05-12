@@ -12,9 +12,11 @@ services:
         environment:
             # In Docker, use the Python container's service name — NOT localhost.
             # localhost inside this container refers to the PHP container itself.
-            FACE_SERVICE_URL: http://face-service:5000
+            # FACE_SERVICE_URL: http://face-service:5050
             # Temp dir for face images shared with the Python service via the storage volume.
             FACE_TEMP_DIR: /var/www/html/storage/app/temp
+            NO_PROXY: localhost,127.0.0.1,face-service,laravel_app,nginx,mysql
+            no_proxy: localhost,127.0.0.1,face-service,laravel_app,nginx,mysql
         depends_on:
             - mysql
             - python
@@ -48,7 +50,7 @@ services:
             # are picked up immediately without rebuilding the Docker image.
             - ./face_recognition_service:/app/face_recognition_service
         ports:
-            - "5000:5000"
+            - "5050:5000"
         depends_on:
             - mysql
         env_file:

@@ -29,7 +29,7 @@ return [
     ],
 
     'face_recognition' => [
-        'url' => env('FACE_SERVICE_URL', 'http://localhost:5000'),
+        'url' => env('FACE_SERVICE_URL', 'http://face-service:5000'),
     ],
 
     'slack' => [

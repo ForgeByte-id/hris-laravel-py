@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
         $this->call(MenuItemSeeder::class);
         $this->call(JabatanSeeder::class);
         $this->call(DevisiSeeder::class);
+        $this->call(ShiftSeeder::class);
 
         // ========================
         // ADMIN

@@ -56,17 +56,26 @@ class AttendanceService
 
             // Check if late
             $isLate = false;
+            $lateMinutes = 0;
             $expectedStartTime = '08:00:00'; // Default start time
 
             if ($schedule) {
-                $shiftTime = $this->extractShiftStartTime($schedule->jam_kerja);
+                $shiftTime = $this->extractShiftStartTime($schedule);
                 if ($shiftTime) {
                     $expectedStartTime = $shiftTime;
-                    $isLate = $now->format('H:i:s') > $shiftTime;
+                    $expectedStart = Carbon::today()->setTimeFromTimeString($shiftTime);
+                    if ($now->gt($expectedStart)) {
+                        $isLate = true;
+                        $lateMinutes = $expectedStart->diffInMinutes($now);
+                    }
                 }
             } else {
                 // No schedule found, allow check-in but mark as potentially flexible
-                $isLate = $now->format('H:i:s') > '09:00:00';
+                $fallbackStart = Carbon::today()->setTimeFromTimeString('09:00:00');
+                if ($now->gt($fallbackStart)) {
+                    $isLate = true;
+                    $lateMinutes = $fallbackStart->diffInMinutes($now);
+                }
             }
 
             // Create or update attendance record
@@ -78,6 +87,7 @@ class AttendanceService
                 [
                     'jam_masuk' => $jamMasuk,
                     'status' => $isLate ? 'terlambat' : 'tepat_waktu',
+                    'menit_terlambat' => $isLate ? $lateMinutes : 0,
                 ]
             );
 
@@ -137,6 +147,43 @@ class AttendanceService
                 ];
             }
 
+            if (!$attendance->jam_masuk) {
+                return [
+                    'success' => false,
+                    'message' => 'Jam masuk belum tersedia, belum bisa absen pulang.',
+                    'attendance' => $attendance,
+                ];
+            }
+
+            $clockInAt = Carbon::today()->setTimeFromTimeString($attendance->jam_masuk);
+            $minimumClockOutAt = (clone $clockInAt)->addHours(5);
+            if (Carbon::now()->lt($minimumClockOutAt)) {
+                $remainingMinutes = Carbon::now()->diffInMinutes($minimumClockOutAt);
+                return [
+                    'success' => false,
+                    'message' => "Absen pulang tersedia minimal 5 jam setelah jam masuk. Sisa {$remainingMinutes} menit lagi.",
+                    'attendance' => $attendance,
+                ];
+            }
+
+            $schedule = $this->getTodaySchedule($idKaryawan);
+            if ($schedule && !$schedule->isLibur()) {
+                $shiftEndTime = $this->extractShiftEndTime($schedule);
+                if ($shiftEndTime) {
+                    $allowedClockOutFrom = Carbon::today()
+                        ->setTimeFromTimeString($shiftEndTime)
+                        ->subMinutes(30);
+
+                    if (Carbon::now()->lt($allowedClockOutFrom)) {
+                        return [
+                            'success' => false,
+                            'message' => 'Belum mendekati jam pulang sesuai shift',
+                            'attendance' => $attendance,
+                        ];
+                    }
+                }
+            }
+
             $jamPulang = Carbon::now()->format('H:i:s');
             $attendance->jam_pulang = $jamPulang;
             $attendance->save();
@@ -169,9 +216,10 @@ class AttendanceService
      * - Both exist → ALREADY COMPLETED (reject)
      *
      * @param int $idKaryawan
+     * @param string|null $preferredAction 'clock_in'|'clock_out' or null for auto
      * @return array ['success' => bool, 'action' => 'clock_in'|'clock_out', 'message' => string, 'attendance' => Absensi|null, 'status' => string|null]
      */
-    public function processAutoAttendance(int $idKaryawan): array
+    public function processAutoAttendance(int $idKaryawan, ?string $preferredAction = null): array
     {
         try {
             $karyawan = Karyawan::find($idKaryawan);
@@ -205,6 +253,19 @@ class AttendanceService
                     'success' => false,
                     'action' => null,
                     'message' => 'Attendance already completed for today',
+                    'attendance' => $todayAttendance,
+                    'status' => null,
+                ];
+            }
+
+            if ($preferredAction && $preferredAction !== $action) {
+                $expectedLabel = $action === 'clock_in' ? 'masuk' : 'pulang';
+                $selectedLabel = $preferredAction === 'clock_in' ? 'masuk' : 'pulang';
+
+                return [
+                    'success' => false,
+                    'action' => $action,
+                    'message' => "Aksi {$selectedLabel} belum sesuai. Silakan lakukan absen {$expectedLabel}.",
                     'attendance' => $todayAttendance,
                     'status' => null,
                 ];
@@ -250,6 +311,7 @@ class AttendanceService
     {
         return JadwalKerja::where('id_karyawan', $idKaryawan)
             ->where('tanggal', Carbon::today())
+            ->with('shift')
             ->first();
     }
 
@@ -257,14 +319,33 @@ class AttendanceService
      * Extract start time from shift description
      * e.g., "Pagi (08:00-17:00)" → "08:00:00"
      *
-     * @param string $jamKerja
+     * @param JadwalKerja $schedule
      * @return string|null
      */
-    private function extractShiftStartTime(string $jamKerja): ?string
+    private function extractShiftStartTime(JadwalKerja $schedule): ?string
     {
+        if ($schedule->shift && $schedule->shift->jam_masuk) {
+            return $schedule->shift->jam_masuk;
+        }
+
+        $jamKerja = $schedule->jam_kerja;
         if (preg_match('/\((\d{2}):(\d{2})-/', $jamKerja, $matches)) {
             return "{$matches[1]}:{$matches[2]}:00";
         }
+        return null;
+    }
+
+    private function extractShiftEndTime(JadwalKerja $schedule): ?string
+    {
+        if ($schedule->shift && $schedule->shift->jam_pulang) {
+            return $schedule->shift->jam_pulang;
+        }
+
+        $jamKerja = $schedule->jam_kerja;
+        if (preg_match('/-(\d{2}):(\d{2})\)/', $jamKerja, $matches)) {
+            return "{$matches[1]}:{$matches[2]}:00";
+        }
+
         return null;
     }
 

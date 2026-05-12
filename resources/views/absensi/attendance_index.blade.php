@@ -10,18 +10,6 @@
     .s2-employee-option { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
     .s2-employee-option .s2-no-face { font-size: 0.72rem; color: #f59e0b; font-weight: 600; }
     .s2-employee-option .s2-job     { font-size: 0.8rem;  color: #6b7280; }
-    .status-option {
-        cursor: pointer;
-        transition: background 0.15s, border-color 0.15s;
-        border-color: var(--hris-border) !important;
-    }
-    .status-option.selected {
-        background: #f0f4ff;
-        border-color: var(--hris-primary) !important;
-    }
-    .status-option:hover:not(.selected) {
-        background: #f8f9fa;
-    }
     #video {
         width: 100%;
         display: block;
@@ -58,6 +46,26 @@
     .leaflet-control { z-index: 0 !important; }
     .leaflet-top,
     .leaflet-bottom { z-index: 1 !important; }
+
+   #btnMasuk:checked + .card-masuk {
+        border-color: #1D9E75 !important;
+        background-color: #E1F5EE !important;
+        transform: translateY(-1px);
+    }
+    #btnMasuk:checked + .card-masuk .check-indicator { opacity: 1 !important; }
+    #btnMasuk:checked + .card-masuk .action-icon-wrapper { background-color: #9FE1CB !important; color: #0F6E56; }
+    #btnMasuk:checked + .card-masuk .action-label { color: #0F6E56 !important; }
+
+    #btnPulang:checked + .card-pulang {
+        border-color: #D85A30 !important;
+        background-color: #FAECE7 !important;
+        transform: translateY(-1px);
+    }
+    #btnPulang:checked + .card-pulang .check-indicator { opacity: 1 !important; }
+    #btnPulang:checked + .card-pulang .action-icon-wrapper { background-color: #F5C4B3 !important; color: #993C1D; }
+    #btnPulang:checked + .card-pulang .action-label { color: #993C1D !important; }
+
+    .attendance-card:hover { background-color: #f8f9fa !important; }
 </style>
 @endsection
 
@@ -114,10 +122,14 @@
                         @foreach($karyawanList as $k)
                             @php
                                 // Prefer model helper if available; fall back to properties that may exist
-                                $hasFace = (method_exists($k, 'hasFaceRegistered') ? $k->hasFaceRegistered() : null) ?? ($k->face_registered ?? ($k->face_verified ?? false));
+                                $isRegistered = (method_exists($k, 'hasFaceRegistered') ? $k->hasFaceRegistered() : false)
+                                                || $k->face_registered
+                                                || $k->face_verified;
+
+                                $valFace = $isRegistered ? '1' : '0';
                             @endphp
                             <option value="{{ $k->id_karyawan }}"
-                                    data-face="{{ $hasFace ? '1' : '0' }}"
+                                    data-face="{{ $valFace }}"
                                     data-nama="{{ $k->nama }}"
                                     data-jabatan="{{ $k->jabatan?->nama_jabatan ?? '' }}"
                                     data-register-url="{{ route('karyawan.register-face', $k->id_karyawan) }}">
@@ -137,36 +149,64 @@
                 </div>
             </div>
 
-            {{-- Step 2: Status --}}
+            {{-- Step 2: Status & Jadwal --}}
             <div class="hris-card">
-                <div class="hris-card-header">
-                    <h6 class="mb-0 fw-semibold"><span class="badge bg-primary me-2">2</span>Status Kehadiran</h6>
+                <div class="hris-card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-semibold d-flex align-items-center gap-2">
+                        <span class="badge rounded-pill bg-primary px-2 py-1" style="font-size: 11px;">2</span>
+                        Pilih Aksi
+                    </h6>
+                    <div id="liveShiftBadge"></div>
                 </div>
-                <div class="hris-card-body d-flex flex-column gap-2">
-                    @foreach(['hadir' => ['success','Hadir','Kehadiran normal'], 'terlambat' => ['warning','Terlambat','Masuk setelah jam kerja'], 'remote' => ['info','Remote / WFH','Bekerja dari rumah'], 'tidak_hadir' => ['danger','Tidak Hadir','Alpha / tidak masuk']] as $val => [$color, $label, $hint])
-                    <label class="d-flex align-items-center gap-2 p-2 rounded border status-option {{ $val === 'hadir' ? 'selected' : '' }}"
-                           data-status="{{ $val }}" onclick="selectStatus('{{ $val }}')">
-                        <input type="radio" name="status" value="{{ $val }}" {{ $val === 'hadir' ? 'checked' : '' }} class="d-none">
-                        <span class="badge bg-{{ $color }} {{ $color === 'warning' ? 'text-dark' : '' }}" style="min-width:90px;text-align:center;">
-                            {{ $label }}
-                        </span>
-                        <span class="small text-muted">{{ $hint }}</span>
-                    </label>
-                    @endforeach
+                <div class="hris-card-body">
+
+                    <div class="d-flex gap-3 mb-3">
+
+                        {{-- Absen Masuk --}}
+                        <div class="flex-grow-1">
+                            <input type="radio" class="d-none" name="attendance_action" id="btnMasuk" value="masuk" checked onchange="setAttendanceAction('masuk')">
+                            <label for="btnMasuk" class="attendance-card card-masuk d-flex flex-column align-items-center justify-content-center gap-2 p-3 rounded-3 border border-2 position-relative"
+                                style="cursor: pointer; transition: border-color .18s, background .18s, transform .12s;">
+                                <i class="bi bi-check-circle-fill check-indicator position-absolute top-0 end-0 mt-2 me-2 text-success" style="font-size: 15px; opacity: 0; transition: opacity .15s;"></i>
+                                <div class="action-icon-wrapper d-flex align-items-center justify-content-center rounded-circle bg-light" style="width: 44px; height: 44px; font-size: 22px;">
+                                    <i class="bi bi-box-arrow-in-right"></i>
+                                </div>
+                                <span class="action-label small fw-medium text-secondary">Absen Masuk</span>
+                            </label>
+                        </div>
+
+                        {{-- Absen Pulang --}}
+                        <div class="flex-grow-1">
+                            <input type="radio" class="d-none" name="attendance_action" id="btnPulang" value="pulang" onchange="setAttendanceAction('pulang')">
+                            <label for="btnPulang" class="attendance-card card-pulang d-flex flex-column align-items-center justify-content-center gap-2 p-3 rounded-3 border border-2 position-relative"
+                                style="cursor: pointer; transition: border-color .18s, background .18s, transform .12s;">
+                                <i class="bi bi-check-circle-fill check-indicator position-absolute top-0 end-0 mt-2 me-2 text-danger" style="font-size: 15px; opacity: 0; transition: opacity .15s;"></i>
+                                <div class="action-icon-wrapper d-flex align-items-center justify-content-center rounded-circle bg-light" style="width: 44px; height: 44px; font-size: 22px;">
+                                    <i class="bi bi-box-arrow-left"></i>
+                                </div>
+                                <span class="action-label small fw-medium text-secondary">Absen Pulang</span>
+                            </label>
+                        </div>
+
+                    </div>
+
+                    {{-- Info Alert --}}
+                    <div id="attendanceAlert" class="rounded-3 p-2 small border-start border-4 d-none" style="background: #f8fafc;">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-info-circle-fill text-primary"></i>
+                            <span id="alertText" class="text-secondary"></span>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
-            {{-- Step 3: Time + GPS --}}
+            {{-- Step 3: Lokasi --}}
             <div class="hris-card">
                 <div class="hris-card-header">
-                    <h6 class="mb-0 fw-semibold"><span class="badge bg-primary me-2">3</span>Waktu &amp; Lokasi</h6>
+                    <h6 class="mb-0 fw-semibold"><span class="badge bg-primary me-2">3</span>Lokasi</h6>
                 </div>
                 <div class="hris-card-body">
-                    <div class="mb-3" id="timeInputWrap">
-                        <label class="form-label small fw-semibold">Jam Masuk</label>
-                        <input type="time" id="jamMasuk" class="form-control" value="{{ now()->setTimezone('Asia/Singapore')->format('H:i') }}">
-                        <div class="form-text">Biarkan kosong untuk menggunakan waktu saat ini</div>
-                    </div>
                     <div>
                         <div class="d-flex align-items-center justify-content-between mb-1">
                             <label class="form-label small fw-semibold mb-0">GPS Lokasi</label>
@@ -215,13 +255,6 @@
                         <p class="text-muted small text-center mt-2 mb-0">
                             <i class="bi bi-info-circle me-1"></i>Pastikan wajah karyawan terlihat jelas dan pencahayaan cukup
                         </p>
-                    </div>
-
-                    {{-- Tidak Hadir placeholder --}}
-                    <div id="noPhotoSection" style="display:none;" class="text-center py-5">
-                        <i class="bi bi-person-x text-danger" style="font-size:3.5rem;"></i>
-                        <p class="fw-semibold mt-3 mb-1">Status: Tidak Hadir</p>
-                        <p class="text-muted small">Verifikasi wajah tidak diperlukan untuk status ini.</p>
                     </div>
 
                     {{-- Verification result --}}
@@ -285,47 +318,43 @@ const serviceOk = @json($serviceHealthy);
 // ── Timezone ────────────────────────────────────────────────────────────────────
 const TZ = 'Asia/Singapore'; // GMT+8 — covers WIB+1, WITA, WIT, SGT, MYT
 
-/** Returns the current wall-clock time in GMT+8 as an HH:mm string for <input type="time">. */
-function currentTimeGMT8() {
-    const parts = new Intl.DateTimeFormat('en-GB', {
-        timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false,
-    }).formatToParts(new Date());
-    const h = parts.find(p => p.type === 'hour')?.value   ?? '00';
-    const m = parts.find(p => p.type === 'minute')?.value ?? '00';
-    return `${h}:${m}`;
-}
-
 // ── State ────────────────────────────────────────────────────────────────────
 let selectedEmployee = null; // { id, nama, hasFace }
-let currentStatus    = 'hadir';
 let faceVerified     = false;
 let capturedPhoto    = null;
+let selectedAttendanceAction = 'masuk';
+let clockOutStatusMessage = 'Absen pulang aktif setelah karyawan absen masuk hari ini.';
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     updateTime();
     setInterval(updateTime, 1000);
-    // Override the PHP-rendered initial value with the client-side GMT+8 time
-    document.getElementById('jamMasuk').value = currentTimeGMT8();
     captureDeviceInfo();
     captureGPS();
     if (serviceOk) startCamera();
     initSelect2();
+    setPulangAvailability(false);
+    setAttendanceAction('masuk');
     updateButtons();
 });
 
 // ── Select2 init ─────────────────────────────────────────────────────────────
 function initSelect2() {
     function formatOption(option) {
-        if (!option.id) return option.text; // placeholder
-        const $opt  = $(option.element);
-        const face  = $opt.data('face')  === '1';
-        const job   = $opt.data('jabatan') || '';
-        const warn  = face ? '' : '<span class="s2-no-face"><i class="bi bi-exclamation-triangle-fill"></i> Belum daftar wajah</span>';
+        if (!option.id) return option.text;
+
+        const $opt = $(option.element);
+        // Gunakan .attr() untuk mendapatkan string murni,
+        // atau gunakan == (double equals) agar tidak sensitif terhadap tipe data
+        const hasFace = $opt.attr('data-face') == '1';
+
+        const job  = $opt.data('jabatan') || '';
+        const warn = hasFace ? '' : '<span class="s2-no-face"><i class="bi bi-exclamation-triangle-fill"></i> Belum daftar wajah</span>';
+
         return $(`<span class="s2-employee-option">
                     <span>${option.text}${job ? ' <span class="s2-job">('+job+')</span>' : ''}</span>
                     ${warn}
-                  </span>`);
+                </span>`);
     }
 
     $('#employeeSelect').select2({
@@ -349,34 +378,103 @@ function updateTime() {
         now.toLocaleDateString('id-ID', { timeZone: TZ, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+
 // ── Employee selection ────────────────────────────────────────────────────────────────────
-function onEmployeeChange() {
+function updateActionUI() {
+    const action = selectedAttendanceAction;
+    const alertBox = document.getElementById('attendanceAlert');
+    const alertText = document.getElementById('alertText');
+
+    alertBox.classList.remove('d-none');
+    alertBox.style.display = 'block';
+
+    if (action === 'masuk') {
+        alertText.textContent = "Status 'Telat' akan dihitung otomatis oleh sistem." +
+            (clockOutStatusMessage ? ` ${clockOutStatusMessage}` : '');
+        alertBox.style.borderLeftColor = "#22c55e"; // Success Green
+    } else {
+        alertText.textContent = "Pastikan semua laporan pekerjaan hari ini sudah di-upload." +
+            (clockOutStatusMessage ? ` ${clockOutStatusMessage}` : '');
+        alertBox.style.borderLeftColor = "#ef4444"; // Danger Red
+    }
+}
+
+// Update fungsi onEmployeeChange yang lama
+async function onEmployeeChange() {
     const $sel = $('#employeeSelect');
     const val  = $sel.val();
 
-    faceVerified  = false;
+    faceVerified = false;
     capturedPhoto = null;
+
+    const shiftDetailInfo = document.getElementById('shiftDetailInfo');
+    const liveShiftBadge  = document.getElementById('liveShiftBadge');
+
+    if (shiftDetailInfo) {
+        shiftDetailInfo.style.display = 'none';
+    }
+
+    if (liveShiftBadge) {
+        liveShiftBadge.innerHTML = '';
+    }
+
     setVerificationUI('idle');
 
     if (!val) {
         selectedEmployee = null;
-        document.getElementById('faceWarning').style.display = 'none';
+        setPulangAvailability(false);
+        setAttendanceAction('masuk');
         updateButtons();
         return;
     }
 
-    // Use .attr() — reads the HTML attribute directly, bypasses jQuery's data() cache
-    const $opt        = $sel.find('option[value="' + val + '"]');
-    const hasFace     = $opt.attr('data-face') === '1';
+    const $opt = $sel.find('option[value="' + val + '"]');
 
     selectedEmployee = {
-        id:          parseInt(val),
-        nama:        $opt.attr('data-nama'),
-        hasFace:     hasFace,
-        registerUrl: $opt.attr('data-register-url') || '/karyawan',
+        id: parseInt(val),
+        nama: $opt.data('nama'),
+        hasFace: $opt.attr('data-face') == '1',
+        registerUrl: $opt.data('register-url') || null
     };
 
-    document.getElementById('faceWarning').style.display = hasFace ? 'none' : 'block';
+    const shiftCode  = $opt.data('shift-code') || 'P';
+    const shiftName  = $opt.data('shift-name') || 'Pagi';
+    const shiftHours = $opt.data('shift-hours') || '08:00 - 17:00';
+
+    const shiftNameEl  = document.getElementById('shiftName');
+    const shiftHoursEl = document.getElementById('shiftHours');
+
+    if (shiftDetailInfo) {
+        shiftDetailInfo.style.display = 'block';
+    }
+
+    if (shiftNameEl) {
+        shiftNameEl.textContent = shiftName;
+    }
+
+    if (shiftHoursEl) {
+        shiftHoursEl.textContent = shiftHours;
+    }
+
+    const iconMap = {
+        'P': '<i class="bi bi-brightness-high-fill text-warning fs-5"></i>',
+        'M': '<i class="bi bi-clock-history text-primary fs-5"></i>',
+        'S': '<i class="bi bi-moon-stars-fill text-info fs-5"></i>'
+    };
+
+    if (liveShiftBadge) {
+        liveShiftBadge.innerHTML = iconMap[shiftCode] || '';
+    }
+
+    const faceWarning = document.getElementById('faceWarning');
+
+    if (faceWarning) {
+        faceWarning.style.display = selectedEmployee.hasFace ? 'none' : 'block';
+    }
+
+    await loadEmployeeCurrentStatus();
+
+    updateActionUI();
     updateButtons();
 }
 
@@ -387,27 +485,57 @@ function goToRegisterFace() {
     }
 }
 
-// ── Status selection ──────────────────────────────────────────────────────────
-function selectStatus(status) {
-    currentStatus = status;
-    faceVerified  = false;
-    capturedPhoto = null;
-    setVerificationUI('idle');
+function setAttendanceAction(action) {
+    const target = document.querySelector(`input[name="attendance_action"][value="${action}"]`);
+    if (!target || target.disabled) {
+        action = 'masuk';
+    }
 
-    document.querySelectorAll('.status-option').forEach(el => {
-        const active = el.dataset.status === status;
-        el.classList.toggle('selected', active);
-    });
+    selectedAttendanceAction = action;
+    const selectedInput = document.querySelector(`input[name="attendance_action"][value="${action}"]`);
+    if (selectedInput) {
+        selectedInput.checked = true;
+    }
 
-    const isAbsent = status === 'tidak_hadir';
-    document.getElementById('cameraSection').style.display   = isAbsent ? 'none' : 'block';
-    document.getElementById('noPhotoSection').style.display  = isAbsent ? 'block' : 'none';
-    document.getElementById('timeInputWrap').style.display   = isAbsent ? 'none' : 'block';
-    document.getElementById('verificationResult').style.display = 'none';
+    updateActionUI();
+}
 
-    if (isAbsent) faceVerified = true; // No face required
+function setPulangAvailability(canClockOut, reason = '') {
+    const pulangInput = document.getElementById('btnPulang');
+    const pulangLabel = document.querySelector('label[for="btnPulang"]');
+    if (!pulangInput || !pulangLabel) return;
 
-    updateButtons();
+    clockOutStatusMessage = canClockOut ? '' : (reason || 'Absen pulang aktif setelah karyawan absen masuk hari ini.');
+    pulangInput.disabled = !canClockOut;
+    pulangLabel.classList.toggle('opacity-50', !canClockOut);
+    pulangLabel.style.cursor = canClockOut ? 'pointer' : 'not-allowed';
+    pulangLabel.style.pointerEvents = canClockOut ? 'auto' : 'none';
+    pulangLabel.title = canClockOut ? '' : clockOutStatusMessage;
+}
+
+async function loadEmployeeCurrentStatus() {
+    if (!selectedEmployee?.id) {
+        setPulangAvailability(false, 'Belum ada data absen masuk hari ini.');
+        setAttendanceAction('masuk');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/attendance/current-status/${selectedEmployee.id}`);
+        if (!response.ok) throw new Error('Gagal memuat status absensi');
+        const data = await response.json();
+        const canClockOut = Boolean(data.can_clock_out);
+        setPulangAvailability(canClockOut, data.clock_out_reason || '');
+
+        if (!canClockOut && selectedAttendanceAction === 'pulang') {
+            setAttendanceAction('masuk');
+        } else {
+            updateActionUI();
+        }
+    } catch (error) {
+        setPulangAvailability(false, 'Gagal memuat status absensi karyawan.');
+        setAttendanceAction('masuk');
+    }
 }
 
 // ── Camera ────────────────────────────────────────────────────────────────────
@@ -522,7 +650,7 @@ function setVerificationUI(state, confidence = 0, message = '') {
 // ── Save attendance ───────────────────────────────────────────────────────────
 async function saveAttendance() {
     if (!selectedEmployee) return alert('Pilih karyawan terlebih dahulu.');
-    if (!faceVerified && currentStatus !== 'tidak_hadir') return alert('Selesaikan verifikasi wajah terlebih dahulu.');
+    if (!faceVerified) return alert('Selesaikan verifikasi wajah terlebih dahulu.');
 
     const btnSave = document.getElementById('btnSave');
     btnSave.disabled = true;
@@ -530,24 +658,24 @@ async function saveAttendance() {
 
     try {
         const payload = {
-            id_karyawan: selectedEmployee.id,
-            status:      currentStatus,
-            jam_masuk:   document.getElementById('jamMasuk').value || null,
-            gps_lat:     document.getElementById('gpsLat').value   || null,
-            gps_lng:     document.getElementById('gpsLng').value   || null,
-            device_info: navigator.userAgent.substring(0, 500),
+            photo: capturedPhoto || captureFrame(),
+            attendance_action: selectedAttendanceAction,
         };
-        if (capturedPhoto && currentStatus !== 'tidak_hadir') {
-            payload.photo = capturedPhoto;
+
+        if (!payload.photo) {
+            throw new Error('Kamera belum siap. Coba ulangi verifikasi.');
         }
 
-        const res = await apiPost('/api/attendance/admin-record', payload);
+        const res = await apiPost('/api/attendance/check-in', payload);
 
         if (res.success) {
+            const actionLabel = res.action === 'clock_out' ? 'Pulang' : 'Masuk';
+            const lateInfo = res.action === 'clock_in' && Number(res.data?.menit_terlambat || 0) > 0
+                ? ` — Terlambat ${res.data.menit_terlambat} menit`
+                : '';
             showToast(
                 'Absensi Berhasil Dicatat',
-                `${res.employee_name} — ${statusLabel(currentStatus)} — ${document.getElementById('jamMasuk').value || 'waktu sekarang'}`
-                + (res.face_verified ? ` — Wajah ✓ (${res.face_confidence?.toFixed(1)}%)` : '')
+                `${res.data?.nama || '-'} — ${actionLabel} — ${res.data?.waktu || 'waktu sekarang'}${lateInfo}`
             );
             resetForm();
         } else {
@@ -563,14 +691,21 @@ async function saveAttendance() {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function updateButtons() {
-    const hasEmp   = !!selectedEmployee;
-    const needFace = currentStatus !== 'tidak_hadir';
+    const hasEmp = !!selectedEmployee;
+
+    console.log({
+        hasEmp,
+        selectedEmployee,
+        hasFace: selectedEmployee?.hasFace,
+        serviceOk,
+        faceVerified
+    });
 
     document.getElementById('btnVerify').disabled =
-        !hasEmp || !needFace || !selectedEmployee?.hasFace || !serviceOk;
+        !hasEmp || !selectedEmployee?.hasFace || !serviceOk;
 
     document.getElementById('btnSave').disabled =
-        !hasEmp || (needFace && !faceVerified);
+        !hasEmp || !faceVerified;
 }
 
 function setLoading(on) {
@@ -644,10 +779,6 @@ function captureDeviceInfo() {
     document.getElementById('auditDevice').innerHTML = `<i class="bi bi-laptop"></i> ${short}`;
 }
 
-function statusLabel(s) {
-    return { hadir: 'Hadir', terlambat: 'Terlambat', remote: 'Remote / WFH', tidak_hadir: 'Tidak Hadir' }[s] || s;
-}
-
 async function apiPost(url, data) {
     const res  = await fetch(url, {
         method:  'POST',
@@ -678,10 +809,10 @@ function resetForm() {
     selectedEmployee = null;
     faceVerified     = false;
     capturedPhoto    = null;
-    currentStatus    = 'hadir';
+    selectedAttendanceAction = 'masuk';
     document.getElementById('faceWarning').style.display = 'none';
-    document.getElementById('jamMasuk').value = currentTimeGMT8(); // reset to current GMT+8 time
-    selectStatus('hadir');
+    setPulangAvailability(false);
+    setAttendanceAction('masuk');
     setVerificationUI('idle');
     updateButtons();
 }

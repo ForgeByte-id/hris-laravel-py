@@ -16,6 +16,7 @@ class JadwalKerja extends Model
         'id_karyawan',
         'tanggal',
         'jam_kerja',
+        'kode_shift',
         'keterangan',
     ];
 
@@ -29,20 +30,26 @@ class JadwalKerja extends Model
         return $this->belongsTo(Karyawan::class, 'id_karyawan', 'id_karyawan');
     }
 
+    public function shift()
+    {
+        return $this->belongsTo(Shift::class, 'kode_shift', 'kode_shift');
+    }
+
     // Check apakah hari libur
     public function isLibur()
     {
-        return $this->jam_kerja === 'Libur';
+        return $this->kode_shift === 'L' || $this->jam_kerja === 'Libur';
     }
 
     // Get badge color untuk jam kerja
     public function getShiftColorAttribute()
     {
-        return match($this->jam_kerja) {
-            'Pagi (08:00-17:00)' => '#4CAF50',
-            'Middle (11:00-20:00)' => '#FF9800',
-            'Siang (13:00-22:00)' => '#2196F3',
-            'Libur' => '#f44336',
+        return match($this->kode_shift ?: $this->jam_kerja) {
+            'P', 'Pagi (08:00-17:00)' => '#4CAF50',
+            'M', 'Middle (11:00-20:00)' => '#FF9800',
+            'S', 'Siang (13:00-22:00)' => '#2196F3',
+            'L', 'Libur' => '#f44336',
+            'C' => '#6f42c1',
             default => '#9E9E9E'
         };
     }
@@ -50,11 +57,13 @@ class JadwalKerja extends Model
     // Get shift short name
     public function getShiftShortAttribute()
     {
-        return match($this->jam_kerja) {
-            'Pagi (08:00-17:00)' => 'P',
-            'Middle (11:00-20:00)' => 'M',
-            'Siang (13:00-22:00)' => 'S',
-            'Libur' => 'L',
+        return match($this->kode_shift ?: $this->jam_kerja) {
+            'P', 'Pagi (08:00-17:00)' => 'P',
+            'M', 'Middle (11:00-20:00)' => 'M',
+            'S', 'Siang (13:00-22:00)' => 'S',
+            'L', 'Libur' => 'L',
+            'C' => 'C',
+            'H' => 'H',
             default => '-'
         };
     }

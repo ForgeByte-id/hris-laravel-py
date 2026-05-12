@@ -97,6 +97,7 @@ class AttendanceController extends Controller
 
         $request->validate([
             'photo' => 'required|string',
+            'attendance_action' => 'nullable|in:masuk,pulang',
         ]);
 
         try {
@@ -149,8 +150,14 @@ class AttendanceController extends Controller
                 ], 422);
             }
 
-            // Auto-detect and process attendance (system decides, not user)
-            $result = $this->attendanceService->processAutoAttendance($idKaryawan);
+            $preferredAction = match ($request->input('attendance_action')) {
+                'masuk' => 'clock_in',
+                'pulang' => 'clock_out',
+                default => null,
+            };
+
+            // Auto-detect and process attendance, with optional user-selected intent
+            $result = $this->attendanceService->processAutoAttendance($idKaryawan, $preferredAction);
 
             // Determine time field based on action
             $timeField = null;
@@ -168,6 +175,7 @@ class AttendanceController extends Controller
                     'nama' => $karyawan->nama,
                     'waktu' => $timeField,
                     'status' => $result['status'],
+                    'menit_terlambat' => $result['attendance']?->menit_terlambat,
                     'confidence' => round($recognitionResult['confidence'], 2),
                 ]
             ], $result['success'] ? 200 : 422);
@@ -217,14 +225,41 @@ class AttendanceController extends Controller
                 return response()->json(['error' => 'Employee not found'], 404);
             }
 
-            $attendance = $this->attendanceService->getAttendanceHistory($idKaryawan, 1)->first();
+            $attendance = Absensi::where('id_karyawan', $idKaryawan)
+                ->whereDate('tanggal', Carbon::today())
+                ->first();
+
+            $clockInAt = $attendance?->jam_masuk
+                ? Carbon::today()->setTimeFromTimeString($attendance->jam_masuk)
+                : null;
+            $minimumClockOutAt = $clockInAt ? (clone $clockInAt)->addHours(5) : null;
+            $canClockOut = (bool) (
+                $attendance?->jam_masuk
+                && !$attendance?->jam_pulang
+                && $minimumClockOutAt
+                && Carbon::now()->gte($minimumClockOutAt)
+            );
+
+            $clockOutReason = null;
+            if (!$attendance || !$attendance->jam_masuk) {
+                $clockOutReason = 'Belum ada data absen masuk hari ini.';
+            } elseif ($attendance->jam_pulang) {
+                $clockOutReason = 'Absen pulang hari ini sudah tercatat.';
+            } elseif ($minimumClockOutAt && Carbon::now()->lt($minimumClockOutAt)) {
+                $remaining = Carbon::now()->diffInMinutes($minimumClockOutAt);
+                $clockOutReason = "Absen pulang aktif minimal 5 jam setelah jam masuk. Sisa {$remaining} menit.";
+            }
 
             return response()->json([
                 'employee' => $karyawan->nama,
                 'clock_in' => $attendance?->jam_masuk,
                 'clock_out' => $attendance?->jam_pulang,
                 'status' => $attendance?->status,
+                'menit_terlambat' => $attendance?->menit_terlambat,
                 'date' => $attendance?->tanggal,
+                'can_clock_out' => $canClockOut,
+                'clock_out_available_at' => $minimumClockOutAt?->format('H:i:s'),
+                'clock_out_reason' => $clockOutReason,
             ]);
         } catch (\Exception $e) {
             Log::error("Get current status error: {$e->getMessage()}");
@@ -431,11 +466,10 @@ class AttendanceController extends Controller
                 'success'        => $result['success'],
                 'message'        => $result['message'],
                 'face_verified'  => $faceVerified,
-                'face_confidence'=> $faceConfidence,
+                'face_confidence' => $faceConfidence,
                 'employee_name'  => $karyawan?->nama,
                 'status'         => $status,
             ], $result['success'] ? 200 : 422);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['success' => false, 'message' => 'Validasi gagal', 'errors' => $e->errors()], 422);
         } catch (\Exception $e) {
