@@ -323,7 +323,7 @@ let selectedEmployee = null; // { id, nama, hasFace }
 let faceVerified     = false;
 let capturedPhoto    = null;
 let selectedAttendanceAction = 'masuk';
-let clockOutRestrictionReason = 'Absen pulang aktif setelah karyawan absen masuk hari ini.';
+let clockOutStatusMessage = 'Absen pulang aktif setelah karyawan absen masuk hari ini.';
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -390,11 +390,11 @@ function updateActionUI() {
 
     if (action === 'masuk') {
         alertText.textContent = "Status 'Telat' akan dihitung otomatis oleh sistem." +
-            (clockOutRestrictionReason ? ` ${clockOutRestrictionReason}` : '');
+            (clockOutStatusMessage ? ` ${clockOutStatusMessage}` : '');
         alertBox.style.borderLeftColor = "#22c55e"; // Success Green
     } else {
         alertText.textContent = "Pastikan semua laporan pekerjaan hari ini sudah di-upload." +
-            (clockOutRestrictionReason ? ` ${clockOutRestrictionReason}` : '');
+            (clockOutStatusMessage ? ` ${clockOutStatusMessage}` : '');
         alertBox.style.borderLeftColor = "#ef4444"; // Danger Red
     }
 }
@@ -480,12 +480,12 @@ function setPulangAvailability(canClockOut, reason = '') {
     const pulangLabel = document.querySelector('label[for="btnPulang"]');
     if (!pulangInput || !pulangLabel) return;
 
-    clockOutRestrictionReason = canClockOut ? '' : (reason || 'Absen pulang aktif setelah karyawan absen masuk hari ini.');
+    clockOutStatusMessage = canClockOut ? '' : (reason || 'Absen pulang aktif setelah karyawan absen masuk hari ini.');
     pulangInput.disabled = !canClockOut;
     pulangLabel.classList.toggle('opacity-50', !canClockOut);
     pulangLabel.style.cursor = canClockOut ? 'pointer' : 'not-allowed';
     pulangLabel.style.pointerEvents = canClockOut ? 'auto' : 'none';
-    pulangLabel.title = canClockOut ? '' : clockOutRestrictionReason;
+    pulangLabel.title = canClockOut ? '' : clockOutStatusMessage;
 }
 
 async function loadEmployeeCurrentStatus() {
