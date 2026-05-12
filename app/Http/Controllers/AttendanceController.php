@@ -438,11 +438,10 @@ class AttendanceController extends Controller
                 'success'        => $result['success'],
                 'message'        => $result['message'],
                 'face_verified'  => $faceVerified,
-                'face_confidence'=> $faceConfidence,
+                'face_confidence' => $faceConfidence,
                 'employee_name'  => $karyawan?->nama,
                 'status'         => $status,
             ], $result['success'] ? 200 : 422);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['success' => false, 'message' => 'Validasi gagal', 'errors' => $e->errors()], 422);
         } catch (\Exception $e) {
