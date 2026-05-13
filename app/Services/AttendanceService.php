@@ -157,46 +157,13 @@ class AttendanceService
                 ];
             }
 
-            $clockInAt = Carbon::today()->setTimeFromTimeString($attendance->jam_masuk);
-            $minimumClockOutAt = (clone $clockInAt)->addHours(5);
-            if (Carbon::now()->lt($minimumClockOutAt)) {
-                $remainingMinutes = Carbon::now()->diffInMinutes($minimumClockOutAt);
+            $availability = $this->resolveClockOutAvailability($karyawan, $attendance);
+            if (!$availability['can_clock_out']) {
                 return [
                     'success' => false,
-                    'message' => "Absen pulang tersedia minimal 5 jam setelah jam masuk. Sisa {$remainingMinutes} menit lagi.",
+                    'message' => $availability['reason'],
                     'attendance' => $attendance,
                 ];
-            }
-
-            $schedule = $this->getTodaySchedule($idKaryawan);
-            $referenceShift = $this->resolveReferenceShift($karyawan, $schedule);
-            if ($schedule && !$schedule->isLibur()) {
-                $shiftEndTime = $this->extractShiftEndTime($schedule, $referenceShift);
-                if ($shiftEndTime) {
-                    $allowedClockOutFrom = Carbon::today()
-                        ->setTimeFromTimeString($shiftEndTime)
-                        ->subMinutes(30);
-
-                    if (Carbon::now()->lt($allowedClockOutFrom)) {
-                        return [
-                            'success' => false,
-                            'message' => 'Belum mendekati jam pulang sesuai shift',
-                            'attendance' => $attendance,
-                        ];
-                    }
-                }
-            } elseif ($referenceShift && $referenceShift->jam_pulang) {
-                $allowedClockOutFrom = Carbon::today()
-                    ->setTimeFromTimeString($referenceShift->jam_pulang)
-                    ->subMinutes(30);
-
-                if (Carbon::now()->lt($allowedClockOutFrom)) {
-                    return [
-                        'success' => false,
-                        'message' => 'Belum mendekati jam pulang sesuai shift',
-                        'attendance' => $attendance,
-                    ];
-                }
             }
 
             $jamPulang = Carbon::now()->format('H:i:s');
@@ -220,6 +187,40 @@ class AttendanceService
                 'attendance' => null,
             ];
         }
+    }
+
+    public function getClockOutAvailability(int $idKaryawan): array
+    {
+        $karyawan = Karyawan::find($idKaryawan);
+        if (!$karyawan) {
+            return [
+                'can_clock_out' => false,
+                'reason' => 'Data karyawan tidak ditemukan.',
+                'available_at' => null,
+            ];
+        }
+
+        $attendance = Absensi::where('id_karyawan', $idKaryawan)
+            ->whereDate('tanggal', Carbon::today())
+            ->first();
+
+        if (!$attendance || !$attendance->jam_masuk) {
+            return [
+                'can_clock_out' => false,
+                'reason' => 'Belum ada data absen masuk hari ini.',
+                'available_at' => null,
+            ];
+        }
+
+        if ($attendance->jam_pulang) {
+            return [
+                'can_clock_out' => false,
+                'reason' => 'Absen pulang hari ini sudah tercatat.',
+                'available_at' => null,
+            ];
+        }
+
+        return $this->resolveClockOutAvailability($karyawan, $attendance);
     }
 
     /**
@@ -383,6 +384,61 @@ class AttendanceService
         }
 
         return $karyawan->shift()->first();
+    }
+
+    private function resolveClockOutAvailability(Karyawan $karyawan, Absensi $attendance): array
+    {
+        $now = Carbon::now();
+        $clockInAt = Carbon::today()->setTimeFromTimeString($attendance->jam_masuk);
+        $minimumClockOutAt = (clone $clockInAt)->addHours(5);
+
+        $schedule = $this->getTodaySchedule($karyawan->id_karyawan);
+        $referenceShift = $this->resolveReferenceShift($karyawan, $schedule);
+        $shiftWindowStart = null;
+
+        if ($schedule && !$schedule->isLibur()) {
+            $shiftEndTime = $this->extractShiftEndTime($schedule, $referenceShift);
+            if ($shiftEndTime) {
+                $shiftWindowStart = Carbon::today()
+                    ->setTimeFromTimeString($shiftEndTime)
+                    ->subMinutes(30);
+            }
+        } elseif ($referenceShift && $referenceShift->jam_pulang) {
+            $shiftWindowStart = Carbon::today()
+                ->setTimeFromTimeString($referenceShift->jam_pulang)
+                ->subMinutes(30);
+        }
+
+        if ($shiftWindowStart) {
+            if ($now->lt($shiftWindowStart)) {
+                return [
+                    'can_clock_out' => false,
+                    'reason' => 'Belum mendekati jam pulang sesuai shift',
+                    'available_at' => $shiftWindowStart,
+                ];
+            }
+
+            return [
+                'can_clock_out' => true,
+                'reason' => null,
+                'available_at' => $shiftWindowStart,
+            ];
+        }
+
+        if ($now->lt($minimumClockOutAt)) {
+            $remainingMinutes = $now->diffInMinutes($minimumClockOutAt);
+            return [
+                'can_clock_out' => false,
+                'reason' => "Absen pulang tersedia minimal 5 jam setelah jam masuk. Sisa {$remainingMinutes} menit lagi.",
+                'available_at' => $minimumClockOutAt,
+            ];
+        }
+
+        return [
+            'can_clock_out' => true,
+            'reason' => null,
+            'available_at' => $minimumClockOutAt,
+        ];
     }
 
     /**
