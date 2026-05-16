@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Absensi;
 use App\Models\Karyawan;
 use App\Models\JadwalKerja;
+use App\Models\Shift;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -53,14 +54,15 @@ class AttendanceService
 
             $now = Carbon::now();
             $jamMasuk = $now->format('H:i:s');
+            $referenceShift = $this->resolveReferenceShift($karyawan, $schedule);
 
             // Check if late
             $isLate = false;
             $lateMinutes = 0;
             $expectedStartTime = '08:00:00'; // Default start time
 
-            if ($schedule) {
-                $shiftTime = $this->extractShiftStartTime($schedule);
+            if ($schedule || $referenceShift) {
+                $shiftTime = $this->extractShiftStartTime($schedule, $referenceShift);
                 if ($shiftTime) {
                     $expectedStartTime = $shiftTime;
                     $expectedStart = Carbon::today()->setTimeFromTimeString($shiftTime);
@@ -155,33 +157,13 @@ class AttendanceService
                 ];
             }
 
-            $clockInAt = Carbon::today()->setTimeFromTimeString($attendance->jam_masuk);
-            $minimumClockOutAt = (clone $clockInAt)->addHours(5);
-            if (Carbon::now()->lt($minimumClockOutAt)) {
-                $remainingMinutes = Carbon::now()->diffInMinutes($minimumClockOutAt);
+            $availability = $this->resolveClockOutAvailability($karyawan, $attendance);
+            if (!$availability['can_clock_out']) {
                 return [
                     'success' => false,
-                    'message' => "Absen pulang tersedia minimal 5 jam setelah jam masuk. Sisa {$remainingMinutes} menit lagi.",
+                    'message' => $availability['reason'],
                     'attendance' => $attendance,
                 ];
-            }
-
-            $schedule = $this->getTodaySchedule($idKaryawan);
-            if ($schedule && !$schedule->isLibur()) {
-                $shiftEndTime = $this->extractShiftEndTime($schedule);
-                if ($shiftEndTime) {
-                    $allowedClockOutFrom = Carbon::today()
-                        ->setTimeFromTimeString($shiftEndTime)
-                        ->subMinutes(30);
-
-                    if (Carbon::now()->lt($allowedClockOutFrom)) {
-                        return [
-                            'success' => false,
-                            'message' => 'Belum mendekati jam pulang sesuai shift',
-                            'attendance' => $attendance,
-                        ];
-                    }
-                }
             }
 
             $jamPulang = Carbon::now()->format('H:i:s');
@@ -205,6 +187,40 @@ class AttendanceService
                 'attendance' => null,
             ];
         }
+    }
+
+    public function getClockOutAvailability(int $idKaryawan): array
+    {
+        $karyawan = Karyawan::find($idKaryawan);
+        if (!$karyawan) {
+            return [
+                'can_clock_out' => false,
+                'reason' => 'Data karyawan tidak ditemukan.',
+                'available_at' => null,
+            ];
+        }
+
+        $attendance = Absensi::where('id_karyawan', $idKaryawan)
+            ->whereDate('tanggal', Carbon::today())
+            ->first();
+
+        if (!$attendance || !$attendance->jam_masuk) {
+            return [
+                'can_clock_out' => false,
+                'reason' => 'Belum ada data absen masuk hari ini.',
+                'available_at' => null,
+            ];
+        }
+
+        if ($attendance->jam_pulang) {
+            return [
+                'can_clock_out' => false,
+                'reason' => 'Absen pulang hari ini sudah tercatat.',
+                'available_at' => null,
+            ];
+        }
+
+        return $this->resolveClockOutAvailability($karyawan, $attendance);
     }
 
     /**
@@ -322,31 +338,107 @@ class AttendanceService
      * @param JadwalKerja $schedule
      * @return string|null
      */
-    private function extractShiftStartTime(JadwalKerja $schedule): ?string
+    private function extractShiftStartTime(?JadwalKerja $schedule, ?Shift $referenceShift = null): ?string
     {
-        if ($schedule->shift && $schedule->shift->jam_masuk) {
+        if ($schedule && $schedule->shift && $schedule->shift->jam_masuk) {
             return $schedule->shift->jam_masuk;
         }
 
-        $jamKerja = $schedule->jam_kerja;
-        if (preg_match('/\((\d{2}):(\d{2})-/', $jamKerja, $matches)) {
+        if ($referenceShift && $referenceShift->jam_masuk) {
+            return $referenceShift->jam_masuk;
+        }
+
+        $jamKerja = $schedule?->jam_kerja;
+        if ($jamKerja && preg_match('/\((\d{2}):(\d{2})-/', $jamKerja, $matches)) {
             return "{$matches[1]}:{$matches[2]}:00";
         }
         return null;
     }
 
-    private function extractShiftEndTime(JadwalKerja $schedule): ?string
+    private function extractShiftEndTime(?JadwalKerja $schedule, ?Shift $referenceShift = null): ?string
     {
-        if ($schedule->shift && $schedule->shift->jam_pulang) {
+        if ($schedule && $schedule->shift && $schedule->shift->jam_pulang) {
             return $schedule->shift->jam_pulang;
         }
 
-        $jamKerja = $schedule->jam_kerja;
-        if (preg_match('/-(\d{2}):(\d{2})\)/', $jamKerja, $matches)) {
+        if ($referenceShift && $referenceShift->jam_pulang) {
+            return $referenceShift->jam_pulang;
+        }
+
+        $jamKerja = $schedule?->jam_kerja;
+        if ($jamKerja && preg_match('/-(\d{2}):(\d{2})\)/', $jamKerja, $matches)) {
             return "{$matches[1]}:{$matches[2]}:00";
         }
 
         return null;
+    }
+
+    private function resolveReferenceShift(Karyawan $karyawan, ?JadwalKerja $schedule): ?Shift
+    {
+        if ($schedule && $schedule->shift) {
+            return $schedule->shift;
+        }
+
+        if ($karyawan->relationLoaded('shift')) {
+            return $karyawan->shift;
+        }
+
+        return $karyawan->shift()->first();
+    }
+
+    private function resolveClockOutAvailability(Karyawan $karyawan, Absensi $attendance): array
+    {
+        $now = Carbon::now();
+        $clockInAt = Carbon::today()->setTimeFromTimeString($attendance->jam_masuk);
+        $minimumClockOutAt = (clone $clockInAt)->addHours(5);
+
+        $schedule = $this->getTodaySchedule($karyawan->id_karyawan);
+        $referenceShift = $this->resolveReferenceShift($karyawan, $schedule);
+        $shiftWindowStart = null;
+
+        if ($schedule && !$schedule->isLibur()) {
+            $shiftEndTime = $this->extractShiftEndTime($schedule, $referenceShift);
+            if ($shiftEndTime) {
+                $shiftWindowStart = Carbon::today()
+                    ->setTimeFromTimeString($shiftEndTime)
+                    ->subMinutes(30);
+            }
+        } elseif ($referenceShift && $referenceShift->jam_pulang) {
+            $shiftWindowStart = Carbon::today()
+                ->setTimeFromTimeString($referenceShift->jam_pulang)
+                ->subMinutes(30);
+        }
+
+        if ($shiftWindowStart) {
+            if ($now->lt($shiftWindowStart)) {
+                return [
+                    'can_clock_out' => false,
+                    'reason' => 'Belum mendekati jam pulang sesuai shift',
+                    'available_at' => $shiftWindowStart,
+                ];
+            }
+
+            return [
+                'can_clock_out' => true,
+                'reason' => null,
+                'available_at' => $shiftWindowStart,
+            ];
+        }
+
+        if ($now->lt($minimumClockOutAt)) {
+            $remainingMinutes = $now->diffInMinutes($minimumClockOutAt);
+            return [
+                'can_clock_out' => false,
+                'reason' => "Absen pulang tersedia minimal 5 jam setelah jam masuk. Sisa {$remainingMinutes} menit lagi.",
+                'available_at' => $minimumClockOutAt,
+            ];
+        }
+
+        return [
+            'can_clock_out' => true,
+            'reason' => null,
+            'available_at' => $minimumClockOutAt,
+        ];
     }
 
     /**

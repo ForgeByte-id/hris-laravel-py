@@ -24,6 +24,11 @@ class Shift extends Model
         return $this->hasMany(JadwalKerja::class, 'kode_shift', 'kode_shift');
     }
 
+    public function karyawan()
+    {
+        return $this->hasMany(Karyawan::class, 'kode_shift', 'kode_shift');
+    }
+
     public function isLiburLike(): bool
     {
         return in_array($this->kode_shift, ['L', 'C'], true);

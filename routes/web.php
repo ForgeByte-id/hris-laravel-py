@@ -7,6 +7,7 @@ use App\Http\Controllers\KaryawanController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\CutiController;
 use App\Http\Controllers\JadwalKerjaController;
+use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\DivisiController;
 use App\Http\Controllers\JabatanController;
 use App\Http\Controllers\LaporanController;
@@ -83,6 +84,9 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/jadwal/{id_jadwal}', [JadwalKerjaController::class, 'destroy'])->name('jadwal.destroy');
     Route::get('/jadwal/karyawan/{id_karyawan}', [JadwalKerjaController::class, 'show'])->name('jadwal.show');
     Route::post('/jadwal/libur-massal', [JadwalKerjaController::class, 'setLiburMassal'])->name('jadwal.libur-massal');
+
+    // Shift Routes
+    Route::resource('shift', ShiftController::class)->except('show');
 
     // Divisi Routes
     Route::get('/divisi', [DivisiController::class, 'index'])->name('divisi.index');

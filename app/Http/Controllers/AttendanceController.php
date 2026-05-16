@@ -229,26 +229,7 @@ class AttendanceController extends Controller
                 ->whereDate('tanggal', Carbon::today())
                 ->first();
 
-            $clockInAt = $attendance?->jam_masuk
-                ? Carbon::today()->setTimeFromTimeString($attendance->jam_masuk)
-                : null;
-            $minimumClockOutAt = $clockInAt ? (clone $clockInAt)->addHours(5) : null;
-            $canClockOut = (bool) (
-                $attendance?->jam_masuk
-                && !$attendance?->jam_pulang
-                && $minimumClockOutAt
-                && Carbon::now()->gte($minimumClockOutAt)
-            );
-
-            $clockOutReason = null;
-            if (!$attendance || !$attendance->jam_masuk) {
-                $clockOutReason = 'Belum ada data absen masuk hari ini.';
-            } elseif ($attendance->jam_pulang) {
-                $clockOutReason = 'Absen pulang hari ini sudah tercatat.';
-            } elseif ($minimumClockOutAt && Carbon::now()->lt($minimumClockOutAt)) {
-                $remaining = Carbon::now()->diffInMinutes($minimumClockOutAt);
-                $clockOutReason = "Absen pulang aktif minimal 5 jam setelah jam masuk. Sisa {$remaining} menit.";
-            }
+            $clockOutAvailability = $this->attendanceService->getClockOutAvailability((int) $idKaryawan);
 
             return response()->json([
                 'employee' => $karyawan->nama,
@@ -257,9 +238,9 @@ class AttendanceController extends Controller
                 'status' => $attendance?->status,
                 'menit_terlambat' => $attendance?->menit_terlambat,
                 'date' => $attendance?->tanggal,
-                'can_clock_out' => $canClockOut,
-                'clock_out_available_at' => $minimumClockOutAt?->format('H:i:s'),
-                'clock_out_reason' => $clockOutReason,
+                'can_clock_out' => $clockOutAvailability['can_clock_out'],
+                'clock_out_available_at' => $clockOutAvailability['available_at']?->format('H:i:s'),
+                'clock_out_reason' => $clockOutAvailability['reason'],
             ]);
         } catch (\Exception $e) {
             Log::error("Get current status error: {$e->getMessage()}");
