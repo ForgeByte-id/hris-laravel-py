@@ -11,6 +11,7 @@ use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\DivisiController;
 use App\Http\Controllers\JabatanController;
 use App\Http\Controllers\LaporanController;
+use App\Http\Controllers\FlaggingController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\MenuItemController;
@@ -46,6 +47,8 @@ Route::middleware(['guest'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/proseslogout', [AuthController::class, 'proseslogout']);
+    Route::get('/flagging', [FlaggingController::class, 'index'])->name('flagging.index');
+    Route::post('/flagging', [FlaggingController::class, 'update'])->name('flagging.update');
 
     // Karyawan Routes
     Route::get('/karyawan', [KaryawanController::class, 'index'])->name('karyawan.index');

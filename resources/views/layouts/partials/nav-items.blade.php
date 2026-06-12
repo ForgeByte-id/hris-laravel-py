@@ -1,6 +1,8 @@
 @php
     $userRole    = auth()->user()?->roles->first();   // null-safe, may be null
     $menuItems   = \App\Models\MenuItem::orderBy('order')->get();
+    $menuVisibility = app(\App\Services\MenuVisibilityService::class);
+    $menuItems = $menuItems->reject(fn($m) => $menuVisibility->isHidden($m));
     $currentPath = request()->path();
 
     // Split into general items (not admin-only) and admin items for the divider
