@@ -28,6 +28,7 @@ class DashboardController extends Controller
         $pendingCutiCount = 0;
         $hadirThisMonth   = 0;
         $dailyAttendanceSummary = null;
+        $dailyAttendanceChartData = [];
         $todayAttendanceRows = collect();
 
         if ($karyawan) {
@@ -82,6 +83,15 @@ class DashboardController extends Controller
                 'cuti_approved' => $cutiApprovedToday,
             ];
 
+            $dailyAttendanceChartData = [
+                ['status' => 'Tepat Waktu/Hadir', 'total' => $dailyAttendanceSummary['tepat_waktu']],
+                ['status' => 'Terlambat', 'total' => $dailyAttendanceSummary['terlambat']],
+                ['status' => 'Remote', 'total' => $dailyAttendanceSummary['remote']],
+                ['status' => 'Tidak Hadir', 'total' => $dailyAttendanceSummary['tidak_hadir']],
+                ['status' => 'Belum Absen', 'total' => $dailyAttendanceSummary['belum_absen']],
+                ['status' => 'Cuti Approved', 'total' => $dailyAttendanceSummary['cuti_approved']],
+            ];
+
             $todayAttendanceRows = $employees->map(function ($employee) use ($todayAbsensi, $todayJadwal) {
                 return [
                     'karyawan' => $employee,
@@ -103,6 +113,7 @@ class DashboardController extends Controller
             'pendingCutiCount',
             'hadirThisMonth',
             'dailyAttendanceSummary',
+            'dailyAttendanceChartData',
             'todayAttendanceRows',
         ));
     }

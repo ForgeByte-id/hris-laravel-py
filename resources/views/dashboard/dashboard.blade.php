@@ -398,14 +398,7 @@
         const chartEl = document.getElementById('chartdiv');
         if (!chartEl || typeof am4core === 'undefined') return;
 
-        const chartData = @json([
-            ['status' => 'Tepat Waktu/Hadir', 'total' => $dailyAttendanceSummary['tepat_waktu'] ?? 0],
-            ['status' => 'Terlambat', 'total' => $dailyAttendanceSummary['terlambat'] ?? 0],
-            ['status' => 'Remote', 'total' => $dailyAttendanceSummary['remote'] ?? 0],
-            ['status' => 'Tidak Hadir', 'total' => $dailyAttendanceSummary['tidak_hadir'] ?? 0],
-            ['status' => 'Belum Absen', 'total' => $dailyAttendanceSummary['belum_absen'] ?? 0],
-            ['status' => 'Cuti Approved', 'total' => $dailyAttendanceSummary['cuti_approved'] ?? 0],
-        ]);
+        const chartData = @json($dailyAttendanceChartData);
 
         const filteredData = chartData.filter(item => Number(item.total) > 0);
 
