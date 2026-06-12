@@ -43,6 +43,8 @@ class JadwalKerjaController extends Controller
             ->get()
             ->groupBy('id_karyawan');
 
+        $shiftLegend = $this->getScheduleShiftOptions();
+
         // Debug - uncomment jika perlu cek data
         // dd($jadwalList->toArray());
 
@@ -51,6 +53,7 @@ class JadwalKerjaController extends Controller
             'jadwalList', 
             'absensiList',
             'cutiList',
+            'shiftLegend',
             'bulan',
             'tanggalAwal',
             'tanggalAkhir'

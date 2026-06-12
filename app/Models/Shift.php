@@ -42,4 +42,17 @@ class Shift extends Model
 
         return $this->nama_shift;
     }
+
+    public function getColorHexAttribute(): string
+    {
+        return match ($this->kode_shift) {
+            'P' => '#4CAF50',
+            'M' => '#FF9800',
+            'S' => '#2196F3',
+            'L' => '#f44336',
+            'C' => '#6f42c1',
+            'H' => '#212529',
+            default => '#9E9E9E',
+        };
+    }
 }

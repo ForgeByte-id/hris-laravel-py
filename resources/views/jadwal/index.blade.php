@@ -59,12 +59,14 @@
 
             <!-- Legend -->
             <div class="d-flex flex-wrap gap-3 mb-3 p-3 bg-light rounded-3">
-                <div><span class="badge text-bg-success">P</span> = Pagi (08:00-17:00)</div>
-                <div><span class="badge text-bg-warning">M</span> = Middle (11:00-20:00)</div>
-                <div><span class="badge text-bg-primary">S</span> = Siang (13:00-22:00)</div>
-                <div><span class="badge text-bg-danger">L</span> = Libur</div>
-                <div><span class="badge text-bg-secondary">C</span> = Cuti</div>
-                <div><span class="badge text-bg-dark">H</span> = Hadir</div>
+                @forelse($shiftLegend as $shift)
+                    <div>
+                        <span class="badge" style="background: {{ $shift->color_hex }};">{{ $shift->kode_shift }}</span>
+                        = {{ $shift->label }}
+                    </div>
+                @empty
+                    <div class="text-muted small">Belum ada data shift</div>
+                @endforelse
             </div>
 
             @php
