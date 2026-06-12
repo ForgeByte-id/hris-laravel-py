@@ -75,11 +75,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/cuti', [CutiController::class, 'index'])->name('cuti.index');
     Route::get('/cuti/create', [CutiController::class, 'create'])->name('cuti.create');
     Route::post('/cuti', [CutiController::class, 'store'])->name('cuti.store');
+    Route::get('/cuti/approval/list', [CutiController::class, 'approval'])->name('cuti.approval');
+    Route::get('/cuti/history/all', [CutiController::class, 'history'])->name('cuti.history');
     Route::get('/cuti/{id_cuti}', [CutiController::class, 'show'])->name('cuti.show');
     Route::delete('/cuti/{id_cuti}', [CutiController::class, 'cancel'])->name('cuti.cancel');
-    Route::get('/cuti/approval/list', [CutiController::class, 'approval'])->name('cuti.approval');
     Route::patch('/cuti/{id_cuti}/status', [CutiController::class, 'updateStatus'])->name('cuti.update-status');
-    Route::get('/cuti/history/all', [CutiController::class, 'history'])->name('cuti.history');
 
     // Jadwal Kerja Routes
     Route::get('/jadwal', [JadwalKerjaController::class, 'index'])->name('jadwal.index');

@@ -8,6 +8,12 @@
         <div>{{ session('success') }}</div>
     </div>
     @endif
+    @if($isReadonlyApproval ?? false)
+    <div class="alert alert-info d-flex gap-2 align-items-start">
+        <i class="bi bi-info-circle-fill" style="font-size: 1.1rem; flex-shrink: 0;"></i>
+        <div>Mode HR/HRD readonly. Anda dapat melihat pengajuan, tetapi tidak dapat approve/reject.</div>
+    </div>
+    @endif
 
     <div class="hris-card">
         <div class="hris-card-header">
@@ -70,24 +76,28 @@
                                 <small class="text-muted">{{ $cuti->keterangan ?? '-' }}</small>
                             </td>
                             <td class="text-center">
-                                <form action="{{ route('cuti.update-status', $cuti->id_cuti) }}" method="POST" class="d-inline-block">
-                                    @csrf
-                                    @method('PATCH')
-                                    <input type="hidden" name="status" value="approved">
-                                    <button type="submit" class="btn btn-sm btn-success d-flex align-items-center gap-2"
-                                            onclick="return confirm('Setujui pengajuan cuti ini?')">
-                                        <i class="bi bi-check-circle-fill"></i> Setujui
-                                    </button>
-                                </form>
-                                <form action="{{ route('cuti.update-status', $cuti->id_cuti) }}" method="POST" class="d-inline-block">
-                                    @csrf
-                                    @method('PATCH')
-                                    <input type="hidden" name="status" value="rejected">
-                                    <button type="submit" class="btn btn-sm btn-danger d-flex align-items-center gap-2"
-                                            onclick="return confirm('Tolak pengajuan cuti ini?')">
-                                        <i class="bi bi-x-circle-fill"></i> Tolak
-                                    </button>
-                                </form>
+                                @if(($approvalPermissions[$cuti->id_cuti] ?? false) === true)
+                                    <form action="{{ route('cuti.update-status', $cuti->id_cuti) }}" method="POST" class="d-inline-block">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="status" value="approved">
+                                        <button type="submit" class="btn btn-sm btn-success d-flex align-items-center gap-2"
+                                                onclick="return confirm('Setujui pengajuan cuti ini?')">
+                                            <i class="bi bi-check-circle-fill"></i> Setujui
+                                        </button>
+                                    </form>
+                                    <form action="{{ route('cuti.update-status', $cuti->id_cuti) }}" method="POST" class="d-inline-block">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="status" value="rejected">
+                                        <button type="submit" class="btn btn-sm btn-danger d-flex align-items-center gap-2"
+                                                onclick="return confirm('Tolak pengajuan cuti ini?')">
+                                            <i class="bi bi-x-circle-fill"></i> Tolak
+                                        </button>
+                                    </form>
+                                @else
+                                    <span class="badge bg-secondary">Readonly</span>
+                                @endif
                             </td>
                         </tr>
                         @endforeach

@@ -17,15 +17,32 @@
     </div>
     @endif
 
+    @if(session('warning'))
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        {{ session('warning') }}
+    </div>
+    @endif
+
     <div class="hris-card">
 
         <div class="hris-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <h2 class="mb-0">{{ $isAdmin ? 'Manajemen Cuti Karyawan' : 'Pengajuan Cuti Saya' }}</h2>
+            <h2 class="mb-0">
+                @if($isAdmin)
+                    Manajemen Cuti Karyawan
+                @elseif($isHrReadonly ?? false)
+                    Data Cuti Karyawan
+                @else
+                    Pengajuan Cuti Saya
+                @endif
+            </h2>
 
-            <a href="{{ route('cuti.create', $isAdmin ? ['mode' => 'admin'] : []) }}" class="btn hris-btn hris-btn-primary">
-                <i class="bi bi-plus-circle me-1"></i>
-                {{ $isAdmin ? 'Buat Cuti Karyawan' : 'Ajukan Cuti Baru' }}
-            </a>
+            @unless($isHrReadonly ?? false)
+                <a href="{{ route('cuti.create', $isAdmin ? ['mode' => 'admin'] : []) }}" class="btn hris-btn hris-btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i>
+                    {{ $isAdmin ? 'Buat Cuti Karyawan' : 'Ajukan Cuti Baru' }}
+                </a>
+            @endunless
         </div>
 
         <div class="hris-card-body">
@@ -66,7 +83,7 @@
                         </h3>
                     </div>
                 </div>
-                @if(!$isAdmin)
+                @if(!$isAdmin && !($isHrReadonly ?? false))
                 <div class="col-12 col-md-6 col-xl-3">
                     <div class="p-3 rounded-3 bg-info text-white shadow-sm">
                         <h6 class="mb-1 opacity-75">Sisa Kuota Cuti</h6>
@@ -86,7 +103,7 @@
                     <thead>
                         <tr>
                             <th>No</th>
-                            @if($isAdmin)
+                            @if($isAdmin || ($isHrReadonly ?? false))
                                 <th>Karyawan</th>
                             @endif
                             <th>Jenis Cuti</th>
@@ -101,7 +118,7 @@
                         @foreach($cutiList as $index => $cuti)
                         <tr>
                             <td>{{ $index + 1 }}</td>
-                            @if($isAdmin)
+                            @if($isAdmin || ($isHrReadonly ?? false))
                                 <td><strong>{{ $cuti->karyawan->nama ?? '-' }}</strong></td>
                             @endif
 

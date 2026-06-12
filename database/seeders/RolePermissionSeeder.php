@@ -58,6 +58,9 @@ class RolePermissionSeeder extends Seeder
         // ROLES
         // ========================
         $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $hr = Role::firstOrCreate(['name' => 'hr', 'guard_name' => 'web']);
+        $hrd = Role::firstOrCreate(['name' => 'hrd', 'guard_name' => 'web']);
+        $atasanDivisi = Role::firstOrCreate(['name' => 'atasan_divisi', 'guard_name' => 'web']);
         $manager = Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'web']);
         $supervisor = Role::firstOrCreate(['name' => 'supervisor', 'guard_name' => 'web']);
         $karyawan = Role::firstOrCreate(['name' => 'karyawan', 'guard_name' => 'web']);
@@ -66,6 +69,29 @@ class RolePermissionSeeder extends Seeder
         // ASSIGN PERMISSIONS
         // ========================
         $admin->givePermissionTo($permissions);
+
+        $hrReadonlyPermissions = [
+            'view-dashboard',
+            'view-karyawan',
+            'view-attendance',
+            'view-attendance-history',
+            'view-cuti',
+            'view-cuti-history',
+            'view-jadwal',
+        ];
+
+        $hr->givePermissionTo($hrReadonlyPermissions);
+        $hrd->givePermissionTo($hrReadonlyPermissions);
+
+        $atasanDivisi->givePermissionTo([
+            'view-dashboard',
+            'view-karyawan',
+            'view-cuti',
+            'view-cuti-history',
+            'approve-cuti',
+            'reject-cuti',
+            'view-jadwal',
+        ]);
 
         $manager->givePermissionTo([
             'view-dashboard',

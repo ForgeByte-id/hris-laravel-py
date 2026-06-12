@@ -12,7 +12,8 @@ class RoleSeeder extends Seeder
      *
      * Establishes the core system roles:
      * - admin: Full system access
-     * - hr: HR department access (can view all attendance, approve leave, etc.)
+     * - hr/hrd: HR department read-only access
+     * - atasan_divisi: Division head approval access for same division
      * - employee: Regular employee (restricted to own data)
      */
     public function run(): void
@@ -20,6 +21,9 @@ class RoleSeeder extends Seeder
         // Create roles with guard 'web'
         Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
         Role::firstOrCreate(['name' => 'hr', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'hrd', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'atasan_divisi', 'guard_name' => 'web']);
         Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'karyawan', 'guard_name' => 'web']);
     }
 }

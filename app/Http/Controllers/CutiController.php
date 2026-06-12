@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Cuti;
 use App\Models\Karyawan;
+use App\Services\CutiApprovalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class CutiController extends Controller
@@ -15,8 +17,9 @@ class CutiController extends Controller
     {
         $user = Auth::user();
         $isAdmin = $user->hasRole('admin');
+        $isHrReadonly = $user->hasAnyRole(['hr', 'hrd']);
 
-        if ($isAdmin) {
+        if ($isAdmin || $isHrReadonly) {
             $cutiList = Cuti::with('karyawan')
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -24,7 +27,8 @@ class CutiController extends Controller
             return view('cuti.index', [
                 'cutiList' => $cutiList,
                 'karyawan' => null,
-                'isAdmin' => true,
+                'isAdmin' => $isAdmin,
+                'isHrReadonly' => $isHrReadonly,
             ]);
         }
 
@@ -41,6 +45,7 @@ class CutiController extends Controller
             'cutiList' => $cutiList,
             'karyawan' => $karyawan,
             'isAdmin' => false,
+            'isHrReadonly' => false,
         ]);
     }
 
@@ -70,7 +75,7 @@ class CutiController extends Controller
     }
 
     // Proses submit pengajuan cuti
-    public function store(Request $request)
+    public function store(Request $request, CutiApprovalService $approvalService)
     {
         $user = Auth::user();
         $isAdmin = $user->hasRole('admin');
@@ -103,27 +108,28 @@ class CutiController extends Controller
             return redirect()->back()->withInput()->with('error', 'Sisa kuota cuti tidak mencukupi.');
         }
 
-        // Cari atasan (bisa disesuaikan logikanya)
-        // Contoh: ambil karyawan dengan jabatan "Manager" atau "Supervisor"
-        $atasan = Karyawan::whereHas('jabatan', function ($query) {
-                $query->whereIn('nama_jabatan', ['Manager', 'Supervisor', 'HRD']);
-            })
-            ->where('id_karyawan', '!=', $karyawan->id_karyawan)
-            ->first();
+        $atasan = $isAdmin ? null : $approvalService->findDivisionHeadFor($karyawan);
 
-        Cuti::create([
-            'id_karyawan' => $karyawan->id_karyawan,
-            'jenis_cuti' => $request->jenis_cuti,
-            'tanggal_mulai' => $request->tanggal_mulai,
-            'tanggal_selesai' => $request->tanggal_selesai,
-            'keterangan' => $request->keterangan,
-            'status_persetujuan' => $isAdmin ? 'approved' : 'pending',
-            'tanggal_persetujuan' => $isAdmin ? Carbon::now() : null,
-            'id_atasan' => $isAdmin ? null : ($atasan ? $atasan->id_karyawan : null),
-        ]);
+        DB::transaction(function () use ($request, $karyawan, $isAdmin, $atasan, $durasiCuti) {
+            Cuti::create([
+                'id_karyawan' => $karyawan->id_karyawan,
+                'jenis_cuti' => $request->jenis_cuti,
+                'tanggal_mulai' => $request->tanggal_mulai,
+                'tanggal_selesai' => $request->tanggal_selesai,
+                'keterangan' => $request->keterangan,
+                'status_persetujuan' => $isAdmin ? 'approved' : 'pending',
+                'tanggal_persetujuan' => $isAdmin ? Carbon::now() : null,
+                'id_atasan' => $isAdmin ? null : ($atasan ? $atasan->id_karyawan : null),
+            ]);
 
-        if ($isAdmin) {
-            $karyawan->decrement('remaining_leave_quota', $durasiCuti);
+            if ($isAdmin) {
+                $karyawan->decrement('remaining_leave_quota', $durasiCuti);
+            }
+        });
+
+        if (!$isAdmin && !$atasan) {
+            return redirect()->route('cuti.index')
+                ->with('warning', 'Pengajuan cuti berhasil dikirim, tetapi belum ada atasan divisi yang terdaftar untuk divisi ini.');
         }
 
         return redirect()->route('cuti.index')
@@ -131,35 +137,37 @@ class CutiController extends Controller
     }
 
     // Halaman approval untuk atasan/HRD
-    public function approval()
+    public function approval(CutiApprovalService $approvalService)
     {
         $user = Auth::user();
-        
-        // Cek apakah user ini atasan/HRD
-        $karyawan = Karyawan::where('id_user', $user->id_user)->first();
 
-        $jabatanNama = $karyawan?->jabatan?->nama_jabatan;
-        if (!$user->hasRole('admin') && (!$karyawan || !in_array($jabatanNama, ['Manager', 'Supervisor', 'HRD', 'Admin']))) {
+        if (!$approvalService->canViewApproval($user)) {
             return redirect()->back()->with('error', 'Anda tidak memiliki akses approval');
         }
 
-        // Ambil semua pengajuan cuti yang pending
-        $cutiList = Cuti::with(['karyawan', 'atasan'])
-                        ->where('status_persetujuan', 'pending')
-                        ->orderBy('created_at', 'desc')
-                        ->get();
+        $cutiList = $approvalService->pendingQueryFor($user)->get();
+        $approvalPermissions = $cutiList->mapWithKeys(fn ($cuti) => [
+            $cuti->id_cuti => $approvalService->canUpdateStatus($user, $cuti),
+        ]);
+        $isReadonlyApproval = $user->hasAnyRole(['hr', 'hrd']) && !$user->hasRole('admin');
 
-        return view('cuti.approval', compact('cutiList'));
+        return view('cuti.approval', compact('cutiList', 'approvalPermissions', 'isReadonlyApproval'));
     }
 
     // Proses approval/reject
-    public function updateStatus(Request $request, $id_cuti)
+    public function updateStatus(Request $request, $id_cuti, CutiApprovalService $approvalService)
     {
         $request->validate([
             'status' => 'required|in:approved,rejected',
         ]);
 
-        $cuti = Cuti::findOrFail($id_cuti);
+        $cuti = Cuti::with('karyawan')->findOrFail($id_cuti);
+
+        abort_unless(
+            $approvalService->canUpdateStatus(Auth::user(), $cuti),
+            403,
+            'Anda tidak berwenang memproses pengajuan cuti ini.'
+        );
 
         if ($request->status === 'approved') {
             $durasiCuti = $cuti->tanggal_mulai->diffInDays($cuti->tanggal_selesai) + 1;
@@ -170,15 +178,17 @@ class CutiController extends Controller
             }
         }
 
-        $cuti->update([
-            'status_persetujuan' => $request->status,
-            'tanggal_persetujuan' => Carbon::now(),
-        ]);
+        DB::transaction(function () use ($cuti, $request) {
+            $cuti->update([
+                'status_persetujuan' => $request->status,
+                'tanggal_persetujuan' => Carbon::now(),
+            ]);
 
-        if ($request->status === 'approved') {
-            $durasiCuti = $cuti->tanggal_mulai->diffInDays($cuti->tanggal_selesai) + 1;
-            $cuti->karyawan()->decrement('remaining_leave_quota', $durasiCuti);
-        }
+            if ($request->status === 'approved') {
+                $durasiCuti = $cuti->tanggal_mulai->diffInDays($cuti->tanggal_selesai) + 1;
+                $cuti->karyawan()->decrement('remaining_leave_quota', $durasiCuti);
+            }
+        });
 
         $statusText = $request->status === 'approved' ? 'disetujui' : 'ditolak';
         
