@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\JadwalKerja;
 use App\Models\Karyawan;
+use App\Models\Devisi;
 use App\Models\Absensi;
 use App\Models\Cuti;
 use App\Models\Shift;
+use App\Services\JadwalBulkService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -107,11 +109,12 @@ class JadwalKerjaController extends Controller
     // Bulk create jadwal (untuk semua karyawan sekaligus)
     public function bulkCreate()
     {
-        $karyawanList = Karyawan::orderBy('nama')->get();
+        $karyawanList = Karyawan::with(['jabatan', 'devisi'])->orderBy('nama')->get();
+        $divisiList = Devisi::orderBy('nama_devisi')->get();
 
         $jamKerjaOptions = $this->getScheduleShiftOptions();
 
-        return view('jadwal.bulk_create', compact('karyawanList', 'jamKerjaOptions'));
+        return view('jadwal.bulk_create', compact('karyawanList', 'divisiList', 'jamKerjaOptions'));
     }
 
     // Store bulk jadwal
@@ -170,6 +173,36 @@ class JadwalKerjaController extends Controller
 
         return redirect()->route('jadwal.index', ['bulan' => $bulan])
                         ->with('success', $message);
+    }
+
+    public function bulkRangeStore(Request $request, JadwalBulkService $jadwalBulkService)
+    {
+        $validated = $request->validate([
+            'tanggal_mulai' => 'required|date',
+            'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
+            'target_type' => 'required|in:all,divisi,karyawan',
+            'id_devisi' => 'required_if:target_type,divisi|nullable|exists:devisis,id',
+            'karyawan_ids' => 'required_if:target_type,karyawan|array',
+            'karyawan_ids.*' => 'exists:karyawan,id_karyawan',
+            'kode_shift' => 'required|exists:shifts,kode_shift',
+            'overwrite' => 'nullable|boolean',
+            'keterangan' => 'nullable|string|max:500',
+        ], [
+            'tanggal_selesai.after_or_equal' => 'Tanggal selesai tidak boleh sebelum tanggal mulai.',
+            'id_devisi.required_if' => 'Pilih divisi untuk target by divisi.',
+            'karyawan_ids.required_if' => 'Pilih minimal satu karyawan.',
+        ]);
+
+        $validated['overwrite'] = $request->boolean('overwrite');
+        $summary = $jadwalBulkService->storeRange($validated);
+
+        $bulan = Carbon::parse($validated['tanggal_mulai'])->format('Y-m');
+        $message = "Bulk range selesai: {$summary['created']} created, {$summary['updated']} updated, {$summary['skipped']} skipped, {$summary['failed']} failed.";
+
+        return redirect()->route('jadwal.bulk-create')
+            ->with('success', $message)
+            ->with('bulk_range_summary', $summary)
+            ->with('bulk_range_month', $bulan);
     }
 
     // Form edit jadwal

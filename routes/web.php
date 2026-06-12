@@ -87,6 +87,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/jadwal', [JadwalKerjaController::class, 'store'])->name('jadwal.store');
     Route::get('/jadwal/bulk-create', [JadwalKerjaController::class, 'bulkCreate'])->name('jadwal.bulk-create');
     Route::post('/jadwal/bulk-store', [JadwalKerjaController::class, 'bulkStore'])->name('jadwal.bulk-store');
+    Route::post('/jadwal/bulk-range-store', [JadwalKerjaController::class, 'bulkRangeStore'])->name('jadwal.bulk-range-store');
     Route::get('/jadwal/{id_jadwal}/edit', [JadwalKerjaController::class, 'edit'])->name('jadwal.edit');
     Route::put('/jadwal/{id_jadwal}', [JadwalKerjaController::class, 'update'])->name('jadwal.update');
     Route::delete('/jadwal/{id_jadwal}', [JadwalKerjaController::class, 'destroy'])->name('jadwal.destroy');
