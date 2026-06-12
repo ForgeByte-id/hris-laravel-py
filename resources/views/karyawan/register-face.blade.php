@@ -126,6 +126,10 @@
                     <button class="btn btn-primary btn-lg w-100" id="btnRegister">
                         <i class="bi bi-camera-fill me-2"></i>Daftarkan Wajah
                     </button>
+                    <a href="{{ route('karyawan.import-face', ['id_karyawan' => $karyawan->id_karyawan]) }}"
+                       class="btn btn-outline-primary w-100">
+                        <i class="bi bi-image me-2"></i>Import dari File Image
+                    </a>
 
                 </div>
             </div>

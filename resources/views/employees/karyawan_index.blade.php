@@ -19,9 +19,14 @@
                     </h2>
                     <p class="text-muted small mb-0">Kelola data karyawan dan registrasi wajah untuk face recognition</p>
                 </div>
-                <a href="{{ route('karyawan.create') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle me-2"></i>Tambah Karyawan
-                </a>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ route('karyawan.import-face') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-image me-2"></i>Import Wajah
+                    </a>
+                    <a href="{{ route('karyawan.create') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Tambah Karyawan
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -132,6 +137,10 @@
                                                 <a href="{{ route('karyawan.register-face', $k->id_karyawan) }}"
                                                    class="btn btn-outline-info" title="Daftar/Update Wajah">
                                                     <i class="bi bi-camera"></i>
+                                                </a>
+                                                <a href="{{ route('karyawan.import-face', ['id_karyawan' => $k->id_karyawan]) }}"
+                                                   class="btn btn-outline-primary" title="Import Wajah dari Image">
+                                                    <i class="bi bi-image"></i>
                                                 </a>
                                                 @if($k->face_embedding)
                                                     <button class="btn btn-outline-danger"
