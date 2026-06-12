@@ -391,7 +391,54 @@
 
     {{-- Admin-only JS --}}
     @if ($isAdmin)
+    renderAttendanceChart();
     loadAdminAttendanceHistory();
+
+    function renderAttendanceChart() {
+        const chartEl = document.getElementById('chartdiv');
+        if (!chartEl || typeof am4core === 'undefined') return;
+
+        const chartData = @json([
+            ['status' => 'Tepat Waktu/Hadir', 'total' => $dailyAttendanceSummary['tepat_waktu'] ?? 0],
+            ['status' => 'Terlambat', 'total' => $dailyAttendanceSummary['terlambat'] ?? 0],
+            ['status' => 'Remote', 'total' => $dailyAttendanceSummary['remote'] ?? 0],
+            ['status' => 'Tidak Hadir', 'total' => $dailyAttendanceSummary['tidak_hadir'] ?? 0],
+            ['status' => 'Belum Absen', 'total' => $dailyAttendanceSummary['belum_absen'] ?? 0],
+            ['status' => 'Cuti Approved', 'total' => $dailyAttendanceSummary['cuti_approved'] ?? 0],
+        ]);
+
+        const filteredData = chartData.filter(item => Number(item.total) > 0);
+
+        if (filteredData.length === 0) {
+            chartEl.innerHTML = '<div class="text-center text-muted py-5">Belum ada data rekap kehadiran hari ini</div>';
+            return;
+        }
+
+        am4core.ready(function () {
+            am4core.useTheme(am4themes_animated);
+
+            const chart = am4core.create('chartdiv', am4charts.PieChart3D);
+            chart.hiddenState.properties.opacity = 0;
+            chart.legend = new am4charts.Legend();
+            chart.data = filteredData;
+
+            const series = chart.series.push(new am4charts.PieSeries3D());
+            series.dataFields.value = 'total';
+            series.dataFields.category = 'status';
+            series.alignLabels = false;
+            series.labels.template.text = "{value.percent.formatNumber('#.0')}%";
+            series.labels.template.radius = am4core.percent(-40);
+            series.labels.template.fill = am4core.color('white');
+            series.colors.list = [
+                am4core.color('#20c997'),
+                am4core.color('#ff9800'),
+                am4core.color('#0dcaf0'),
+                am4core.color('#6c757d'),
+                am4core.color('#dc3545'),
+                am4core.color('#6f42c1'),
+            ];
+        });
+    }
 
     async function fetchJson(url) {
         const res  = await fetch(url);
