@@ -241,14 +241,95 @@
     @endif {{-- end $karyawan --}}
 
     {{-- ══════════════════════════════════════════════════════════════════ --}}
-    {{-- ADMIN SECTIONS                                                     --}}
+    {{-- ADMIN / HR SECTIONS                                                --}}
     {{-- ══════════════════════════════════════════════════════════════════ --}}
-    @if ($isAdmin)
+    @if ($isAdmin || $isHr)
 
-        {{-- Attendance summary cards (JS-loaded) --}}
-        <div class="row g-3 mb-3" id="attendance-summary">
-            {{-- filled by loadTodaysSummary() --}}
+        {{-- Daily attendance summary --}}
+        <div class="row g-3 mb-3">
+            @foreach([
+                ['icon' => 'bi-people-fill', 'label' => 'Total Karyawan', 'value' => $dailyAttendanceSummary['total_karyawan'] ?? 0, 'color' => 'var(--hris-primary)'],
+                ['icon' => 'bi-person-check-fill', 'label' => 'Sudah Absen Masuk', 'value' => $dailyAttendanceSummary['sudah_absen_masuk'] ?? 0, 'color' => '#198754'],
+                ['icon' => 'bi-person-x-fill', 'label' => 'Belum Absen', 'value' => $dailyAttendanceSummary['belum_absen'] ?? 0, 'color' => '#dc3545'],
+                ['icon' => 'bi-exclamation-circle-fill', 'label' => 'Terlambat', 'value' => $dailyAttendanceSummary['terlambat'] ?? 0, 'color' => '#ff9800'],
+                ['icon' => 'bi-check-circle-fill', 'label' => 'Tepat Waktu/Hadir', 'value' => $dailyAttendanceSummary['tepat_waktu'] ?? 0, 'color' => '#20c997'],
+                ['icon' => 'bi-house-check-fill', 'label' => 'Remote', 'value' => $dailyAttendanceSummary['remote'] ?? 0, 'color' => '#0dcaf0'],
+                ['icon' => 'bi-slash-circle-fill', 'label' => 'Tidak Hadir', 'value' => $dailyAttendanceSummary['tidak_hadir'] ?? 0, 'color' => '#6c757d'],
+                ['icon' => 'bi-calendar-check-fill', 'label' => 'Cuti Approved', 'value' => $dailyAttendanceSummary['cuti_approved'] ?? 0, 'color' => '#6f42c1'],
+            ] as $card)
+                <div class="col-6 col-lg-3">
+                    <div class="hris-card h-100">
+                        <div class="hris-card-body text-center">
+                            <div style="font-size:1.8rem;color:{{ $card['color'] }};margin-bottom:8px;">
+                                <i class="bi {{ $card['icon'] }}"></i>
+                            </div>
+                            <div class="h3 mb-1">{{ $card['value'] }}</div>
+                            <div class="text-muted small">{{ $card['label'] }}</div>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
         </div>
+
+        {{-- Today's attendance table --}}
+        <div class="row g-3 mb-3">
+            <div class="col-12">
+                <div class="hris-card">
+                    <div class="hris-card-header">
+                        <h5 class="mb-0"><i class="bi bi-calendar-day me-2"></i>Absensi Hari Ini</h5>
+                    </div>
+                    <div class="hris-card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Nama</th>
+                                        <th>Divisi</th>
+                                        <th>Jabatan</th>
+                                        <th>Jadwal/Shift</th>
+                                        <th>Masuk</th>
+                                        <th>Pulang</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($todayAttendanceRows as $row)
+                                        @php
+                                            $employee = $row['karyawan'];
+                                            $absensi = $row['absensi'];
+                                            $jadwal = $row['jadwal'];
+                                        @endphp
+                                        <tr>
+                                            <td class="small fw-semibold">{{ $employee->nama }}</td>
+                                            <td class="small">{{ $employee->devisi->nama_devisi ?? '-' }}</td>
+                                            <td class="small">{{ $employee->jabatan->nama_jabatan ?? '-' }}</td>
+                                            <td class="small">{{ $jadwal?->jam_kerja ?? $employee->shift?->label ?? '-' }}</td>
+                                            <td class="small">{{ $absensi?->jam_masuk ?? '-' }}</td>
+                                            <td class="small">{{ $absensi?->jam_pulang ?? '-' }}</td>
+                                            <td>
+                                                @if($absensi)
+                                                    <span class="badge bg-{{ $absensi->status_color }}">{{ $absensi->status_label }}</span>
+                                                @else
+                                                    <span class="badge bg-secondary">Belum Absen</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted py-3">Belum ada data karyawan</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    @endif {{-- end admin / HR daily recap --}}
+
+    @if ($isAdmin)
 
         {{-- Attendance chart --}}
         <div class="row g-3 mt-1">
@@ -310,7 +391,6 @@
 
     {{-- Admin-only JS --}}
     @if ($isAdmin)
-    loadTodaysSummary();
     loadAdminAttendanceHistory();
 
     async function fetchJson(url) {
@@ -318,52 +398,6 @@
         const text = await res.text();
         if (!res.ok) throw new Error(`Request gagal (${res.status})`);
         return text ? JSON.parse(text) : {};
-    }
-
-    async function loadTodaysSummary() {
-        try {
-            const data = await fetchJson('/api/attendance/todays-summary');
-            const div  = document.getElementById('attendance-summary');
-            if (!div) return;
-
-            div.innerHTML = `
-                <div class="col-md-4">
-                    <div class="hris-card">
-                        <div class="hris-card-body text-center">
-                            <div style="font-size:2rem;color:var(--hris-primary);margin-bottom:8px;">
-                                <i class="bi bi-person-check"></i>
-                            </div>
-                            <div class="h3 mb-1">${data.total_present ?? 0}</div>
-                            <div class="text-muted small">Hadir</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="hris-card">
-                        <div class="hris-card-body text-center">
-                            <div style="font-size:2rem;color:#ff9800;margin-bottom:8px;">
-                                <i class="bi bi-exclamation-circle"></i>
-                            </div>
-                            <div class="h3 mb-1">${data.total_late ?? 0}</div>
-                            <div class="text-muted small">Terlambat</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="hris-card">
-                        <div class="hris-card-body text-center">
-                            <div style="font-size:2rem;color:#f44336;margin-bottom:8px;">
-                                <i class="bi bi-person-x"></i>
-                            </div>
-                            <div class="h3 mb-1">${data.total_absent ?? 0}</div>
-                            <div class="text-muted small">Tidak Hadir</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        } catch (err) {
-            console.error('Summary error:', err);
-        }
     }
 
     async function loadAdminAttendanceHistory() {

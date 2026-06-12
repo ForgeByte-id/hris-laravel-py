@@ -27,6 +27,8 @@ class DashboardController extends Controller
         $recentCuti       = collect();
         $pendingCutiCount = 0;
         $hadirThisMonth   = 0;
+        $dailyAttendanceSummary = null;
+        $todayAttendanceRows = collect();
 
         if ($karyawan) {
             $todayJadwal = JadwalKerja::where('id_karyawan', $karyawan->id_karyawan)
@@ -57,6 +59,38 @@ class DashboardController extends Controller
                 ->count();
         }
 
+        if ($isAdmin || $isHr) {
+            $today = Carbon::today();
+            $employees = Karyawan::with(['devisi', 'jabatan'])->orderBy('nama')->get();
+            $todayAbsensi = Absensi::whereDate('tanggal', $today)->get()->keyBy('id_karyawan');
+            $todayJadwal = JadwalKerja::with('shift')->whereDate('tanggal', $today)->get()->keyBy('id_karyawan');
+            $cutiApprovedToday = Cuti::where('status_persetujuan', 'approved')
+                ->whereDate('tanggal_mulai', '<=', $today)
+                ->whereDate('tanggal_selesai', '>=', $today)
+                ->count();
+
+            $presentRows = $todayAbsensi->filter(fn ($absensi) => !empty($absensi->jam_masuk));
+
+            $dailyAttendanceSummary = [
+                'total_karyawan' => $employees->count(),
+                'sudah_absen_masuk' => $presentRows->count(),
+                'belum_absen' => max(0, $employees->count() - $presentRows->count()),
+                'terlambat' => $todayAbsensi->filter(fn ($absensi) => $absensi->status === 'terlambat' || ($absensi->menit_terlambat ?? 0) > 0)->count(),
+                'tepat_waktu' => $todayAbsensi->filter(fn ($absensi) => in_array($absensi->status, ['hadir', 'tepat_waktu'], true))->count(),
+                'remote' => $todayAbsensi->where('status', 'remote')->count(),
+                'tidak_hadir' => $todayAbsensi->where('status', 'tidak_hadir')->count(),
+                'cuti_approved' => $cutiApprovedToday,
+            ];
+
+            $todayAttendanceRows = $employees->map(function ($employee) use ($todayAbsensi, $todayJadwal) {
+                return [
+                    'karyawan' => $employee,
+                    'absensi' => $todayAbsensi->get($employee->id_karyawan),
+                    'jadwal' => $todayJadwal->get($employee->id_karyawan),
+                ];
+            });
+        }
+
         return view('dashboard.dashboard', compact(
             'user',
             'karyawan',
@@ -68,6 +102,8 @@ class DashboardController extends Controller
             'recentCuti',
             'pendingCutiCount',
             'hadirThisMonth',
+            'dailyAttendanceSummary',
+            'todayAttendanceRows',
         ));
     }
 }
