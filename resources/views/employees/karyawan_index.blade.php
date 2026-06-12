@@ -20,6 +20,9 @@
                     <p class="text-muted small mb-0">Kelola data karyawan dan registrasi wajah untuk face recognition</p>
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ route('karyawan.import') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-filetype-csv me-2"></i>Import Karyawan
+                    </a>
                     <a href="{{ route('karyawan.import-face') }}" class="btn btn-outline-primary">
                         <i class="bi bi-image me-2"></i>Import Wajah
                     </a>

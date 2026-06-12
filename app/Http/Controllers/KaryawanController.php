@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Services\FaceRecognitionService;
 use App\Services\KaryawanFaceImportService;
+use App\Services\KaryawanImportService;
 use RuntimeException;
 
 class KaryawanController extends Controller
@@ -27,6 +28,76 @@ class KaryawanController extends Controller
         $divisiList  = Devisi::orderBy('nama_devisi')->get();
         $shiftList = Shift::orderBy('nama_shift')->get();
         return view('employees.karyawan_create', compact('jabatanList', 'divisiList', 'shiftList'));
+    }
+
+    public function importForm()
+    {
+        return view('employees.import', [
+            'summary' => session('import_summary'),
+        ]);
+    }
+
+    public function importEmployees(Request $request, KaryawanImportService $importService)
+    {
+        $request->validate([
+            'import_file' => 'required|file|mimes:csv,txt|max:10240',
+        ], [
+            'import_file.required' => 'Upload file CSV terlebih dahulu.',
+            'import_file.mimes' => 'File import harus berformat CSV.',
+            'import_file.max' => 'Ukuran file CSV maksimal 10 MB.',
+        ]);
+
+        try {
+            $summary = $importService->importCsv($request->file('import_file'));
+
+            return redirect()->route('karyawan.import')
+                ->with('import_summary', $summary)
+                ->with('success', "Import selesai: {$summary['success']} sukses, {$summary['updated']} updated, {$summary['skipped']} skipped, {$summary['failed']} failed.");
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->with('error', 'Import gagal diproses. Pastikan format CSV sesuai template.');
+        }
+    }
+
+    public function importTemplate()
+    {
+        $headers = [
+            'nama',
+            'username',
+            'email',
+            'password',
+            'nama_devisi',
+            'nama_jabatan',
+            'kode_shift',
+            'tanggal_masuk',
+            'yearly_leave_quota',
+            'remaining_leave_quota',
+            'face_image_path',
+        ];
+
+        $example = [
+            'Budi Santoso',
+            'budi.santoso',
+            'budi@hris.local',
+            '',
+            'Operasional',
+            'Staff',
+            'P',
+            now()->toDateString(),
+            '12',
+            '12',
+            'budi.jpg',
+        ];
+
+        $csv = implode(',', $headers) . "\n" . implode(',', $example) . "\n";
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="template-import-karyawan.csv"',
+        ]);
     }
 
     public function store(Request $request)
