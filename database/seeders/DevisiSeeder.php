@@ -3,22 +3,12 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
+use App\Models\Devisi;
 
 class DevisiSeeder extends Seeder
 {
     public function run(): void
     {
-
-        // disable FK
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-
-        // truncate
-        DB::table('devisis')->truncate();
-
-        // enable FK kembali
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-
         $devisis = [
             'IT',
             'HR',
@@ -26,14 +16,14 @@ class DevisiSeeder extends Seeder
             'Operations',
             'Sales',
             'Marketing',
+            'NBCS',
+            'NSC1',
+            'NSC2',
+            'Office',
         ];
 
         foreach ($devisis as $devisi) {
-            DB::table('devisis')->insert([
-                'nama_devisi' => $devisi,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            Devisi::firstOrCreate(['nama_devisi' => $devisi]);
         }
     }
 }

@@ -33,6 +33,9 @@ erDiagram
         bigint id_devisi
         string kode_shift FK
         date tanggal_masuk
+        date tanggal_mulai_kerja
+        string status_aktif
+        string status_karyawan
         int yearly_leave_quota
         int remaining_leave_quota
         text face_embedding
@@ -92,6 +95,16 @@ erDiagram
         string jam_kerja
         string kode_shift FK
         text keterangan
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    LEAVE_TYPES {
+        bigint id PK
+        string nama_cuti
+        int default_quota
+        string applies_to_status
+        boolean is_active
         timestamp created_at
         timestamp updated_at
     }

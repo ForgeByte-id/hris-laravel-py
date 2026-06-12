@@ -23,12 +23,17 @@ class Karyawan extends Authenticatable
         'id_devisi',
         'kode_shift',
         'tanggal_masuk',
+        'tanggal_mulai_kerja',
+        'status_aktif',
+        'status_karyawan',
         'yearly_leave_quota',
         'remaining_leave_quota',
         'face_embedding',
     ];
 
     protected $casts = [
+        'tanggal_masuk' => 'date',
+        'tanggal_mulai_kerja' => 'date',
         'yearly_leave_quota' => 'integer',
         'remaining_leave_quota' => 'integer',
     ];

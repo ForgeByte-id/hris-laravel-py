@@ -4,21 +4,11 @@ namespace Database\Seeders;
 
 use App\Models\Jabatan;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class JabatanSeeder extends Seeder
 {
     public function run(): void
     {
-        // disable FK
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-
-        // truncate
-        Jabatan::truncate();
-
-        // enable FK kembali
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-
         $jabatans = [
             'Administrator',
             'Manager HR',
@@ -37,10 +27,20 @@ class JabatanSeeder extends Seeder
             'Marketing Specialist',
             'Supervisor',
             'Staff General',
+            'Manager Divisi',
+            'Wakil Manager Divisi',
+            'Kasir',
+            'Customer Service',
+            'Teknisi',
+            'Wakil Manager Umum',
+            'Accounting',
+            'SDM',
+            'Manager Umum',
+            'Online Marketing',
         ];
 
         foreach ($jabatans as $jabatan) {
-            Jabatan::create([
+            Jabatan::firstOrCreate([
                 'nama_jabatan' => $jabatan
             ]);
         }

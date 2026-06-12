@@ -8,6 +8,8 @@ Run these after pulling the changes:
 php artisan migrate
 php artisan db:seed --class=RoleSeeder
 php artisan db:seed --class=RolePermissionSeeder
+php artisan db:seed --class=LeaveTypeSeeder
+php artisan db:seed --class=RealEmployeeSeeder
 php artisan config:clear
 php artisan cache:clear
 ```
@@ -15,7 +17,7 @@ php artisan cache:clear
 Optional env values:
 
 ```env
-HRIS_DEFAULT_IMPORT_PASSWORD=
+HRIS_DEFAULT_IMPORT_PASSWORD=change-this-default-password
 HRIS_FLAGGING_SECRET=
 ```
 
@@ -24,6 +26,20 @@ For CSV face image import, place images under:
 ```text
 storage/app/imports/faces
 ```
+
+## Real Employee Seeder
+
+- Set `HRIS_DEFAULT_IMPORT_PASSWORD` before running `RealEmployeeSeeder`.
+- Run `php artisan migrate`.
+- Run `php artisan db:seed` or run specific seeders:
+  `RolePermissionSeeder`, `DevisiSeeder`, `JabatanSeeder`, `ShiftSeeder`, `LeaveTypeSeeder`, `RealEmployeeSeeder`.
+- Re-run the same seeder command and confirm users/karyawan/divisi/jabatan/shift are updated, not duplicated.
+- Confirm divisions exist: NBCS, NSC1, NSC2, Office.
+- Confirm positions exist: Manager Divisi, Wakil Manager Divisi, Kasir, Customer Service, Teknisi, Supervisor, Wakil Manager Umum, Accounting, SDM, Manager Umum, Online Marketing.
+- Confirm shifts exist: Pagi 08:00-17:00 and Siang 13:00-22:00.
+- Confirm `tanggal_mulai_kerja`, `status_aktif`, and `status_karyawan` are filled for seeded employees.
+- Confirm employees with Manager/Wakil Manager/Supervisor positions receive `atasan_divisi` role.
+- Confirm Tetap employees get annual quota 12, while Kontrak/Training get annual quota 0.
 
 ## Import Manual Wajah
 
