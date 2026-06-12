@@ -11,14 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('shifts')) {
+            return;
+        }
+
         Schema::create('shifts', function (Blueprint $table) {
-            $table->id();
-            $table->string('nama_shift'); // Pagi, Middle, Siang
-            $table->string('kode_shift')->unique(); // P, M, S, L, C
+            $table->id('id_shift');
+            $table->string('kode_shift', 2)->unique();
+            $table->string('nama_shift');
             $table->time('jam_masuk')->nullable();
             $table->time('jam_pulang')->nullable();
-            $table->string('icon'); // bi-sun, bi-clock, dll
-            $table->string('color'); // text-warning, text-primary, dll
             $table->timestamps();
         });
     }
