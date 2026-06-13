@@ -69,7 +69,12 @@
                             </td>
                             <td>
                                 <small class="text-muted">
-                                    Sisa: {{ $cuti->karyawan->remaining_leave_quota ?? 0 }} hari
+                                    @if(($quotaBalances[$cuti->id_cuti] ?? null))
+                                        Sisa {{ $quotaBalances[$cuti->id_cuti]->leaveType->nama_cuti }}:
+                                        {{ $quotaBalances[$cuti->id_cuti]->remaining_quota }} hari
+                                    @else
+                                        Kuota tidak ditemukan
+                                    @endif
                                 </small>
                             </td>
                             <td class="text-truncate" style="max-width: 200px;">

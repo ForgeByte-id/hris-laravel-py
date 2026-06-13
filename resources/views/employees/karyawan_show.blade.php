@@ -35,10 +35,17 @@
                     <h5 class="mb-0"><i class="bi bi-person me-2"></i>Informasi Karyawan</h5>
                 </div>
                 <div class="hris-card-body text-center">
-                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                         style="width: 80px; height: 80px; background: var(--hris-primary); color: white; font-size: 2rem; font-weight: bold;">
-                        {{ substr($karyawan->nama, 0, 1) }}
-                    </div>
+                    @if($karyawan->face_image_path)
+                        <img src="{{ route('karyawan.face-image', $karyawan->id_karyawan) }}"
+                             alt="Foto wajah {{ $karyawan->nama }}"
+                             class="rounded-circle border mb-3"
+                             style="width: 112px; height: 112px; object-fit: cover;">
+                    @else
+                        <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                             style="width: 112px; height: 112px; background: var(--hris-primary); color: white; font-size: 2.25rem; font-weight: bold;">
+                            {{ substr($karyawan->nama, 0, 1) }}
+                        </div>
+                    @endif
                     <h4 class="mb-1">{{ $karyawan->nama }}</h4>
                     <p class="text-muted mb-3">{{ $karyawan->jabatan?->nama_jabatan ?? 'Jabatan belum ditentukan' }}</p>
 
@@ -65,6 +72,11 @@
                                 <span class="badge bg-warning">Belum Daftar</span>
                             @endif
                         </div>
+                        @if($karyawan->face_embedding && !$karyawan->face_image_path)
+                            <div class="alert alert-info py-2 px-3 mt-3 mb-0 small text-start">
+                                Data wajah lama hanya menyimpan embedding, belum menyimpan file foto preview.
+                            </div>
+                        @endif
                         <div class="mt-2 d-flex justify-content-between">
                             <span class="text-muted small">Kuota Cuti</span>
                             <span class="fw-semibold small">{{ $karyawan->remaining_leave_quota ?? 0 }}/{{ $karyawan->yearly_leave_quota ?? 0 }} hari</span>

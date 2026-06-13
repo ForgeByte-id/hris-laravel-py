@@ -107,6 +107,46 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="mb-3">
+                                    <label class="form-label fw-semibold">Tanggal Mulai Kerja</label>
+                                    <input type="date" name="tanggal_mulai_kerja"
+                                           class="form-control @error('tanggal_mulai_kerja') is-invalid @enderror"
+                                           value="{{ old('tanggal_mulai_kerja', $karyawan->tanggal_mulai_kerja ? \Carbon\Carbon::parse($karyawan->tanggal_mulai_kerja)->format('Y-m-d') : '') }}">
+                                    @error('tanggal_mulai_kerja')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Status Aktif</label>
+                                    <select name="status_aktif" class="form-select @error('status_aktif') is-invalid @enderror">
+                                        @foreach(['Aktif', 'Nonaktif'] as $status)
+                                            <option value="{{ $status }}" {{ old('status_aktif', $karyawan->status_aktif ?? 'Aktif') === $status ? 'selected' : '' }}>{{ $status }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('status_aktif')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Status Karyawan</label>
+                                    <select name="status_karyawan" class="form-select @error('status_karyawan') is-invalid @enderror">
+                                        @foreach(['Tetap', 'Kontrak', 'Training'] as $status)
+                                            <option value="{{ $status }}" {{ old('status_karyawan', $karyawan->status_karyawan ?? 'Tetap') === $status ? 'selected' : '' }}>{{ $status }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('status_karyawan')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
                                     <label class="form-label fw-semibold">Akun User</label>
                                     <select name="id_user" class="form-select @error('id_user') is-invalid @enderror">
                                         <option value="">-- Pilih User (Opsional) --</option>

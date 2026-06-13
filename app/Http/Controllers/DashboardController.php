@@ -78,6 +78,7 @@ class DashboardController extends Controller
                 'belum_absen' => max(0, $employees->count() - $presentRows->count()),
                 'terlambat' => $todayAbsensi->filter(fn ($absensi) => $absensi->status === 'terlambat' || ($absensi->menit_terlambat ?? 0) > 0)->count(),
                 'tepat_waktu' => $todayAbsensi->filter(fn ($absensi) => in_array($absensi->status, ['hadir', 'tepat_waktu'], true))->count(),
+                // Remote/WFH is kept as an optional legacy attendance status, but hidden from the main dashboard recap.
                 'remote' => $todayAbsensi->where('status', 'remote')->count(),
                 'tidak_hadir' => $todayAbsensi->where('status', 'tidak_hadir')->count(),
                 'cuti_approved' => $cutiApprovedToday,
@@ -86,7 +87,6 @@ class DashboardController extends Controller
             $dailyAttendanceChartData = [
                 ['status' => 'Tepat Waktu/Hadir', 'total' => $dailyAttendanceSummary['tepat_waktu']],
                 ['status' => 'Terlambat', 'total' => $dailyAttendanceSummary['terlambat']],
-                ['status' => 'Remote', 'total' => $dailyAttendanceSummary['remote']],
                 ['status' => 'Tidak Hadir', 'total' => $dailyAttendanceSummary['tidak_hadir']],
                 ['status' => 'Belum Absen', 'total' => $dailyAttendanceSummary['belum_absen']],
                 ['status' => 'Cuti Approved', 'total' => $dailyAttendanceSummary['cuti_approved']],

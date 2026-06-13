@@ -36,7 +36,17 @@
                         <p class="mb-1"><strong>Nama:</strong> {{ $karyawan->nama }}</p>
                         <p class="mb-1"><strong>Jabatan:</strong> {{ $karyawan->jabatan->nama_jabatan ?? '-' }}</p>
                         <p class="mb-1"><strong>Divisi:</strong> {{ $karyawan->devisi->nama_devisi ?? '-' }}</p>
-                        <p class="mb-0"><strong>Sisa Kuota Cuti:</strong> {{ $karyawan->remaining_leave_quota ?? 0 }} hari</p>
+                        <p class="mb-2"><strong>Sisa Kuota Cuti Tahunan:</strong> {{ $karyawan->remaining_leave_quota ?? 0 }} hari</p>
+                        @if(($leaveBalances ?? collect())->isNotEmpty())
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach($leaveBalances as $balance)
+                                    <span class="badge text-bg-light border">
+                                        {{ $balance->leaveType->nama_cuti }}:
+                                        {{ $balance->remaining_quota }}/{{ $balance->quota }} hari
+                                    </span>
+                                @endforeach
+                            </div>
+                        @endif
                     </div>
                 @endif
 

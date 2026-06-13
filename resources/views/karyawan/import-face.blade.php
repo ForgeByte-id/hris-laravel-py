@@ -51,9 +51,9 @@
                     <input type="file"
                            name="face_image"
                            class="form-control @error('face_image') is-invalid @enderror"
-                           accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                           accept=".jpg,.png,.webp,image/jpeg,image/png,image/webp"
                            required>
-                    <div class="form-text">Format JPG, JPEG, atau PNG. Maksimal 5 MB. Gunakan foto dengan satu wajah yang jelas.</div>
+                    <div class="form-text">Format JPG, PNG, atau WEBP. Maksimal 2 MB. Gunakan foto dengan satu wajah yang jelas.</div>
                     @error('face_image')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
@@ -61,8 +61,8 @@
 
                 <div class="alert alert-info small">
                     <i class="bi bi-info-circle-fill me-1"></i>
-                    File image hanya dipakai untuk generate encoding. Database tetap menyimpan hasil encoding di
-                    <code>karyawan.face_embedding</code>, bukan menyimpan image mentah.
+                    File image dipakai untuk generate encoding di <code>karyawan.face_embedding</code>.
+                    Preview foto disimpan terbatas di folder import wajah dan hanya ditampilkan untuk user yang login.
                 </div>
 
                 <div class="d-flex gap-2">

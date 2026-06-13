@@ -14,7 +14,7 @@
         <div class="col-lg-5">
             <div class="hris-card h-100">
                 <div class="hris-card-header">
-                    <h5 class="mb-0"><i class="bi bi-filetype-csv me-2"></i>Import Karyawan CSV</h5>
+                    <h5 class="mb-0"><i class="bi bi-file-earmark-arrow-up me-2"></i>Import Karyawan</h5>
                 </div>
                 <div class="hris-card-body">
                     @if(session('success'))
@@ -27,11 +27,11 @@
                     <form action="{{ route('karyawan.import.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">File CSV <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">File Import <span class="text-danger">*</span></label>
                             <input type="file"
                                    name="import_file"
                                    class="form-control @error('import_file') is-invalid @enderror"
-                                   accept=".csv,text/csv"
+                                   accept=".csv,.txt,.json,.xlsx,text/csv,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                                    required>
                             @error('import_file')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -41,7 +41,13 @@
                         <div class="alert alert-info small">
                             <div class="fw-semibold mb-1">Catatan face image</div>
                             Kolom <code>face_image_path</code> menunjuk file di <code>storage/app/imports/faces</code>.
-                            Contoh: <code>budi.jpg</code> atau <code>subfolder/budi.png</code>.
+                            Contoh: <code>budi.jpg</code>, <code>subfolder/budi.png</code>, atau <code>subfolder/budi.webp</code>.
+                            <hr class="my-2">
+                            Format dataset karyawan juga didukung:
+                            <code>Nama Lengkap, Divisi, Posisi, Mulai Kerja, Aktif, Status</code>.
+                            Jika <code>username</code> kosong, sistem membuat username dari nama.
+                            File boleh berupa CSV, JSON, atau XLSX selama header/field-nya sama.
+                            Data yang sudah ada akan dilewati agar tidak membuat duplikasi.
                         </div>
 
                         <div class="d-flex gap-2 flex-wrap">

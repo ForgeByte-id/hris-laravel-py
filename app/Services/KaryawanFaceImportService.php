@@ -8,8 +8,11 @@ use RuntimeException;
 
 class KaryawanFaceImportService
 {
-    private const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png'];
-    private const ALLOWED_MIMES = ['image/jpeg', 'image/png'];
+    private const ALLOWED_EXTENSIONS = ['jpg', 'png', 'webp'];
+    private const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
+    private const PREVIEW_MAX_DIMENSION = 720;
+    private const PREVIEW_WEBP_QUALITY = 72;
+    private const ENCODING_JPEG_QUALITY = 90;
 
     public function __construct(private readonly FaceRecognitionService $faceRecognitionService)
     {
@@ -33,6 +36,40 @@ class KaryawanFaceImportService
     }
 
     /**
+     * Store a compressed preview copy of an uploaded face image under storage/app/imports/faces.
+     *
+     * The database stores only the relative path. The file is served through an
+     * authenticated Laravel route, not exposed through the public disk.
+     */
+    public function storeUploadedPreview(UploadedFile $file, int $idKaryawan): string
+    {
+        $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension());
+        $this->assertSupportedImage($extension, (string) $file->getMimeType());
+
+        $relativePath = 'karyawan/' . $idKaryawan . '/face.webp';
+        $destination = storage_path('app/imports/faces/' . str_replace('/', DIRECTORY_SEPARATOR, $relativePath));
+
+        File::ensureDirectoryExists(dirname($destination));
+        $this->writeCompressedImage($file->getRealPath(), $extension, $destination, 'webp');
+
+        return $relativePath;
+    }
+
+    /**
+     * Store a compressed preview copy from a camera-captured image binary.
+     */
+    public function storeCameraPreview(string $imageBinary, int $idKaryawan): string
+    {
+        $relativePath = 'karyawan/' . $idKaryawan . '/face.webp';
+        $destination = storage_path('app/imports/faces/' . str_replace('/', DIRECTORY_SEPARATOR, $relativePath));
+
+        File::ensureDirectoryExists(dirname($destination));
+        $this->writeCompressedImageFromString($imageBinary, $destination, 'webp');
+
+        return $relativePath;
+    }
+
+    /**
      * Encode a face image referenced by an import CSV.
      *
      * CSV paths are resolved under storage/app/imports/faces to avoid allowing
@@ -50,10 +87,44 @@ class KaryawanFaceImportService
         return $this->encodeReadableImagePath($resolvedPath, $extension);
     }
 
+    /**
+     * Store a compressed preview copy from a CSV/JSON/XLSX referenced image.
+     */
+    public function storeImportPreview(string $faceImagePath, int $idKaryawan): string
+    {
+        $resolvedPath = $this->resolveImportFacePath($faceImagePath);
+        $extension = strtolower(pathinfo($resolvedPath, PATHINFO_EXTENSION));
+        $mimeType = File::mimeType($resolvedPath) ?: '';
+        $this->assertSupportedImage($extension, $mimeType);
+
+        $relativePath = 'karyawan/' . $idKaryawan . '/face.webp';
+        $destination = storage_path('app/imports/faces/' . str_replace('/', DIRECTORY_SEPARATOR, $relativePath));
+
+        File::ensureDirectoryExists(dirname($destination));
+        $this->writeCompressedImage($resolvedPath, $extension, $destination, 'webp');
+
+        return $relativePath;
+    }
+
+    /**
+     * Return a normalized storage/app/imports/faces relative path for DB storage.
+     */
+    public function storedImportPath(string $faceImagePath): string
+    {
+        $resolvedPath = $this->resolveImportFacePath($faceImagePath);
+        $realBase = realpath(storage_path('app/imports/faces'));
+
+        if (!$realBase) {
+            throw new RuntimeException('Folder storage/app/imports/faces tidak ditemukan.');
+        }
+
+        return str_replace(DIRECTORY_SEPARATOR, '/', ltrim(substr($resolvedPath, strlen($realBase)), DIRECTORY_SEPARATOR));
+    }
+
     private function assertSupportedImage(string $extension, string $mimeType): void
     {
         if (!in_array($extension, self::ALLOWED_EXTENSIONS, true) || !in_array($mimeType, self::ALLOWED_MIMES, true)) {
-            throw new RuntimeException('File wajah harus berupa gambar JPG, JPEG, atau PNG.');
+            throw new RuntimeException('File wajah harus berupa gambar JPG, PNG, atau WEBP.');
         }
     }
 
@@ -66,12 +137,10 @@ class KaryawanFaceImportService
             throw new RuntimeException('File wajah tidak dapat dibaca. Silakan upload ulang file gambar.');
         }
 
-        $tempPath = $this->makeTempPathWithExtension($extension);
+        $tempPath = $this->faceRecognitionService->makeTempPath('import_face_');
 
         try {
-            if (!copy($sourcePath, $tempPath)) {
-                throw new RuntimeException('Gagal menyiapkan file wajah untuk diproses.');
-            }
+            $this->writeCompressedImage($sourcePath, $extension, $tempPath, 'jpg', null, self::ENCODING_JPEG_QUALITY);
 
             $result = $this->faceRecognitionService->encodeFace($tempPath);
 
@@ -91,11 +160,142 @@ class KaryawanFaceImportService
         }
     }
 
-    private function makeTempPathWithExtension(string $extension): string
-    {
-        $basePath = $this->faceRecognitionService->makeTempPath('import_face_');
+    private function writeCompressedImage(
+        string|false $sourcePath,
+        string $extension,
+        string $destination,
+        string $format,
+        ?int $maxDimension = self::PREVIEW_MAX_DIMENSION,
+        ?int $quality = self::PREVIEW_WEBP_QUALITY
+    ): void {
+        if (!$sourcePath || !is_file($sourcePath) || !is_readable($sourcePath)) {
+            throw new RuntimeException('File wajah tidak dapat dibaca. Silakan upload ulang file gambar.');
+        }
 
-        return preg_replace('/\.jpg$/i', '.' . $extension, $basePath) ?: $basePath;
+        $image = $this->createImageResource($sourcePath, $extension);
+
+        try {
+            $image = $this->resizeImageIfNeeded($image, $maxDimension);
+            $this->saveImage($image, $destination, $format, $quality ?? self::PREVIEW_WEBP_QUALITY);
+        } finally {
+            \imagedestroy($image);
+        }
+    }
+
+    private function writeCompressedImageFromString(
+        string $imageBinary,
+        string $destination,
+        string $format,
+        ?int $maxDimension = self::PREVIEW_MAX_DIMENSION,
+        int $quality = self::PREVIEW_WEBP_QUALITY
+    ): void {
+        $this->assertGdFunction('imagecreatefromstring', 'membaca gambar');
+
+        $image = \imagecreatefromstring($imageBinary);
+
+        if (!$image) {
+            throw new RuntimeException('File wajah tidak dapat dibaca. Silakan upload ulang file gambar.');
+        }
+
+        try {
+            $image = $this->resizeImageIfNeeded($image, $maxDimension);
+            $this->saveImage($image, $destination, $format, $quality);
+        } finally {
+            \imagedestroy($image);
+        }
+    }
+
+    /**
+     * @return \GdImage
+     */
+    private function createImageResource(string $sourcePath, string $extension)
+    {
+        $function = match ($extension) {
+            'jpg' => 'imagecreatefromjpeg',
+            'png' => 'imagecreatefrompng',
+            'webp' => 'imagecreatefromwebp',
+            default => false,
+        };
+
+        if (!$function) {
+            throw new RuntimeException('File wajah harus berupa gambar JPG, PNG, atau WEBP.');
+        }
+
+        $this->assertGdFunction($function, strtoupper($extension));
+
+        return $function($sourcePath)
+            ?: throw new RuntimeException('File wajah tidak dapat diproses. Gunakan gambar JPG, PNG, atau WEBP yang valid.');
+    }
+
+    /**
+     * @param \GdImage $image
+     *
+     * @return \GdImage
+     */
+    private function resizeImageIfNeeded($image, ?int $maxDimension)
+    {
+        if (!$maxDimension) {
+            return $image;
+        }
+
+        $this->assertGdFunction('imagecreatetruecolor', 'kompresi gambar');
+        $this->assertGdFunction('imagecopyresampled', 'kompresi gambar');
+
+        $width = \imagesx($image);
+        $height = \imagesy($image);
+        $largestSide = max($width, $height);
+
+        if ($largestSide <= $maxDimension) {
+            return $image;
+        }
+
+        $scale = $maxDimension / $largestSide;
+        $targetWidth = max(1, (int) round($width * $scale));
+        $targetHeight = max(1, (int) round($height * $scale));
+        $resized = \imagecreatetruecolor($targetWidth, $targetHeight);
+
+        \imagealphablending($resized, false);
+        \imagesavealpha($resized, true);
+
+        if (!\imagecopyresampled($resized, $image, 0, 0, 0, 0, $targetWidth, $targetHeight, $width, $height)) {
+            \imagedestroy($resized);
+            throw new RuntimeException('Gagal mengompres foto wajah.');
+        }
+
+        \imagedestroy($image);
+
+        return $resized;
+    }
+
+    /**
+     * @param \GdImage $image
+     */
+    private function saveImage($image, string $destination, string $format, int $quality): void
+    {
+        $function = match ($format) {
+            'jpg' => 'imagejpeg',
+            'webp' => 'imagewebp',
+            default => false,
+        };
+
+        if (!$function) {
+            throw new RuntimeException('Format kompresi foto wajah tidak valid.');
+        }
+
+        $this->assertGdFunction($function, strtoupper($format));
+
+        if (!$function($image, $destination, $quality)) {
+            throw new RuntimeException('Gagal menyimpan preview foto wajah.');
+        }
+    }
+
+    private function assertGdFunction(string $function, string $context): void
+    {
+        if (!function_exists($function)) {
+            throw new RuntimeException(
+                "Dukungan {$context} pada ekstensi PHP GD belum aktif. Rebuild container aplikasi agar upload wajah JPG/PNG/WEBP bisa diproses."
+            );
+        }
     }
 
     private function resolveImportFacePath(string $faceImagePath): string

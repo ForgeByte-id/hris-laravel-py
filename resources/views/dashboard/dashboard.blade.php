@@ -253,7 +253,6 @@
                 ['icon' => 'bi-person-x-fill', 'label' => 'Belum Absen', 'value' => $dailyAttendanceSummary['belum_absen'] ?? 0, 'color' => '#dc3545'],
                 ['icon' => 'bi-exclamation-circle-fill', 'label' => 'Terlambat', 'value' => $dailyAttendanceSummary['terlambat'] ?? 0, 'color' => '#ff9800'],
                 ['icon' => 'bi-check-circle-fill', 'label' => 'Tepat Waktu/Hadir', 'value' => $dailyAttendanceSummary['tepat_waktu'] ?? 0, 'color' => '#20c997'],
-                ['icon' => 'bi-house-check-fill', 'label' => 'Remote', 'value' => $dailyAttendanceSummary['remote'] ?? 0, 'color' => '#0dcaf0'],
                 ['icon' => 'bi-slash-circle-fill', 'label' => 'Tidak Hadir', 'value' => $dailyAttendanceSummary['tidak_hadir'] ?? 0, 'color' => '#6c757d'],
                 ['icon' => 'bi-calendar-check-fill', 'label' => 'Cuti Approved', 'value' => $dailyAttendanceSummary['cuti_approved'] ?? 0, 'color' => '#6f42c1'],
             ] as $card)

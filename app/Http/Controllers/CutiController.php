@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Cuti;
 use App\Models\Karyawan;
 use App\Services\CutiApprovalService;
+use App\Services\LeaveQuotaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use RuntimeException;
 
 class CutiController extends Controller
 {
@@ -50,7 +52,7 @@ class CutiController extends Controller
     }
 
     // Form pengajuan cuti
-    public function create()
+    public function create(LeaveQuotaService $leaveQuotaService)
     {
         $user = Auth::user();
         $isAdmin = $user->hasRole('admin');
@@ -61,21 +63,16 @@ class CutiController extends Controller
             return redirect()->route('cuti.index')->with('error', 'Data karyawan tidak ditemukan');
         }
         
-        // Daftar jenis cuti
-        $jenisCuti = [
-            'Tahunan',
-            'Sakit',
-            'Melahirkan',
-            'Menikah',
-            'Keluarga Meninggal',
-            'Lainnya'
-        ];
+        $leaveBalances = $karyawan ? $leaveQuotaService->ensureBalancesFor($karyawan) : collect();
+        $jenisCuti = $karyawan
+            ? $leaveBalances->pluck('leaveType.nama_cuti')->filter()->values()
+            : \App\Models\LeaveType::where('is_active', true)->orderBy('nama_cuti')->pluck('nama_cuti');
 
-        return view('cuti.create', compact('karyawan', 'karyawanList', 'jenisCuti', 'isAdmin'));
+        return view('cuti.create', compact('karyawan', 'karyawanList', 'jenisCuti', 'isAdmin', 'leaveBalances'));
     }
 
     // Proses submit pengajuan cuti
-    public function store(Request $request, CutiApprovalService $approvalService)
+    public function store(Request $request, CutiApprovalService $approvalService, LeaveQuotaService $leaveQuotaService)
     {
         $user = Auth::user();
         $isAdmin = $user->hasRole('admin');
@@ -104,28 +101,40 @@ class CutiController extends Controller
 
         $durasiCuti = Carbon::parse($request->tanggal_mulai)->diffInDays(Carbon::parse($request->tanggal_selesai)) + 1;
 
-        if (($karyawan->remaining_leave_quota ?? 0) < $durasiCuti) {
-            return redirect()->back()->withInput()->with('error', 'Sisa kuota cuti tidak mencukupi.');
+        try {
+            $leaveType = $leaveQuotaService->resolveLeaveType($request->jenis_cuti);
+            $leaveQuotaService->assertAvailable(
+                $karyawan,
+                $leaveType->nama_cuti,
+                $durasiCuti,
+                (int) Carbon::parse($request->tanggal_mulai)->year
+            );
+        } catch (RuntimeException $e) {
+            return redirect()->back()->withInput()->with('error', $e->getMessage());
         }
 
         $atasan = $isAdmin ? null : $approvalService->findDivisionHeadFor($karyawan);
 
-        DB::transaction(function () use ($request, $karyawan, $isAdmin, $atasan, $durasiCuti) {
-            Cuti::create([
-                'id_karyawan' => $karyawan->id_karyawan,
-                'jenis_cuti' => $request->jenis_cuti,
-                'tanggal_mulai' => $request->tanggal_mulai,
-                'tanggal_selesai' => $request->tanggal_selesai,
-                'keterangan' => $request->keterangan,
-                'status_persetujuan' => $isAdmin ? 'approved' : 'pending',
-                'tanggal_persetujuan' => $isAdmin ? Carbon::now() : null,
-                'id_atasan' => $isAdmin ? null : ($atasan ? $atasan->id_karyawan : null),
-            ]);
+        try {
+            DB::transaction(function () use ($request, $karyawan, $isAdmin, $atasan, $leaveType, $leaveQuotaService) {
+                $cuti = Cuti::create([
+                    'id_karyawan' => $karyawan->id_karyawan,
+                    'jenis_cuti' => $leaveType->nama_cuti,
+                    'tanggal_mulai' => $request->tanggal_mulai,
+                    'tanggal_selesai' => $request->tanggal_selesai,
+                    'keterangan' => $request->keterangan,
+                    'status_persetujuan' => $isAdmin ? 'approved' : 'pending',
+                    'tanggal_persetujuan' => $isAdmin ? Carbon::now() : null,
+                    'id_atasan' => $isAdmin ? null : ($atasan ? $atasan->id_karyawan : null),
+                ]);
 
-            if ($isAdmin) {
-                $karyawan->decrement('remaining_leave_quota', $durasiCuti);
-            }
-        });
+                if ($isAdmin) {
+                    $leaveQuotaService->decrementForApprovedLeave($cuti->load('karyawan'));
+                }
+            });
+        } catch (RuntimeException $e) {
+            return redirect()->back()->withInput()->with('error', $e->getMessage());
+        }
 
         if (!$isAdmin && !$atasan) {
             return redirect()->route('cuti.index')
@@ -137,7 +146,7 @@ class CutiController extends Controller
     }
 
     // Halaman approval untuk atasan/HRD
-    public function approval(CutiApprovalService $approvalService)
+    public function approval(CutiApprovalService $approvalService, LeaveQuotaService $leaveQuotaService)
     {
         $user = Auth::user();
 
@@ -146,16 +155,29 @@ class CutiController extends Controller
         }
 
         $cutiList = $approvalService->pendingQueryFor($user)->get();
+        $quotaBalances = $cutiList->mapWithKeys(function ($cuti) use ($leaveQuotaService) {
+            try {
+                $balance = $leaveQuotaService->balanceFor(
+                    $cuti->karyawan,
+                    $cuti->jenis_cuti,
+                    (int) $cuti->tanggal_mulai->year
+                );
+
+                return [$cuti->id_cuti => $balance];
+            } catch (RuntimeException) {
+                return [$cuti->id_cuti => null];
+            }
+        });
         $approvalPermissions = $cutiList->mapWithKeys(fn ($cuti) => [
             $cuti->id_cuti => $approvalService->canUpdateStatus($user, $cuti),
         ]);
         $isReadonlyApproval = $user->hasAnyRole(['hr', 'hrd']) && !$user->hasRole('admin');
 
-        return view('cuti.approval', compact('cutiList', 'approvalPermissions', 'isReadonlyApproval'));
+        return view('cuti.approval', compact('cutiList', 'approvalPermissions', 'isReadonlyApproval', 'quotaBalances'));
     }
 
     // Proses approval/reject
-    public function updateStatus(Request $request, $id_cuti, CutiApprovalService $approvalService)
+    public function updateStatus(Request $request, $id_cuti, CutiApprovalService $approvalService, LeaveQuotaService $leaveQuotaService)
     {
         $request->validate([
             'status' => 'required|in:approved,rejected',
@@ -171,24 +193,33 @@ class CutiController extends Controller
 
         if ($request->status === 'approved') {
             $durasiCuti = $cuti->tanggal_mulai->diffInDays($cuti->tanggal_selesai) + 1;
-            $karyawan = $cuti->karyawan;
 
-            if (($karyawan->remaining_leave_quota ?? 0) < $durasiCuti) {
-                return redirect()->back()->with('error', 'Sisa kuota cuti karyawan tidak mencukupi.');
+            try {
+                $leaveQuotaService->assertAvailable(
+                    $cuti->karyawan,
+                    $cuti->jenis_cuti,
+                    $durasiCuti,
+                    (int) $cuti->tanggal_mulai->year
+                );
+            } catch (RuntimeException $e) {
+                return redirect()->back()->with('error', $e->getMessage());
             }
         }
 
-        DB::transaction(function () use ($cuti, $request) {
-            $cuti->update([
-                'status_persetujuan' => $request->status,
-                'tanggal_persetujuan' => Carbon::now(),
-            ]);
+        try {
+            DB::transaction(function () use ($cuti, $request, $leaveQuotaService) {
+                $cuti->update([
+                    'status_persetujuan' => $request->status,
+                    'tanggal_persetujuan' => Carbon::now(),
+                ]);
 
-            if ($request->status === 'approved') {
-                $durasiCuti = $cuti->tanggal_mulai->diffInDays($cuti->tanggal_selesai) + 1;
-                $cuti->karyawan()->decrement('remaining_leave_quota', $durasiCuti);
-            }
-        });
+                if ($request->status === 'approved') {
+                    $leaveQuotaService->decrementForApprovedLeave($cuti);
+                }
+            });
+        } catch (RuntimeException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
 
         $statusText = $request->status === 'approved' ? 'disetujui' : 'ditolak';
         

@@ -7,6 +7,7 @@ use App\Models\Jabatan;
 use App\Models\Karyawan;
 use App\Models\Shift;
 use App\Models\User;
+use App\Services\LeaveQuotaService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -105,13 +106,16 @@ class RealEmployeeSeeder extends Seeder
 
         if ($karyawan) {
             $karyawan->update($payload);
+            app(LeaveQuotaService::class)->ensureBalancesFor($karyawan->refresh());
             return;
         }
 
-        Karyawan::updateOrCreate(
+        $karyawan = Karyawan::updateOrCreate(
             ['id_user' => $user->id_user],
             $payload
         );
+
+        app(LeaveQuotaService::class)->ensureBalancesFor($karyawan);
     }
 
     private function ensureMasterData(): void

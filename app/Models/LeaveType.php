@@ -17,4 +17,9 @@ class LeaveType extends Model
         'default_quota' => 'integer',
         'is_active' => 'boolean',
     ];
+
+    public function karyawanQuotas()
+    {
+        return $this->hasMany(KaryawanLeaveQuota::class);
+    }
 }

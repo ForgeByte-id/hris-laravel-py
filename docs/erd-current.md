@@ -11,6 +11,8 @@ erDiagram
     KARYAWAN ||--o{ CUTI : mengajukan
     KARYAWAN ||--o{ JADWAL_KERJA : memiliki
     KARYAWAN ||--o{ CUTI : menjadi_atasan
+    KARYAWAN ||--o{ KARYAWAN_LEAVE_QUOTAS : punya_saldo_cuti
+    LEAVE_TYPES ||--o{ KARYAWAN_LEAVE_QUOTAS : jenis_saldo
     SHIFTS ||--o{ KARYAWAN : default_shift
     SHIFTS ||--o{ JADWAL_KERJA : shift_jadwal
 
@@ -39,6 +41,7 @@ erDiagram
         int yearly_leave_quota
         int remaining_leave_quota
         text face_embedding
+        string face_image_path
         timestamp created_at
         timestamp updated_at
     }
@@ -105,6 +108,17 @@ erDiagram
         int default_quota
         string applies_to_status
         boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    KARYAWAN_LEAVE_QUOTAS {
+        bigint id PK
+        bigint id_karyawan FK
+        bigint leave_type_id FK
+        int year
+        int quota
+        int remaining_quota
         timestamp created_at
         timestamp updated_at
     }

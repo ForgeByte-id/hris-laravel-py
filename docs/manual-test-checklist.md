@@ -44,18 +44,21 @@ storage/app/imports/faces
 ## Import Manual Wajah
 
 - Open `Karyawan > Import Wajah`.
-- Select a karyawan and upload `.jpg`, `.jpeg`, or `.png` under 5 MB.
+- Select a karyawan and upload `.jpg`, `.png`, or `.webp` under 2 MB.
 - Confirm `karyawan.face_embedding` is filled.
+- Open detail karyawan and confirm the uploaded face image appears as a thumbnail.
 - Open existing camera registration page and confirm camera registration still works.
 - Try an invalid file type and confirm a friendly validation error appears.
 
 ## Import Karyawan CSV
 
 - Download template from `Karyawan > Import Karyawan`.
-- Import a CSV with a new user/karyawan and valid `kode_shift`.
-- Import the same row again and confirm it updates instead of duplicating user/karyawan.
+- Import a CSV, JSON, and XLSX with matching headers and valid `kode_shift`.
+- Import `karyawan-dataset/data-karyawan.csv`; confirm headers `Nama Lengkap`, `Divisi`, `Posisi`, `Mulai Kerja`, `Aktif`, and `Status` are accepted.
+- Import the same row again and confirm it is skipped instead of duplicating or updating user/karyawan.
+- Fill `tanggal_mulai_kerja`, `status_aktif`, and `status_karyawan`; confirm all three fields are saved.
 - Use a new `nama_devisi` and `nama_jabatan`; confirm both are auto-created.
-- Add `face_image_path` pointing to `storage/app/imports/faces/<file>` and confirm `face_embedding` is saved.
+- Add `face_image_path` pointing to `storage/app/imports/faces/<file>` with `.jpg`, `.png`, or `.webp` and confirm `face_embedding` plus compressed preview are saved.
 - Import a row with invalid `kode_shift`; confirm the row is failed in summary and other rows still process.
 - Import a new user without password while `HRIS_DEFAULT_IMPORT_PASSWORD` is blank; confirm a friendly failed row.
 
@@ -78,12 +81,15 @@ storage/app/imports/faces
 ## Dashboard Rekap Hari Ini
 
 - Login as admin and HR/HRD.
-- Confirm cards show total karyawan, sudah absen masuk, belum absen, terlambat, tepat waktu/hadir, remote, tidak hadir, and cuti approved.
+- Confirm cards show total karyawan, sudah absen masuk, belum absen, terlambat, tepat waktu/hadir, tidak hadir, and cuti approved.
 - Confirm table "Absensi Hari Ini" shows nama, divisi, jabatan, jadwal/shift, jam masuk, jam pulang, and status.
 - Login as employee and confirm personal dashboard still appears.
 
 ## Approval Atasan Divisi
 
+- Confirm `leave_types` has Cuti Tahunan 12 days for Tetap, Cuti Hari Raya 4 days, and Cuti Sakit 6 days.
+- Submit and approve Cuti Hari Raya; confirm Hari Raya balance decreases while yearly annual balance stays unchanged.
+- Submit Cuti Tahunan from a Kontrak/Training employee; confirm backend rejects it because the type is not applicable.
 - Seed or assign role `atasan_divisi` to a user with a karyawan record and `id_devisi`.
 - Submit cuti from employee in same divisi; confirm `cuti.id_atasan` is set.
 - Login as atasan divisi A and confirm only pending cuti from divisi A appears.

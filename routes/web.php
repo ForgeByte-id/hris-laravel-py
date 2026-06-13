@@ -59,6 +59,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/karyawan/import-face', [KaryawanController::class, 'importFaceForm'])->name('karyawan.import-face');
     Route::post('/karyawan/import-face', [KaryawanController::class, 'importFace'])->name('karyawan.import-face.store');
     Route::post('/karyawan', [KaryawanController::class, 'store'])->name('karyawan.store');
+    Route::get('/karyawan/{id_karyawan}/face-image', [KaryawanController::class, 'faceImage'])->name('karyawan.face-image');
     Route::get('/karyawan/{id_karyawan}', [KaryawanController::class, 'show'])->name('karyawan.show');
     Route::get('/karyawan/{id_karyawan}/edit', [KaryawanController::class, 'edit'])->name('karyawan.edit');
     Route::put('/karyawan/{id_karyawan}', [KaryawanController::class, 'update'])->name('karyawan.update');

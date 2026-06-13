@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\MenuItem;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class MenuItemSeeder extends Seeder
 {
@@ -13,15 +12,6 @@ class MenuItemSeeder extends Seeder
      */
     public function run(): void
     {
-        // disable FK
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-
-        MenuItem::truncate();
-
-        // enable FK kembali
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-
-
         $menus = [
             [
                 'name' => 'Dashboard',
@@ -110,7 +100,10 @@ class MenuItemSeeder extends Seeder
         ];
 
         foreach ($menus as $menu) {
-            MenuItem::create($menu);
+            MenuItem::updateOrCreate(
+                ['name' => $menu['name']],
+                $menu
+            );
         }
     }
 }

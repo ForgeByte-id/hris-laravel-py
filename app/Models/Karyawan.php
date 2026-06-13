@@ -29,6 +29,7 @@ class Karyawan extends Authenticatable
         'yearly_leave_quota',
         'remaining_leave_quota',
         'face_embedding',
+        'face_image_path',
     ];
 
     protected $casts = [
@@ -77,6 +78,11 @@ class Karyawan extends Authenticatable
     public function cutiToApprove()
     {
         return $this->hasMany(Cuti::class, 'id_atasan', 'id_karyawan');
+    }
+
+    public function leaveQuotas()
+    {
+        return $this->hasMany(KaryawanLeaveQuota::class, 'id_karyawan', 'id_karyawan');
     }
 
     // Check apakah sudah registrasi wajah

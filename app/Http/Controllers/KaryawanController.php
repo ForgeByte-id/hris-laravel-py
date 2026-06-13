@@ -40,15 +40,15 @@ class KaryawanController extends Controller
     public function importEmployees(Request $request, KaryawanImportService $importService)
     {
         $request->validate([
-            'import_file' => 'required|file|mimes:csv,txt|max:10240',
+            'import_file' => 'required|file|mimes:csv,txt,json,xlsx|max:2048',
         ], [
-            'import_file.required' => 'Upload file CSV terlebih dahulu.',
-            'import_file.mimes' => 'File import harus berformat CSV.',
-            'import_file.max' => 'Ukuran file CSV maksimal 10 MB.',
+            'import_file.required' => 'Upload file import terlebih dahulu.',
+            'import_file.mimes' => 'File import harus berformat CSV, JSON, atau XLSX.',
+            'import_file.max' => 'Ukuran file import maksimal 2 MB.',
         ]);
 
         try {
-            $summary = $importService->importCsv($request->file('import_file'));
+            $summary = $importService->importFile($request->file('import_file'));
 
             return redirect()->route('karyawan.import')
                 ->with('import_summary', $summary)
@@ -73,6 +73,9 @@ class KaryawanController extends Controller
             'nama_jabatan',
             'kode_shift',
             'tanggal_masuk',
+            'tanggal_mulai_kerja',
+            'status_aktif',
+            'status_karyawan',
             'yearly_leave_quota',
             'remaining_leave_quota',
             'face_image_path',
@@ -87,6 +90,9 @@ class KaryawanController extends Controller
             'Staff',
             'P',
             now()->toDateString(),
+            now()->toDateString(),
+            'Aktif',
+            'Tetap',
             '12',
             '12',
             'budi.jpg',
@@ -108,6 +114,9 @@ class KaryawanController extends Controller
             'id_jabatan'            => 'nullable|exists:jabatans,id',
             'id_devisi'             => 'nullable|exists:devisis,id',
             'tanggal_masuk'         => 'nullable|date',
+            'tanggal_mulai_kerja'   => 'nullable|date',
+            'status_aktif'          => 'nullable|in:Aktif,Nonaktif',
+            'status_karyawan'       => 'nullable|in:Tetap,Kontrak,Training',
             'kode_shift'            => 'required|exists:shifts,kode_shift',
             'yearly_leave_quota'    => 'nullable|integer|min:0|max:365',
             'remaining_leave_quota' => 'nullable|integer|min:0|max:365',
@@ -131,7 +140,8 @@ class KaryawanController extends Controller
             $user->assignRole('karyawan');
 
             // 2. Create karyawan linked to the new user
-            $yearlyLeaveQuota    = $request->yearly_leave_quota ?? 12;
+            $statusKaryawan      = $request->status_karyawan ?: 'Tetap';
+            $yearlyLeaveQuota    = $request->yearly_leave_quota ?? ($statusKaryawan === 'Tetap' ? 12 : 0);
             $remainingLeaveQuota = $request->remaining_leave_quota ?? $yearlyLeaveQuota;
 
             Karyawan::create([
@@ -140,6 +150,9 @@ class KaryawanController extends Controller
                 'id_devisi'             => $request->id_devisi,
                 'kode_shift'            => $request->kode_shift,
                 'tanggal_masuk'         => $request->tanggal_masuk,
+                'tanggal_mulai_kerja'   => $request->tanggal_mulai_kerja ?: $request->tanggal_masuk,
+                'status_aktif'          => $request->status_aktif ?: 'Aktif',
+                'status_karyawan'       => $statusKaryawan,
                 'id_user'               => $user->id_user,
                 'yearly_leave_quota'    => $yearlyLeaveQuota,
                 'remaining_leave_quota' => min($remainingLeaveQuota, $yearlyLeaveQuota),
@@ -163,6 +176,27 @@ class KaryawanController extends Controller
         return view('employees.karyawan_show', compact('karyawan'));
     }
 
+    public function faceImage($id_karyawan)
+    {
+        $karyawan = Karyawan::findOrFail($id_karyawan);
+
+        abort_if(empty($karyawan->face_image_path), 404, 'Foto wajah belum tersedia.');
+
+        $baseDir = storage_path('app/imports/faces');
+        $relativePath = str_replace(['\\', '..'], ['/', ''], $karyawan->face_image_path);
+        $candidate = $baseDir . DIRECTORY_SEPARATOR . ltrim(str_replace('/', DIRECTORY_SEPARATOR, $relativePath), DIRECTORY_SEPARATOR);
+        $realBase = realpath($baseDir);
+        $realCandidate = realpath($candidate);
+
+        abort_unless(
+            $realBase && $realCandidate && str_starts_with($realCandidate, $realBase . DIRECTORY_SEPARATOR),
+            404,
+            'Foto wajah tidak ditemukan.'
+        );
+
+        return response()->file($realCandidate);
+    }
+
     public function edit($id_karyawan)
     {
         $karyawan = Karyawan::findOrFail($id_karyawan);
@@ -184,13 +218,17 @@ class KaryawanController extends Controller
             'id_jabatan'    => 'nullable|exists:jabatans,id',
             'id_devisi'     => 'nullable|exists:devisis,id',
             'tanggal_masuk' => 'nullable|date',
+            'tanggal_mulai_kerja' => 'nullable|date',
+            'status_aktif' => 'nullable|in:Aktif,Nonaktif',
+            'status_karyawan' => 'nullable|in:Tetap,Kontrak,Training',
             'kode_shift'    => 'required|exists:shifts,kode_shift',
             'id_user'       => 'nullable|exists:users,id_user',
             'yearly_leave_quota' => 'nullable|integer|min:0|max:365',
             'remaining_leave_quota' => 'nullable|integer|min:0|max:365',
         ]);
 
-        $yearlyLeaveQuota = $request->yearly_leave_quota ?? $karyawan->yearly_leave_quota ?? 12;
+        $statusKaryawan = $request->status_karyawan ?: ($karyawan->status_karyawan ?: 'Tetap');
+        $yearlyLeaveQuota = $request->yearly_leave_quota ?? $karyawan->yearly_leave_quota ?? ($statusKaryawan === 'Tetap' ? 12 : 0);
         $remainingLeaveQuota = $request->remaining_leave_quota ?? $karyawan->remaining_leave_quota ?? $yearlyLeaveQuota;
 
         $karyawan->update([
@@ -199,6 +237,9 @@ class KaryawanController extends Controller
             'id_devisi'     => $request->id_devisi,
             'kode_shift'    => $request->kode_shift,
             'tanggal_masuk' => $request->tanggal_masuk,
+            'tanggal_mulai_kerja' => $request->tanggal_mulai_kerja ?: $request->tanggal_masuk,
+            'status_aktif' => $request->status_aktif ?: 'Aktif',
+            'status_karyawan' => $statusKaryawan,
             'id_user'       => $request->id_user,
             'yearly_leave_quota' => $yearlyLeaveQuota,
             'remaining_leave_quota' => min($remainingLeaveQuota, $yearlyLeaveQuota),
@@ -237,18 +278,33 @@ class KaryawanController extends Controller
     {
         $request->validate([
             'id_karyawan' => 'required|exists:karyawan,id_karyawan',
-            'face_image' => 'required|file|mimes:jpg,jpeg,png|mimetypes:image/jpeg,image/png|max:5120',
+            'face_image' => [
+                'required',
+                'file',
+                'mimes:jpg,png,webp',
+                'mimetypes:image/jpeg,image/png,image/webp',
+                'max:2048',
+                function ($attribute, $value, $fail) {
+                    $extension = strtolower($value->getClientOriginalExtension());
+
+                    if (!in_array($extension, ['jpg', 'png', 'webp'], true)) {
+                        $fail('File wajah harus berekstensi .jpg, .png, atau .webp.');
+                    }
+                },
+            ],
         ], [
             'id_karyawan.required' => 'Pilih karyawan terlebih dahulu.',
             'face_image.required' => 'Upload file wajah terlebih dahulu.',
-            'face_image.mimes' => 'File wajah harus berupa JPG, JPEG, atau PNG.',
-            'face_image.max' => 'Ukuran file wajah maksimal 5 MB.',
+            'face_image.mimes' => 'File wajah harus berupa JPG, PNG, atau WEBP.',
+            'face_image.mimetypes' => 'File wajah harus berupa gambar JPG, PNG, atau WEBP yang valid.',
+            'face_image.max' => 'Ukuran file wajah maksimal 2 MB.',
         ]);
 
         try {
             $karyawan = Karyawan::findOrFail($request->id_karyawan);
             $encoding = $faceImportService->encodeUploadedFile($request->file('face_image'));
-            $this->persistFaceEncoding($karyawan, $encoding);
+            $previewPath = $faceImportService->storeUploadedPreview($request->file('face_image'), $karyawan->id_karyawan);
+            $this->persistFaceEncoding($karyawan, $encoding, $previewPath);
 
             return redirect()->route('karyawan.index')
                 ->with('success', "Wajah {$karyawan->nama} berhasil diimport.");
@@ -262,7 +318,11 @@ class KaryawanController extends Controller
         }
     }
 
-    public function storeFaceEncoding(Request $request, FaceRecognitionService $faceRecognitionService)
+    public function storeFaceEncoding(
+        Request $request,
+        FaceRecognitionService $faceRecognitionService,
+        KaryawanFaceImportService $faceImportService
+    )
     {
         $request->validate([
             'id_karyawan' => 'required|exists:karyawan,id_karyawan',
@@ -302,7 +362,8 @@ class KaryawanController extends Controller
             }
 
             $karyawan = Karyawan::find($request->id_karyawan);
-            $this->persistFaceEncoding($karyawan, $result['encoding']);
+            $previewPath = $faceImportService->storeCameraPreview($imageBinary, $karyawan->id_karyawan);
+            $this->persistFaceEncoding($karyawan, $result['encoding'], $previewPath);
 
             return response()->json([
                 'success' => true,
@@ -323,6 +384,7 @@ class KaryawanController extends Controller
         
         if ($karyawan) {
             $karyawan->face_embedding = null;
+            $karyawan->face_image_path = null;
             $karyawan->save();
             
             return response()->json([
@@ -342,9 +404,10 @@ class KaryawanController extends Controller
      *
      * @param array<int, float|int> $encoding
      */
-    private function persistFaceEncoding(Karyawan $karyawan, array $encoding): void
+    private function persistFaceEncoding(Karyawan $karyawan, array $encoding, ?string $faceImagePath = null): void
     {
         $karyawan->face_embedding = json_encode($encoding);
+        $karyawan->face_image_path = $faceImagePath;
         $karyawan->save();
     }
 }
