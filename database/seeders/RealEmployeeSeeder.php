@@ -2,10 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\Devisi;
+use App\Models\Divisi;
 use App\Models\Jabatan;
 use App\Models\Karyawan;
-use App\Models\Shift;
 use App\Models\User;
 use App\Services\LeaveQuotaService;
 use Illuminate\Database\Seeder;
@@ -15,13 +14,6 @@ use RuntimeException;
 
 class RealEmployeeSeeder extends Seeder
 {
-    private const DIVISION_DEFAULT_SHIFT = [
-        'NBCS' => 'P',
-        'Office' => 'P',
-        'NSC1' => 'P',
-        'NSC2' => 'P',
-    ];
-
     private const DIVISION_HEAD_POSITIONS = [
         'Manager Divisi',
         'Wakil Manager Divisi',
@@ -47,15 +39,10 @@ class RealEmployeeSeeder extends Seeder
         });
     }
 
-    /**
-     * @param array{name:string,division:string,position:string,start_date:string,active_status:string,employee_status:string} $employee
-     */
     private function seedEmployee(array $employee, string $defaultPassword): void
     {
-        $division = Devisi::firstOrCreate(['nama_devisi' => $employee['division']]);
+        $division = Divisi::firstOrCreate(['nama_divisi' => $employee['division']]);
         $position = Jabatan::firstOrCreate(['nama_jabatan' => $employee['position']]);
-        $shiftCode = self::DIVISION_DEFAULT_SHIFT[$employee['division']] ?? 'P';
-        $shift = Shift::where('kode_shift', $shiftCode)->firstOrFail();
         $username = $this->usernameFromName($employee['name']);
         $email = $username . '@hris.local';
 
@@ -88,20 +75,14 @@ class RealEmployeeSeeder extends Seeder
             $user->assignRole('atasan_divisi');
         }
 
-        $annualQuota = $employee['employee_status'] === 'Tetap' ? 12 : 0;
-
         $payload = [
             'id_user' => $user->id_user,
             'nama' => $employee['name'],
-            'id_devisi' => $division->id,
+            'id_divisi' => $division->id,
             'id_jabatan' => $position->id,
-            'kode_shift' => $shift->kode_shift,
             'tanggal_masuk' => $employee['start_date'],
-            'tanggal_mulai_kerja' => $employee['start_date'],
             'status_aktif' => $employee['active_status'],
             'status_karyawan' => $employee['employee_status'],
-            'yearly_leave_quota' => $annualQuota,
-            'remaining_leave_quota' => $annualQuota,
         ];
 
         if ($karyawan) {
@@ -121,7 +102,7 @@ class RealEmployeeSeeder extends Seeder
     private function ensureMasterData(): void
     {
         foreach (array_unique(array_column($this->employees(), 'division')) as $division) {
-            Devisi::firstOrCreate(['nama_devisi' => $division]);
+            Divisi::firstOrCreate(['nama_divisi' => $division]);
         }
 
         foreach (array_unique(array_column($this->employees(), 'position')) as $position) {
@@ -138,9 +119,6 @@ class RealEmployeeSeeder extends Seeder
             ->value();
     }
 
-    /**
-     * @return array<int, array{name:string,division:string,position:string,start_date:string,active_status:string,employee_status:string}>
-     */
     private function employees(): array
     {
         return [

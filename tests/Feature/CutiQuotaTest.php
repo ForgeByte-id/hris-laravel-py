@@ -3,11 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\Cuti;
-use App\Models\Devisi;
+use App\Models\Divisi;
 use App\Models\Jabatan;
 use App\Models\Karyawan;
-use App\Models\LeaveType;
+use App\Models\KuotaCutiKaryawan;
+use App\Models\TipeCuti;
 use App\Models\User;
+use App\Services\LeaveQuotaService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -20,7 +22,7 @@ class CutiQuotaTest extends TestCase
     public function test_employee_leave_submission_stays_pending_and_does_not_reduce_quota(): void
     {
         $this->seedLeaveTypes();
-        $employee = $this->createEmployeeUser('karyawan', 12, 12);
+        $employee = $this->createEmployeeUser();
         $this->actingAs($employee['user']);
 
         $response = $this->post(route('cuti.store'), [
@@ -36,15 +38,17 @@ class CutiQuotaTest extends TestCase
             'status_persetujuan' => 'pending',
         ]);
 
-        $employee['karyawan']->refresh();
-        $this->assertSame(12, $employee['karyawan']->remaining_leave_quota);
+        $this->assertDatabaseHas('kuota_cuti_karyawan', [
+            'id_karyawan' => $employee['karyawan']->id_karyawan,
+            'remaining_quota' => 12,
+        ]);
     }
 
     public function test_admin_can_create_approved_leave_and_reduce_employee_quota(): void
     {
         $this->seedLeaveTypes();
         $admin = $this->createAdminUser();
-        $employee = $this->createEmployeeUser('karyawan', 12, 12);
+        $employee = $this->createEmployeeUser();
         $this->actingAs($admin);
 
         $response = $this->post(route('cuti.store'), [
@@ -61,15 +65,21 @@ class CutiQuotaTest extends TestCase
             'status_persetujuan' => 'approved',
         ]);
 
-        $employee['karyawan']->refresh();
-        $this->assertSame(10, $employee['karyawan']->remaining_leave_quota);
+        $this->assertDatabaseHas('kuota_cuti_karyawan', [
+            'id_karyawan' => $employee['karyawan']->id_karyawan,
+            'remaining_quota' => 10,
+        ]);
     }
 
     public function test_approval_is_rejected_when_remaining_quota_is_not_enough(): void
     {
         $this->seedLeaveTypes();
         $admin = $this->createAdminUser();
-        $employee = $this->createEmployeeUser('karyawan', 12, 1);
+
+        $employee = $this->createEmployeeUser();
+        app(LeaveQuotaService::class)->ensureBalancesFor($employee['karyawan']);
+        KuotaCutiKaryawan::where('id_karyawan', $employee['karyawan']->id_karyawan)
+            ->update(['remaining_quota' => 1]);
         $this->actingAs($admin);
 
         $cuti = Cuti::create([
@@ -92,15 +102,17 @@ class CutiQuotaTest extends TestCase
             'status_persetujuan' => 'pending',
         ]);
 
-        $employee['karyawan']->refresh();
-        $this->assertSame(1, $employee['karyawan']->remaining_leave_quota);
+        $this->assertDatabaseHas('kuota_cuti_karyawan', [
+            'id_karyawan' => $employee['karyawan']->id_karyawan,
+            'remaining_quota' => 1,
+        ]);
     }
 
     public function test_holiday_leave_uses_its_own_quota_balance(): void
     {
         $this->seedLeaveTypes();
         $admin = $this->createAdminUser();
-        $employee = $this->createEmployeeUser('karyawan', 12, 12);
+        $employee = $this->createEmployeeUser();
         $this->actingAs($admin);
 
         $response = $this->post(route('cuti.store'), [
@@ -112,20 +124,17 @@ class CutiQuotaTest extends TestCase
         ]);
 
         $response->assertRedirect(route('cuti.index'));
-        $this->assertDatabaseHas('karyawan_leave_quotas', [
+        $this->assertDatabaseHas('kuota_cuti_karyawan', [
             'id_karyawan' => $employee['karyawan']->id_karyawan,
             'remaining_quota' => 0,
         ]);
-
-        $employee['karyawan']->refresh();
-        $this->assertSame(12, $employee['karyawan']->remaining_leave_quota);
     }
 
     public function test_contract_employee_cannot_use_annual_leave_by_default(): void
     {
         $this->seedLeaveTypes();
         $admin = $this->createAdminUser();
-        $employee = $this->createEmployeeUser('karyawan', 0, 0, 'Kontrak');
+        $employee = $this->createEmployeeUser('Kontrak');
         $this->actingAs($admin);
 
         $response = $this->post(route('cuti.store'), [
@@ -158,28 +167,28 @@ class CutiQuotaTest extends TestCase
         return $user;
     }
 
-    private function createEmployeeUser(string $role, int $yearlyQuota, int $remainingQuota, string $statusKaryawan = 'Tetap'): array
+    private function createEmployeeUser(string $statusKaryawan = 'Tetap'): array
     {
         $jabatan = Jabatan::firstOrCreate(['nama_jabatan' => 'Staff']);
-        $divisi = Devisi::firstOrCreate(['nama_devisi' => 'Divisi Test']);
+        $divisi = Divisi::firstOrCreate(['nama_divisi' => 'Divisi Test']);
 
         $user = User::create([
             'username' => 'employee_' . uniqid(),
             'password' => bcrypt('password'),
-            'role' => $role,
+            'role' => 'karyawan',
         ]);
 
         $karyawan = Karyawan::create([
             'id_user' => $user->id_user,
             'nama' => 'Employee Test',
             'id_jabatan' => $jabatan->id,
-            'id_devisi' => $divisi->id,
+            'id_divisi' => $divisi->id,
             'tanggal_masuk' => Carbon::today()->format('Y-m-d'),
             'status_aktif' => 'Aktif',
             'status_karyawan' => $statusKaryawan,
-            'yearly_leave_quota' => $yearlyQuota,
-            'remaining_leave_quota' => $remainingQuota,
         ]);
+
+        app(LeaveQuotaService::class)->ensureBalancesFor($karyawan);
 
         return ['user' => $user, 'karyawan' => $karyawan];
     }
@@ -187,11 +196,11 @@ class CutiQuotaTest extends TestCase
     private function seedLeaveTypes(): void
     {
         foreach ([
-            ['nama_cuti' => 'Cuti Tahunan', 'default_quota' => 12, 'applies_to_status' => 'Tetap'],
-            ['nama_cuti' => 'Cuti Hari Raya', 'default_quota' => 4, 'applies_to_status' => null],
-            ['nama_cuti' => 'Cuti Sakit', 'default_quota' => 6, 'applies_to_status' => null],
+            ['nama_cuti' => 'Cuti Tahunan', 'kuota_cuti' => 12, 'berlaku_untuk_status' => 'Tetap'],
+            ['nama_cuti' => 'Cuti Hari Raya', 'kuota_cuti' => 4, 'berlaku_untuk_status' => null],
+            ['nama_cuti' => 'Cuti Sakit', 'kuota_cuti' => 6, 'berlaku_untuk_status' => null],
         ] as $leaveType) {
-            LeaveType::updateOrCreate(
+            TipeCuti::updateOrCreate(
                 ['nama_cuti' => $leaveType['nama_cuti']],
                 $leaveType + ['is_active' => true]
             );

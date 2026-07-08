@@ -55,16 +55,16 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold">Divisi</label>
-                                    <select name="id_devisi" class="form-select @error('id_devisi') is-invalid @enderror">
+                                    <select name="id_divisi" class="form-select @error('id_divisi') is-invalid @enderror">
                                         <option value="">-- Pilih Divisi --</option>
                                         @foreach($divisiList as $divisi)
                                             <option value="{{ $divisi->id }}"
-                                                {{ old('id_devisi', $karyawan->id_devisi) == $divisi->id ? 'selected' : '' }}>
-                                                {{ $divisi->nama_devisi }}
+                                                {{ old('id_divisi', $karyawan->id_divisi) == $divisi->id ? 'selected' : '' }}>
+                                                {{ $divisi->nama_divisi }}
                                             </option>
                                         @endforeach
                                     </select>
-                                    @error('id_devisi')
+                                    @error('id_divisi')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
@@ -85,19 +85,11 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label fw-semibold">
-                                        Shift Default <span class="text-danger">*</span>
-                                    </label>
-                                    <select name="kode_shift" class="form-select @error('kode_shift') is-invalid @enderror" required>
-                                        <option value="">-- Pilih Shift --</option>
-                                        @foreach($shiftList as $shift)
-                                            <option value="{{ $shift->kode_shift }}"
-                                                {{ old('kode_shift', $karyawan->kode_shift) === $shift->kode_shift ? 'selected' : '' }}>
-                                                {{ $shift->label }} [{{ $shift->kode_shift }}]
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('kode_shift')
+                                    <label class="form-label fw-semibold">Akun User</label>
+                                    <input type="text" name="username" class="form-control @error('username') is-invalid @enderror"
+                                   value="{{ old('username', $karyawan->user?->username) }}" required>
+                                    
+                                    @error('username')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
@@ -105,17 +97,6 @@
                         </div>
 
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold">Tanggal Mulai Kerja</label>
-                                    <input type="date" name="tanggal_mulai_kerja"
-                                           class="form-control @error('tanggal_mulai_kerja') is-invalid @enderror"
-                                           value="{{ old('tanggal_mulai_kerja', $karyawan->tanggal_mulai_kerja ? \Carbon\Carbon::parse($karyawan->tanggal_mulai_kerja)->format('Y-m-d') : '') }}">
-                                    @error('tanggal_mulai_kerja')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold">Status Aktif</label>
@@ -129,9 +110,6 @@
                                     @enderror
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold">Status Karyawan</label>
@@ -145,49 +123,30 @@
                                     @enderror
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold">Akun User</label>
-                                    <select name="id_user" class="form-select @error('id_user') is-invalid @enderror">
-                                        <option value="">-- Pilih User (Opsional) --</option>
-                                        @foreach($userList as $user)
-                                            <option value="{{ $user->id_user }}"
-                                                {{ old('id_user', $karyawan->id_user) == $user->id_user ? 'selected' : '' }}>
-                                                {{ $user->username }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('id_user')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6"></div>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                Role <span class="text-danger">*</span>
+                            </label>
+                            <select name="role" class="form-select @error('role') is-invalid @enderror" required>
+                                <option value="Admin"
+                                    {{ old('role', $karyawan->user?->role) === 'Admin' ? 'selected' : '' }}>
+                                    Admin
+                                </option>
 
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold">Kuota Cuti Tahunan</label>
-                                    <input type="number" name="yearly_leave_quota" min="0" max="365"
-                                           class="form-control @error('yearly_leave_quota') is-invalid @enderror"
-                                           value="{{ old('yearly_leave_quota', $karyawan->yearly_leave_quota ?? 12) }}">
-                                    @error('yearly_leave_quota')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold">Sisa Kuota Cuti</label>
-                                    <input type="number" name="remaining_leave_quota" min="0" max="365"
-                                           class="form-control @error('remaining_leave_quota') is-invalid @enderror"
-                                           value="{{ old('remaining_leave_quota', $karyawan->remaining_leave_quota ?? ($karyawan->yearly_leave_quota ?? 12)) }}">
-                                    @error('remaining_leave_quota')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
+                                <option value="Atasan"
+                                    {{ old('role', $karyawan->user?->role) === 'Atasan' ? 'selected' : '' }}>
+                                    Atasan
+                                </option>
+
+                                <option value="Karyawan"
+                                    {{ old('role', $karyawan->user?->role) === 'Karyawan' ? 'selected' : '' }}>
+                                    Karyawan
+                                </option>
+                            </select>
+                            @error('role')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
 
                         <div class="d-flex gap-2 mt-4">

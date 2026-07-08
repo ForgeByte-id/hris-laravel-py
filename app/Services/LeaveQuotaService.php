@@ -4,8 +4,8 @@ namespace App\Services;
 
 use App\Models\Cuti;
 use App\Models\Karyawan;
-use App\Models\KaryawanLeaveQuota;
-use App\Models\LeaveType;
+use App\Models\KuotaCutiKaryawan;
+use App\Models\TipeCuti;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use RuntimeException;
@@ -15,15 +15,15 @@ class LeaveQuotaService
     /**
      * Return active leave types applicable to an employee status.
      *
-     * @return Collection<int, LeaveType>
+     * @return Collection<int, TipeCuti>
      */
     public function applicableTypesFor(Karyawan $karyawan): Collection
     {
-        return LeaveType::query()
+        return TipeCuti::query()
             ->where('is_active', true)
             ->where(function ($query) use ($karyawan) {
-                $query->whereNull('applies_to_status')
-                    ->orWhere('applies_to_status', $karyawan->status_karyawan);
+                $query->whereNull('berlaku_untuk_status')
+                    ->orWhere('berlaku_untuk_status', $karyawan->status_karyawan);
             })
             ->orderBy('nama_cuti')
             ->get();
@@ -35,7 +35,7 @@ class LeaveQuotaService
      * Existing balances are adjusted by quota delta instead of reset, so used
      * leave days are not lost when seeders are rerun.
      *
-     * @return Collection<int, KaryawanLeaveQuota>
+     * @return Collection<int, KuotaCutiKaryawan>
      */
     public function ensureBalancesFor(Karyawan $karyawan, ?int $year = null): Collection
     {
@@ -45,16 +45,16 @@ class LeaveQuotaService
             $this->ensureBalanceFor($karyawan, $leaveType, $year);
         }
 
-        return KaryawanLeaveQuota::with('leaveType')
+        return KuotaCutiKaryawan::with('leaveType')
             ->where('id_karyawan', $karyawan->id_karyawan)
             ->where('year', $year)
             ->get();
     }
 
-    public function balanceFor(Karyawan $karyawan, string $jenisCuti, ?int $year = null): KaryawanLeaveQuota
+    public function balanceFor(Karyawan $karyawan, string $jenisCuti, ?int $year = null): KuotaCutiKaryawan
     {
         $year ??= (int) now()->year;
-        $leaveType = $this->resolveLeaveType($jenisCuti);
+        $leaveType = $this->resolveTipeCuti($jenisCuti);
 
         if (!$this->isApplicable($leaveType, $karyawan)) {
             throw new RuntimeException("Jenis cuti {$leaveType->nama_cuti} tidak berlaku untuk status karyawan {$karyawan->status_karyawan}.");
@@ -95,18 +95,14 @@ class LeaveQuotaService
         }
 
         $balance->decrement('remaining_quota', $days);
-
-        if ($this->isAnnualLeave($balance->leaveType)) {
-            $karyawan->decrement('remaining_leave_quota', $days);
-        }
     }
 
-    public function resolveLeaveType(string $jenisCuti): LeaveType
+    public function resolveTipeCuti(string $jenisCuti): TipeCuti
     {
         $needle = $this->normalizeLeaveName($jenisCuti);
 
-        $leaveType = LeaveType::where('is_active', true)->get()
-            ->first(fn (LeaveType $type) => $this->normalizeLeaveName($type->nama_cuti) === $needle);
+        $leaveType = TipeCuti::where('is_active', true)->get()
+            ->first(fn (TipeCuti $type) => $this->normalizeLeaveName($type->nama_cuti) === $needle);
 
         if (!$leaveType) {
             throw new RuntimeException('Jenis cuti tidak valid atau sedang tidak aktif.');
@@ -115,24 +111,22 @@ class LeaveQuotaService
         return $leaveType;
     }
 
-    private function ensureBalanceFor(Karyawan $karyawan, LeaveType $leaveType, int $year): KaryawanLeaveQuota
+    private function ensureBalanceFor(Karyawan $karyawan, TipeCuti $leaveType, int $year): KuotaCutiKaryawan
     {
         $quota = $this->defaultQuotaFor($karyawan, $leaveType);
-        $balance = KaryawanLeaveQuota::where('id_karyawan', $karyawan->id_karyawan)
+        $balance = KuotaCutiKaryawan::where('id_karyawan', $karyawan->id_karyawan)
             ->where('leave_type_id', $leaveType->id)
             ->where('year', $year)
             ->lockForUpdate()
             ->first();
 
         if (!$balance) {
-            return KaryawanLeaveQuota::create([
+            return KuotaCutiKaryawan::create([
                 'id_karyawan' => $karyawan->id_karyawan,
                 'leave_type_id' => $leaveType->id,
                 'year' => $year,
                 'quota' => $quota,
-                'remaining_quota' => $this->isAnnualLeave($leaveType)
-                    ? min((int) ($karyawan->remaining_leave_quota ?? $quota), $quota)
-                    : $quota,
+                'remaining_quota' => $quota,
             ]);
         }
 
@@ -146,24 +140,24 @@ class LeaveQuotaService
         return $balance->load('leaveType');
     }
 
-    private function defaultQuotaFor(Karyawan $karyawan, LeaveType $leaveType): int
+    private function defaultQuotaFor(Karyawan $karyawan, TipeCuti $leaveType): int
     {
         if ($this->isAnnualLeave($leaveType)) {
             return $karyawan->status_karyawan === 'Tetap'
-                ? (int) ($karyawan->yearly_leave_quota ?? $leaveType->default_quota)
+                ? (int) $leaveType->kuota_cuti
                 : 0;
         }
 
-        return (int) $leaveType->default_quota;
+        return (int) $leaveType->kuota_cuti;
     }
 
-    private function isApplicable(LeaveType $leaveType, Karyawan $karyawan): bool
+    private function isApplicable(TipeCuti $leaveType, Karyawan $karyawan): bool
     {
-        return $leaveType->applies_to_status === null
-            || $leaveType->applies_to_status === $karyawan->status_karyawan;
+        return $leaveType->berlaku_untuk_status === null
+            || $leaveType->berlaku_untuk_status === $karyawan->status_karyawan;
     }
 
-    private function isAnnualLeave(LeaveType $leaveType): bool
+    private function isAnnualLeave(TipeCuti $leaveType): bool
     {
         return $this->normalizeLeaveName($leaveType->nama_cuti) === 'tahunan';
     }

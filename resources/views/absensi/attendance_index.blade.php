@@ -202,34 +202,34 @@
             </div>
 
             {{-- Step 3: Lokasi --}}
-            <div class="hris-card">
-                <div class="hris-card-header">
+            {{-- <div class="hris-card"> --}}
+                {{-- <div class="hris-card-header">
                     <h6 class="mb-0 fw-semibold"><span class="badge bg-primary me-2">3</span>Lokasi</h6>
-                </div>
-                <div class="hris-card-body">
-                    <div>
-                        <div class="d-flex align-items-center justify-content-between mb-1">
+                </div> --}}
+                {{-- <div class="hris-card-body">
+                    <div> --}}
+                        {{-- <div class="d-flex align-items-center justify-content-between mb-1">
                             <label class="form-label small fw-semibold mb-0">GPS Lokasi</label>
                             <button class="btn btn-sm btn-outline-secondary" onclick="captureGPS()" id="btnGPS">
                                 <i class="bi bi-geo-alt me-1"></i>Ambil GPS
                             </button>
-                        </div>
-                        <div id="gpsStatus" class="small text-muted mb-2">
+                        </div> --}}
+                        {{-- <div id="gpsStatus" class="small text-muted mb-2">
                             <i class="bi bi-geo-alt me-1"></i>Belum diambil
-                        </div>
-                        <input type="hidden" id="gpsLat">
-                        <input type="hidden" id="gpsLng">
+                        </div> --}}
+                        {{-- <input type="hidden" id="gpsLat">
+                        <input type="hidden" id="gpsLng"> --}}
 
                         {{-- Leaflet map — hidden until GPS is captured --}}
-                        <div id="mapWrap" style="display:none; margin-top:8px;">
+                        {{-- <div id="mapWrap" style="display:none; margin-top:8px;">
                             <div id="map" style="height:180px; border-radius:8px; border:1px solid var(--hris-border); z-index:0;"></div>
                             <div class="text-muted small mt-1">
                                 <i class="bi bi-info-circle me-1"></i>Lokasi admin saat mencatat absensi
                             </div>
-                        </div>
-                    </div>
+                        </div> --}}
+                    {{-- </div>
                 </div>
-            </div>
+            </div> --}}
 
         </div>
 
@@ -237,7 +237,7 @@
         <div class="col-lg-8">
             <div class="hris-card h-100">
                 <div class="hris-card-header d-flex align-items-center justify-content-between">
-                    <h6 class="mb-0 fw-semibold"><span class="badge bg-primary me-2">4</span>Verifikasi Wajah</h6>
+                    <h6 class="mb-0 fw-semibold"><span class="badge bg-primary me-2">3</span>Verifikasi Wajah</h6>
                     <span id="verificationBadge" class="badge bg-secondary">Menunggu</span>
                 </div>
                 <div class="hris-card-body d-flex flex-column gap-3">
@@ -271,7 +271,7 @@
                     </div>
 
                     {{-- Audit chip row --}}
-                    <div class="border-top pt-3 d-flex flex-wrap gap-2">
+                    {{-- <div class="border-top pt-3 d-flex flex-wrap gap-2">
                         <span class="audit-chip">
                             <i class="bi bi-shield-lock-fill"></i>
                             Admin: <strong class="ms-1">{{ auth()->user()->username }}</strong>
@@ -285,7 +285,7 @@
                         <span class="audit-chip">
                             <i class="bi bi-lock-fill"></i> Rekaman terkunci setelah disimpan
                         </span>
-                    </div>
+                    </div> --}}
 
                 </div>
             </div>
@@ -329,8 +329,8 @@ let clockOutStatusMessage = 'Absen pulang aktif setelah karyawan absen masuk har
 document.addEventListener('DOMContentLoaded', () => {
     updateTime();
     setInterval(updateTime, 1000);
-    captureDeviceInfo();
-    captureGPS();
+    // captureDeviceInfo();
+    // captureGPS();
     if (serviceOk) startCamera();
     initSelect2();
     setPulangAvailability(false);
@@ -626,7 +626,7 @@ function setVerificationUI(state, confidence = 0, message = '') {
         success:  `<div class="d-flex align-items-center gap-3">
                      <i class="bi ${icons.success} fs-3"></i>
                      <div><div class="fw-semibold text-success">Wajah Terverifikasi</div>
-                     <div class="small text-muted">Akurasi: ${confidence.toFixed(1)}% &mdash; Siap untuk disimpan</div></div>
+                     <div class="small text-muted">Siap untuk disimpan</div></div>
                    </div>`,
         fail:     `<div class="d-flex align-items-center gap-3">
                      <i class="bi ${icons.fail} fs-3"></i>

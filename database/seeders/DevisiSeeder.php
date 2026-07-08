@@ -3,27 +3,21 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\Devisi;
+use App\Models\Divisi;
 
 class DevisiSeeder extends Seeder
 {
     public function run(): void
     {
-        $devisis = [
-            'IT',
-            'HR',
-            'Finance',
-            'Operations',
-            'Sales',
-            'Marketing',
+        $divisis = [
             'NBCS',
             'NSC1',
             'NSC2',
             'Office',
         ];
 
-        foreach ($devisis as $devisi) {
-            Devisi::firstOrCreate(['nama_devisi' => $devisi]);
+        foreach ($divisis as $divisi) {
+            Divisi::firstOrCreate(['nama_divisi' => $divisi]);
         }
     }
 }

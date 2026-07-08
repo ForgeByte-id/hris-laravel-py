@@ -34,10 +34,10 @@
             <!-- Summary -->
             <div class="row g-3 mb-4">
                 @php
-                    $totalPagi = $jadwalList->where('jam_kerja', 'Pagi (07:00-15:00)')->count();
-                    $totalSiang = $jadwalList->where('jam_kerja', 'Siang (15:00-23:00)')->count();
-                    $totalMalam = $jadwalList->where('jam_kerja', 'Malam (23:00-07:00)')->count();
-                    $totalLibur = $jadwalList->where('jam_kerja', 'Libur')->count();
+                    $totalPagi = $jadwalList->where('id_shift', 'P')->count();
+                    $totalSiang = $jadwalList->where('id_shift', 'M')->count();
+                    $totalMalam = $jadwalList->where('id_shift', 'S')->count();
+                    $totalLibur = $jadwalList->where('id_shift', 'L')->count();
                 @endphp
                 <div class="col-6 col-lg-3">
                     <div class="p-3 rounded-3 text-center text-white" style="background: #4CAF50;">
@@ -73,7 +73,7 @@
                             <th>Tanggal</th>
                             <th>Hari</th>
                             <th>Jam Kerja</th>
-                            <th>Keterangan</th>
+                            <th>Shift</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -87,11 +87,11 @@
                             </td>
                             <td>
                                 <span class="text-white px-2 py-1 rounded-2 fw-semibold" style="background: {{ $jadwal->shift_color }};">
-                                    {{ $jadwal->jam_kerja }}
+                                    {{ $jadwal->id_shift }}
                                 </span>
                             </td>
                             <td>
-                                {{ $jadwal->keterangan ?? '-' }}
+                                {{ $jadwal->shift?->nama_shift ?? '-' }}
                             </td>
                         </tr>
                         @empty

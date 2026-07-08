@@ -66,7 +66,7 @@ class CutiController extends Controller
         $leaveBalances = $karyawan ? $leaveQuotaService->ensureBalancesFor($karyawan) : collect();
         $jenisCuti = $karyawan
             ? $leaveBalances->pluck('leaveType.nama_cuti')->filter()->values()
-            : \App\Models\LeaveType::where('is_active', true)->orderBy('nama_cuti')->pluck('nama_cuti');
+            : \App\Models\TipeCuti::where('is_active', true)->orderBy('nama_cuti')->pluck('nama_cuti');
 
         return view('cuti.create', compact('karyawan', 'karyawanList', 'jenisCuti', 'isAdmin', 'leaveBalances'));
     }
@@ -102,7 +102,7 @@ class CutiController extends Controller
         $durasiCuti = Carbon::parse($request->tanggal_mulai)->diffInDays(Carbon::parse($request->tanggal_selesai)) + 1;
 
         try {
-            $leaveType = $leaveQuotaService->resolveLeaveType($request->jenis_cuti);
+            $leaveType = $leaveQuotaService->resolveTipeCuti($request->jenis_cuti);
             $leaveQuotaService->assertAvailable(
                 $karyawan,
                 $leaveType->nama_cuti,

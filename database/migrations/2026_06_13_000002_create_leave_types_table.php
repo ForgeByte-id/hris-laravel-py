@@ -8,15 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (Schema::hasTable('leave_types')) {
+        if (Schema::hasTable('tipe_cuti')) {
             return;
         }
 
-        Schema::create('leave_types', function (Blueprint $table) {
+        Schema::create('tipe_cuti', function (Blueprint $table) {
             $table->id();
             $table->string('nama_cuti')->unique();
-            $table->unsignedInteger('default_quota');
-            $table->string('applies_to_status')->nullable();
+            $table->unsignedInteger('kuota_cuti');
+            $table->string('berlaku_untuk_status')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
@@ -24,6 +24,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('leave_types');
+        Schema::dropIfExists('tipe_cuti');
     }
 };

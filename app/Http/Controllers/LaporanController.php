@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Absensi;
 use App\Models\Cuti;
-use App\Models\Devisi;
+use App\Models\Divisi;
 use App\Models\Jabatan;
 use App\Models\Karyawan;
 use Illuminate\Http\Request;
@@ -17,7 +17,7 @@ class LaporanController extends Controller
 
         [$tahun, $bulanNum] = explode('-', $bulan);
 
-        $karyawanList = Karyawan::with(['jabatan', 'devisi'])->get();
+        $karyawanList = Karyawan::with(['jabatan', 'divisi'])->get();
 
         // Rekap absensi per karyawan
         $absensiRekap = Absensi::whereYear('tanggal', $tahun)
@@ -36,7 +36,7 @@ class LaporanController extends Controller
             ->get()
             ->keyBy('id_karyawan');
 
-        $divisiList = Devisi::orderBy('nama_devisi')->get();
+        $divisiList = Divisi::orderBy('nama_divisi')->get();
         $jabatanList = Jabatan::orderBy('nama_jabatan')->get();
 
         return view('laporan.index', compact(

@@ -32,8 +32,8 @@
                             <option value="{{ $karyawan->id_karyawan }}"
                                 @selected((string) old('id_karyawan', $selectedKaryawan?->id_karyawan) === (string) $karyawan->id_karyawan)>
                                 {{ $karyawan->nama }}
-                                @if($karyawan->devisi)
-                                    - {{ $karyawan->devisi->nama_devisi }}
+                                @if($karyawan->divisi)
+                                    - {{ $karyawan->divisi->nama_divisi }}
                                 @endif
                                 @if($karyawan->face_embedding)
                                     (update wajah)

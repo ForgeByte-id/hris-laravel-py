@@ -31,7 +31,6 @@
                                 <th>Nama Karyawan</th>
                                 <th>Jabatan</th>
                                 <th>Jam Kerja</th>
-                                <th>Keterangan</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -44,16 +43,12 @@
                                 </td>
                                 <td>{{ $k->jabatan->nama_jabatan ?? '-' }}</td>
                                 <td>
-                                     <select name="jadwal[{{ $index }}][kode_shift]" required class="form-select">
+                                     <select name="jadwal[{{ $index }}][id_shift]" required class="form-select">
                                          <option value="">-- Pilih --</option>
                                          @foreach($jamKerjaOptions as $option)
-                                             <option value="{{ $option->kode_shift }}">{{ $option->kode_shift }} - {{ $option->label }}</option>
+                                             <option value="{{ $option->id_shift }}">{{ $option->id_shift }} - {{ $option->label }}</option>
                                          @endforeach
                                      </select>
-                                </td>
-                                <td>
-                                    <input type="text" name="jadwal[{{ $index }}][keterangan]"
-                                           placeholder="Optional" class="form-control">
                                 </td>
                             </tr>
                             @endforeach
@@ -111,11 +106,11 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Shift</label>
-                        <select name="kode_shift" class="form-select" required>
+                        <select name="id_shift" class="form-select" required>
                             <option value="">-- Pilih --</option>
                             @foreach($jamKerjaOptions as $option)
-                                <option value="{{ $option->kode_shift }}" @selected(old('kode_shift') === $option->kode_shift)>
-                                    {{ $option->kode_shift }} - {{ $option->label }}
+                                <option value="{{ $option->id_shift }}" @selected(old('id_shift') === $option->id_shift)>
+                                    {{ $option->id_shift }} - {{ $option->label }}
                                 </option>
                             @endforeach
                         </select>
@@ -140,19 +135,16 @@
                     </div>
                     <div class="col-md-4 target-panel" id="targetDivisi">
                         <label class="form-label fw-semibold">Divisi</label>
-                        <select name="id_devisi" class="form-select">
+                        <select name="id_divisi" class="form-select">
                             <option value="">-- Pilih Divisi --</option>
                             @foreach($divisiList as $divisi)
-                                <option value="{{ $divisi->id }}" @selected((string) old('id_devisi') === (string) $divisi->id)>
-                                    {{ $divisi->nama_devisi }}
+                                <option value="{{ $divisi->id }}" @selected((string) old('id_divisi') === (string) $divisi->id)>
+                                    {{ $divisi->nama_divisi }}
                                 </option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-semibold">Keterangan</label>
-                        <input type="text" name="keterangan" class="form-control" maxlength="500" value="{{ old('keterangan') }}" placeholder="Optional">
-                    </div>
+
                 </div>
 
                 <div class="target-panel mt-3" id="targetKaryawan">
@@ -164,7 +156,7 @@
                                     <input class="form-check-input me-1" type="checkbox" name="karyawan_ids[]" value="{{ $karyawan->id_karyawan }}"
                                            @checked(in_array($karyawan->id_karyawan, old('karyawan_ids', [])))>
                                     <span class="small fw-semibold">{{ $karyawan->nama }}</span>
-                                    <span class="small text-muted d-block">{{ $karyawan->devisi->nama_devisi ?? 'Tanpa Divisi' }}</span>
+                                    <span class="small text-muted d-block">{{ $karyawan->divisi->nama_divisi ?? 'Tanpa Divisi' }}</span>
                                 </label>
                             </div>
                         @endforeach
@@ -186,7 +178,7 @@
 @section('scripts')
 <script>
 function setAllShift(shift) {
-    const selects = document.querySelectorAll('select[name*="[kode_shift]"]');
+    const selects = document.querySelectorAll('select[name*="[id_shift]"]');
     selects.forEach(select => {
         select.value = shift;
     });

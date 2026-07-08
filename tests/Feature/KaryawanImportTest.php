@@ -3,7 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Karyawan;
-use App\Models\LeaveType;
+use App\Models\KuotaCutiKaryawan;
+use App\Models\TipeCuti;
 use App\Models\Shift;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -22,8 +23,8 @@ class KaryawanImportTest extends TestCase
 
         Storage::fake('local');
         $csv = implode("\n", [
-            'nama,username,email,password,nama_devisi,nama_jabatan,kode_shift,tanggal_masuk,tanggal_mulai_kerja,status_aktif,status_karyawan,yearly_leave_quota,remaining_leave_quota,face_image_path',
-            'Import Test,import.test,import.test@hris.local,,Import Divisi,Import Jabatan,P,2026-06-01,2026-06-02,Aktif,Kontrak,0,0,',
+            'nama,username,email,password,nama_divisi,nama_jabatan,tanggal_masuk,status_aktif,status_karyawan,face_image_path',
+            'Import Test,import.test,import.test@hris.local,,Import Divisi,Import Jabatan,2026-06-01,Aktif,Kontrak,',
         ]);
         $file = UploadedFile::fake()->createWithContent('karyawan.csv', $csv);
 
@@ -36,18 +37,16 @@ class KaryawanImportTest extends TestCase
             'nama' => 'Import Test',
             'status_aktif' => 'Aktif',
             'status_karyawan' => 'Kontrak',
-            'yearly_leave_quota' => 0,
-            'remaining_leave_quota' => 0,
         ]);
 
         $karyawan = Karyawan::where('nama', 'Import Test')->firstOrFail();
-        $this->assertSame('2026-06-02', $karyawan->tanggal_mulai_kerja->toDateString());
-        $this->assertDatabaseHas('karyawan_leave_quotas', [
+        $this->assertSame('2026-06-01', $karyawan->tanggal_masuk->toDateString());
+        $this->assertDatabaseHas('kuota_cuti_karyawan', [
             'id_karyawan' => $karyawan->id_karyawan,
             'quota' => 4,
             'remaining_quota' => 4,
         ]);
-        $this->assertDatabaseHas('karyawan_leave_quotas', [
+        $this->assertDatabaseHas('kuota_cuti_karyawan', [
             'id_karyawan' => $karyawan->id_karyawan,
             'quota' => 6,
             'remaining_quota' => 6,
@@ -77,15 +76,10 @@ class KaryawanImportTest extends TestCase
             'nama' => 'I Gede Juli Suparwata',
             'status_aktif' => 'Aktif',
             'status_karyawan' => 'Tetap',
-            'kode_shift' => 'P',
-            'yearly_leave_quota' => 12,
-            'remaining_leave_quota' => 12,
         ]);
         $this->assertDatabaseHas('karyawan', [
             'nama' => 'Citra BR Sinuraya',
             'status_karyawan' => 'Training',
-            'yearly_leave_quota' => 0,
-            'remaining_leave_quota' => 0,
         ]);
 
         $tetap = Karyawan::where('nama', 'I Gede Juli Suparwata')->firstOrFail();
@@ -138,7 +132,6 @@ class KaryawanImportTest extends TestCase
         $this->assertDatabaseHas('karyawan', [
             'nama' => 'New JSON Employee',
             'status_karyawan' => 'Training',
-            'kode_shift' => 'P',
         ]);
     }
 
@@ -159,9 +152,6 @@ class KaryawanImportTest extends TestCase
         $this->assertDatabaseHas('karyawan', [
             'nama' => 'XLSX Employee',
             'status_karyawan' => 'Training',
-            'kode_shift' => 'P',
-            'yearly_leave_quota' => 0,
-            'remaining_leave_quota' => 0,
         ]);
 
         $employee = Karyawan::where('nama', 'XLSX Employee')->firstOrFail();
@@ -207,7 +197,7 @@ class KaryawanImportTest extends TestCase
         config(['hris.default_import_password' => 'password']);
         Role::findOrCreate('admin', 'web');
         Role::findOrCreate('karyawan', 'web');
-        Shift::firstOrCreate(['kode_shift' => 'P'], [
+        Shift::firstOrCreate(['kode_shift' => 'Pa'], [
             'nama_shift' => 'Pagi',
             'jam_masuk' => '08:00:00',
             'jam_pulang' => '17:00:00',
@@ -227,11 +217,11 @@ class KaryawanImportTest extends TestCase
     private function seedLeaveTypes(): void
     {
         foreach ([
-            ['nama_cuti' => 'Cuti Tahunan', 'default_quota' => 12, 'applies_to_status' => 'Tetap'],
-            ['nama_cuti' => 'Cuti Hari Raya', 'default_quota' => 4, 'applies_to_status' => null],
-            ['nama_cuti' => 'Cuti Sakit', 'default_quota' => 6, 'applies_to_status' => null],
+            ['nama_cuti' => 'Cuti Tahunan', 'kuota_cuti' => 12, 'berlaku_untuk_status' => 'Tetap'],
+            ['nama_cuti' => 'Cuti Hari Raya', 'kuota_cuti' => 4, 'berlaku_untuk_status' => null],
+            ['nama_cuti' => 'Cuti Sakit', 'kuota_cuti' => 6, 'berlaku_untuk_status' => null],
         ] as $leaveType) {
-            LeaveType::updateOrCreate(
+            TipeCuti::updateOrCreate(
                 ['nama_cuti' => $leaveType['nama_cuti']],
                 $leaveType + ['is_active' => true]
             );

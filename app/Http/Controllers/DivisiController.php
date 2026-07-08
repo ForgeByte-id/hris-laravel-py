@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Devisi;
+use App\Models\Divisi;
 use Illuminate\Http\Request;
 
 class DivisiController extends Controller
 {
     public function index()
     {
-        $divisi = Devisi::withCount('karyawan')->orderBy('nama_devisi')->get();
+        $divisi = Divisi::withCount('karyawan')->orderBy('nama_divisi')->get();
         return view('divisi.index', compact('divisi'));
     }
 
@@ -21,11 +21,11 @@ class DivisiController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nama_devisi' => 'required|string|max:255|unique:devisis,nama_devisi',
+            'nama_divisi' => 'required|string|max:255|unique:divisis,nama_divisi',
         ]);
 
-        Devisi::create([
-            'nama_devisi' => $request->nama_devisi,
+        Divisi::create([
+            'nama_divisi' => $request->nama_divisi,
         ]);
 
         return redirect()->route('divisi.index')
@@ -34,20 +34,20 @@ class DivisiController extends Controller
 
     public function edit($id)
     {
-        $divisi = Devisi::findOrFail($id);
+        $divisi = Divisi::findOrFail($id);
         return view('divisi.edit', compact('divisi'));
     }
 
     public function update(Request $request, $id)
     {
-        $divisi = Devisi::findOrFail($id);
+        $divisi = Divisi::findOrFail($id);
 
         $request->validate([
-            'nama_devisi' => 'required|string|max:255|unique:devisis,nama_devisi,' . $id,
+            'nama_divisi' => 'required|string|max:255|unique:divisis,nama_divisi,' . $id,
         ]);
 
         $divisi->update([
-            'nama_devisi' => $request->nama_devisi,
+            'nama_divisi' => $request->nama_divisi,
         ]);
 
         return redirect()->route('divisi.index')
@@ -56,7 +56,7 @@ class DivisiController extends Controller
 
     public function destroy($id)
     {
-        $divisi = Devisi::findOrFail($id);
+        $divisi = Divisi::findOrFail($id);
 
         if ($divisi->karyawan()->count() > 0) {
             return redirect()->route('divisi.index')

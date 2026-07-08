@@ -87,7 +87,7 @@
                 <div class="col-12 col-md-6 col-xl-3">
                     <div class="p-3 rounded-3 bg-info text-white shadow-sm">
                         <h6 class="mb-1 opacity-75">Sisa Kuota Cuti</h6>
-                        <h3 class="mb-0 fw-bold">{{ $karyawan->remaining_leave_quota ?? 0 }} hari</h3>
+                        <h3 class="mb-0 fw-bold">{{ $karyawan->status_karyawan ?? 0 }} hari</h3>
                     </div>
                 </div>
                 @endif

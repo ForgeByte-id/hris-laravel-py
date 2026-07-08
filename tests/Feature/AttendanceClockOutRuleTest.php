@@ -18,7 +18,7 @@ class AttendanceClockOutRuleTest extends TestCase
     public function test_clock_out_is_opened_near_shift_end_even_if_less_than_five_hours_after_clock_in(): void
     {
         $service = app(AttendanceService::class);
-        $karyawan = $this->createEmployeeWithShift('M', '11:00:00', '20:00:00');
+        $karyawan = $this->createEmployeeWithShift('Pa', '11:00:00', '20:00:00');
 
         Carbon::setTestNow(Carbon::today()->setTime(19, 50));
         $clockInResult = $service->clockIn($karyawan->id_karyawan);
@@ -35,7 +35,7 @@ class AttendanceClockOutRuleTest extends TestCase
     public function test_clock_out_remains_blocked_before_shift_end_window(): void
     {
         $service = app(AttendanceService::class);
-        $karyawan = $this->createEmployeeWithShift('M', '11:00:00', '20:00:00');
+        $karyawan = $this->createEmployeeWithShift('Pa', '11:00:00', '20:00:00');
 
         Absensi::create([
             'id_karyawan' => $karyawan->id_karyawan,
@@ -62,7 +62,7 @@ class AttendanceClockOutRuleTest extends TestCase
     {
         Shift::create([
             'kode_shift' => $kodeShift,
-            'nama_shift' => 'Middle',
+            'nama_shift' => 'Pagi',
             'jam_masuk' => $jamMasuk,
             'jam_pulang' => $jamPulang,
         ]);
@@ -77,7 +77,6 @@ class AttendanceClockOutRuleTest extends TestCase
             'id_user' => $user->id_user,
             'nama' => 'Employee Shift',
             'tanggal_masuk' => Carbon::today()->toDateString(),
-            'kode_shift' => $kodeShift,
         ]);
     }
 }

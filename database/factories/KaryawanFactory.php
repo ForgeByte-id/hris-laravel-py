@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Devisi;
+use App\Models\Divisi;
 use App\Models\Jabatan;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -19,7 +19,7 @@ class KaryawanFactory extends Factory
 
             'id_jabatan' => Jabatan::inRandomOrder()->value('id'),
 
-            'id_devisi' => Devisi::inRandomOrder()->value('id'),
+            'id_divisi' => Divisi::inRandomOrder()->value('id'),
 
             'tanggal_masuk' => fake()->dateTimeBetween('-5 years', 'now'),
 

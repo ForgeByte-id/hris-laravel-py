@@ -13,18 +13,14 @@ class JadwalBulkService
     /**
      * Create or update schedules for a date range and employee target.
      *
-     * The service checks existing rows by employee + date before writing, so
-     * bulk input does not create duplicate schedules.
-     *
      * @param array{
      *     tanggal_mulai:string,
      *     tanggal_selesai:string,
      *     target_type:string,
-     *     id_devisi?:int|string|null,
+     *     id_divisi?:int|string|null,
      *     karyawan_ids?:array<int, int|string>,
-     *     kode_shift:string,
+     *     id_shift:string,
      *     overwrite?:bool,
-     *     keterangan?:string|null
      * } $payload
      *
      * @return array{created:int,updated:int,skipped:int,failed:int,details:array<int, array{status:string,message:string}>}
@@ -39,7 +35,7 @@ class JadwalBulkService
             'details' => [],
         ];
 
-        $shift = Shift::where('kode_shift', $payload['kode_shift'])->firstOrFail();
+        $shift = Shift::where('kode_shift', $payload['id_shift'])->firstOrFail();
         $employees = $this->resolveEmployees($payload);
 
         if ($employees->isEmpty()) {
@@ -56,14 +52,14 @@ class JadwalBulkService
         $end = Carbon::parse($payload['tanggal_selesai'])->startOfDay();
         $overwrite = (bool) ($payload['overwrite'] ?? false);
 
-        DB::transaction(function () use ($employees, $start, $end, $shift, $overwrite, $payload, &$summary) {
+        DB::transaction(function () use ($employees, $start, $end, $payload, &$summary) {
             foreach ($employees as $employee) {
                 for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
                     $existing = JadwalKerja::where('id_karyawan', $employee->id_karyawan)
                         ->whereDate('tanggal', $date->toDateString())
                         ->first();
 
-                    if ($existing && !$overwrite) {
+                    if ($existing && !$payload['overwrite']) {
                         $summary['skipped']++;
                         continue;
                     }
@@ -71,9 +67,7 @@ class JadwalBulkService
                     $data = [
                         'id_karyawan' => $employee->id_karyawan,
                         'tanggal' => $date->toDateString(),
-                        'jam_kerja' => $shift->label,
-                        'kode_shift' => $shift->kode_shift,
-                        'keterangan' => $payload['keterangan'] ?? null,
+                        'id_shift' => $payload['id_shift'],
                     ];
 
                     if ($existing) {
@@ -98,7 +92,7 @@ class JadwalBulkService
         $query = Karyawan::query()->orderBy('nama');
 
         if ($payload['target_type'] === 'divisi') {
-            $query->where('id_devisi', $payload['id_devisi']);
+            $query->where('id_divisi', $payload['id_divisi']);
         }
 
         if ($payload['target_type'] === 'karyawan') {

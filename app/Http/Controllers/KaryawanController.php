@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Devisi;
+use App\Models\Divisi;
 use App\Models\Jabatan;
 use App\Models\Karyawan;
 use App\Models\Shift;
@@ -13,19 +13,20 @@ use App\Services\FaceRecognitionService;
 use App\Services\KaryawanFaceImportService;
 use App\Services\KaryawanImportService;
 use RuntimeException;
+use Illuminate\Validation\Rule;
 
 class KaryawanController extends Controller
 {
     public function index()
     {
-        $karyawan = Karyawan::with(['jabatan', 'devisi'])->get();
+        $karyawan = Karyawan::with(['jabatan', 'divisi'])->get();
         return view('employees.karyawan_index', compact('karyawan'));
     }
 
     public function create()
     {
         $jabatanList = Jabatan::orderBy('nama_jabatan')->get();
-        $divisiList  = Devisi::orderBy('nama_devisi')->get();
+        $divisiList  = Divisi::orderBy('nama_divisi')->get();
         $shiftList = Shift::orderBy('nama_shift')->get();
         return view('employees.karyawan_create', compact('jabatanList', 'divisiList', 'shiftList'));
     }
@@ -69,15 +70,11 @@ class KaryawanController extends Controller
             'username',
             'email',
             'password',
-            'nama_devisi',
+            'nama_divisi',
             'nama_jabatan',
-            'kode_shift',
             'tanggal_masuk',
-            'tanggal_mulai_kerja',
             'status_aktif',
             'status_karyawan',
-            'yearly_leave_quota',
-            'remaining_leave_quota',
             'face_image_path',
         ];
 
@@ -88,13 +85,9 @@ class KaryawanController extends Controller
             '',
             'Operasional',
             'Staff',
-            'P',
-            now()->toDateString(),
             now()->toDateString(),
             'Aktif',
             'Tetap',
-            '12',
-            '12',
             'budi.jpg',
         ];
 
@@ -112,18 +105,15 @@ class KaryawanController extends Controller
             // Karyawan fields
             'nama'                  => 'required|string|max:255',
             'id_jabatan'            => 'nullable|exists:jabatans,id',
-            'id_devisi'             => 'nullable|exists:devisis,id',
+            'id_divisi'             => 'nullable|exists:divisis,id',
             'tanggal_masuk'         => 'nullable|date',
-            'tanggal_mulai_kerja'   => 'nullable|date',
             'status_aktif'          => 'nullable|in:Aktif,Nonaktif',
             'status_karyawan'       => 'nullable|in:Tetap,Kontrak,Training',
-            'kode_shift'            => 'required|exists:shifts,kode_shift',
-            'yearly_leave_quota'    => 'nullable|integer|min:0|max:365',
-            'remaining_leave_quota' => 'nullable|integer|min:0|max:365',
             // New user account fields
             'username'              => 'required|string|max:255|unique:users,username',
             'email'                 => 'nullable|email|max:255|unique:users,email',
             'password'              => 'required|string|min:6|confirmed',
+            'role'                  => 'required|string|max:255',
         ]);
 
         DB::beginTransaction();
@@ -133,29 +123,25 @@ class KaryawanController extends Controller
                 'username' => $request->username,
                 'email'    => $request->email ?: null,
                 'password' => $request->password,   // hashed automatically by User model cast
-                'role'     => 'karyawan',
+                'role'     => $request->role,
             ]);
 
             // Assign Spatie role so permissions work correctly
-            $user->assignRole('karyawan');
+            //$user->assignRole('role');
 
             // 2. Create karyawan linked to the new user
             $statusKaryawan      = $request->status_karyawan ?: 'Tetap';
-            $yearlyLeaveQuota    = $request->yearly_leave_quota ?? ($statusKaryawan === 'Tetap' ? 12 : 0);
-            $remainingLeaveQuota = $request->remaining_leave_quota ?? $yearlyLeaveQuota;
+            $yearlyLeaveQuota    = $request->status_karyawan ?? ($statusKaryawan === 'Tetap' ? 12 : 0);
+            $remainingLeaveQuota = $request->status_karyawan ?? $yearlyLeaveQuota;
 
             Karyawan::create([
                 'nama'                  => $request->nama,
                 'id_jabatan'            => $request->id_jabatan,
-                'id_devisi'             => $request->id_devisi,
-                'kode_shift'            => $request->kode_shift,
+                'id_divisi'             => $request->id_divisi,
                 'tanggal_masuk'         => $request->tanggal_masuk,
-                'tanggal_mulai_kerja'   => $request->tanggal_mulai_kerja ?: $request->tanggal_masuk,
                 'status_aktif'          => $request->status_aktif ?: 'Aktif',
                 'status_karyawan'       => $statusKaryawan,
                 'id_user'               => $user->id_user,
-                'yearly_leave_quota'    => $yearlyLeaveQuota,
-                'remaining_leave_quota' => min($remainingLeaveQuota, $yearlyLeaveQuota),
             ]);
 
             DB::commit();
@@ -172,7 +158,7 @@ class KaryawanController extends Controller
 
     public function show($id_karyawan)
     {
-        $karyawan = Karyawan::with(['jabatan', 'devisi', 'absensi', 'cuti'])->findOrFail($id_karyawan);
+        $karyawan = Karyawan::with(['jabatan', 'divisi', 'absensi', 'cuti'])->findOrFail($id_karyawan);
         return view('employees.karyawan_show', compact('karyawan'));
     }
 
@@ -201,12 +187,12 @@ class KaryawanController extends Controller
     {
         $karyawan = Karyawan::findOrFail($id_karyawan);
         $jabatanList = Jabatan::orderBy('nama_jabatan')->get();
-        $divisiList = Devisi::orderBy('nama_devisi')->get();
+        $divisiList = Divisi::orderBy('nama_divisi')->get();
         $shiftList = Shift::orderBy('nama_shift')->get();
-        $userList = User::whereDoesntHave('karyawan')
-            ->orWhere('id_user', $karyawan->id_user)
-            ->get();
-        return view('employees.karyawan_edit', compact('karyawan', 'jabatanList', 'divisiList', 'shiftList', 'userList'));
+        //$userList = User::whereDoesntHave('karyawan')
+        //    ->orWhere('id_user', $karyawan->id_user)
+        //    ->get();
+        return view('employees.karyawan_edit', compact('karyawan', 'jabatanList', 'divisiList', 'shiftList'));
     }
 
     public function update(Request $request, $id_karyawan)
@@ -215,38 +201,62 @@ class KaryawanController extends Controller
 
         $request->validate([
             'nama'          => 'required|string|max:255',
-            'id_jabatan'    => 'nullable|exists:jabatans,id',
-            'id_devisi'     => 'nullable|exists:devisis,id',
-            'tanggal_masuk' => 'nullable|date',
-            'tanggal_mulai_kerja' => 'nullable|date',
-            'status_aktif' => 'nullable|in:Aktif,Nonaktif',
-            'status_karyawan' => 'nullable|in:Tetap,Kontrak,Training',
-            'kode_shift'    => 'required|exists:shifts,kode_shift',
-            'id_user'       => 'nullable|exists:users,id_user',
-            'yearly_leave_quota' => 'nullable|integer|min:0|max:365',
-            'remaining_leave_quota' => 'nullable|integer|min:0|max:365',
+            'id_jabatan'    => 'required|exists:jabatans,id',
+            'id_divisi'     => 'required|exists:divisis,id',
+            'tanggal_masuk' => 'required|date',
+            'status_aktif' => 'required|in:Aktif,Nonaktif',
+            'status_karyawan' => 'required|in:Tetap,Kontrak,Training',
+            'username' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('users', 'username')
+                    ->ignore($karyawan->id_user, 'id_user')
+            ],
+            'role'           => 'required|in:Admin,Atasan,Karyawan',
         ]);
 
-        $statusKaryawan = $request->status_karyawan ?: ($karyawan->status_karyawan ?: 'Tetap');
-        $yearlyLeaveQuota = $request->yearly_leave_quota ?? $karyawan->yearly_leave_quota ?? ($statusKaryawan === 'Tetap' ? 12 : 0);
-        $remainingLeaveQuota = $request->remaining_leave_quota ?? $karyawan->remaining_leave_quota ?? $yearlyLeaveQuota;
+        //$statusKaryawan = $request->status_karyawan ?: ($karyawan->status_karyawan ?: 'Tetap');
+        //$yearlyLeaveQuota = $request->status_karyawan ?? $karyawan->status_karyawan ?? ($statusKaryawan === 'Tetap' ? 12 : 0);
+        //$remainingLeaveQuota = $request->status_karyawan ?? $karyawan->status_karyawan ?? $yearlyLeaveQuota;
+        DB::beginTransaction();
 
+        try {
         $karyawan->update([
             'nama'          => $request->nama,
             'id_jabatan'    => $request->id_jabatan,
-            'id_devisi'     => $request->id_devisi,
-            'kode_shift'    => $request->kode_shift,
+            'id_divisi'     => $request->id_divisi,
             'tanggal_masuk' => $request->tanggal_masuk,
-            'tanggal_mulai_kerja' => $request->tanggal_mulai_kerja ?: $request->tanggal_masuk,
-            'status_aktif' => $request->status_aktif ?: 'Aktif',
-            'status_karyawan' => $statusKaryawan,
-            'id_user'       => $request->id_user,
-            'yearly_leave_quota' => $yearlyLeaveQuota,
-            'remaining_leave_quota' => min($remainingLeaveQuota, $yearlyLeaveQuota),
+            'status_aktif' => $request->status_aktif,
+            'status_karyawan' => $request->status_karyawan,
+            
         ]);
 
+        $karyawan->user->update([
+            'username' => $request->username,
+            'role'     => $request->role
+        ]);
+        DB::commit();
+       
         return redirect()->route('karyawan.index')
             ->with('success', 'Data karyawan berhasil diperbarui.');
+        } catch (\Throwable $e) {
+        Log::error('Gagal memperbarui data karyawan', [
+            'id_karyawan' => $id_karyawan,
+            'id_user' => $karyawan->id_user,
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString(),
+        ]);
+
+        return back()
+            ->withInput()
+            ->with(
+                'error',
+                'Gagal memperbarui data karyawan: '.$e->getMessage()
+            );
+        }
     }
 
     public function destroy($id_karyawan)
@@ -266,7 +276,7 @@ class KaryawanController extends Controller
 
     public function importFaceForm(Request $request)
     {
-        $karyawanList = Karyawan::with(['jabatan', 'devisi'])->orderBy('nama')->get();
+        $karyawanList = Karyawan::with(['jabatan', 'divisi'])->orderBy('nama')->get();
         $selectedKaryawan = $request->filled('id_karyawan')
             ? Karyawan::find($request->id_karyawan)
             : null;

@@ -73,6 +73,6 @@ class User extends Authenticatable
 
     public function getRoleLabelAttribute()
     {
-        return $this->karyawan->jabatan->nama_jabatan ?? $this->attributes['role'] ?? 'User';
+        return $this->karyawan?->jabatan?->nama_jabatan ?? $this->attributes['role'] ?? 'User';
     }
 }

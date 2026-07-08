@@ -20,7 +20,7 @@
                             <h2 class="h4 mb-1">{{ $karyawan->nama ?? $user->username }}</h2>
                             <span class="text-muted small">
                                 {{ $karyawan->jabatan?->nama_jabatan ?? 'Karyawan' }}
-                                &mdash; {{ $karyawan->devisi?->nama_devisi ?? 'Tanpa Divisi' }}
+                                &mdash; {{ $karyawan->divisi?->nama_divisi ?? 'Tanpa Divisi' }}
                             </span>
                         @else
                             <h2 class="h4 mb-1">{{ $user->username }}</h2>
@@ -64,7 +64,7 @@
                         @if ($todayJadwal)
                             <span class="badge"
                                   style="background-color:{{ $todayJadwal->shift_color }};font-size:0.8rem;">
-                                {{ $todayJadwal->jam_kerja }}
+                                {{ $todayJadwal->id_shift }}
                             </span>
                         @else
                             <span class="text-muted small">Tidak ada jadwal</span>
@@ -80,7 +80,7 @@
                         <div class="mb-2" style="font-size:2rem;">
                             <i class="bi bi-calendar-check-fill text-success"></i>
                         </div>
-                        <div class="h3 mb-1 fw-bold">{{ $karyawan->remaining_leave_quota ?? 0 }}</div>
+                        <div class="h3 mb-1 fw-bold">{{ $karyawan->status_karyawan ?? 0 }}</div>
                         <div class="text-muted small">Sisa Cuti (hari)</div>
                         @if ($pendingCutiCount > 0)
                             <span class="badge bg-warning text-dark mt-1">{{ $pendingCutiCount }} menunggu persetujuan</span>
@@ -300,9 +300,9 @@
                                         @endphp
                                         <tr>
                                             <td class="small fw-semibold">{{ $employee->nama }}</td>
-                                            <td class="small">{{ $employee->devisi->nama_devisi ?? '-' }}</td>
+                                            <td class="small">{{ $employee->divisi->nama_divisi ?? '-' }}</td>
                                             <td class="small">{{ $employee->jabatan->nama_jabatan ?? '-' }}</td>
-                                            <td class="small">{{ $jadwal?->jam_kerja ?? $employee->shift?->label ?? '-' }}</td>
+                                            <td class="small">{{ $jadwal?->id_shift ?? $employee->shift?->label ?? '-' }}</td>
                                             <td class="small">{{ $absensi?->jam_masuk ?? '-' }}</td>
                                             <td class="small">{{ $absensi?->jam_pulang ?? '-' }}</td>
                                             <td>

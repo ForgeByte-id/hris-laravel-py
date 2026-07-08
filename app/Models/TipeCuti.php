@@ -4,22 +4,24 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class LeaveType extends Model
+class TipeCuti extends Model
 {
+    protected $table = 'tipe_cuti';
+
     protected $fillable = [
         'nama_cuti',
-        'default_quota',
-        'applies_to_status',
+        'kuota_cuti',
+        'berlaku_untuk_status',
         'is_active',
     ];
 
     protected $casts = [
-        'default_quota' => 'integer',
+        'kuota_cuti' => 'integer',
         'is_active' => 'boolean',
     ];
 
     public function karyawanQuotas()
     {
-        return $this->hasMany(KaryawanLeaveQuota::class);
+        return $this->hasMany(KuotaCutiKaryawan::class, 'leave_type_id', 'id');
     }
 }

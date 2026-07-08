@@ -58,9 +58,9 @@
                                         <th>Jam Masuk</th>
                                         <th>Jam Pulang</th>
                                         <th>Status</th>
-                                        <th>Dicatat Oleh</th>
+                                        {{-- <th>Dicatat Oleh</th>
                                         <th>Verifikasi</th>
-                                        <th>GPS</th>
+                                        <th>GPS</th> --}}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -72,11 +72,11 @@
                                             <td>{{ $abs->jam_pulang ?? '-' }}</td>
                                             <td>
                                                 <span class="badge bg-light text-dark status-{{ $abs->status }}">{{ $abs->status_label ?? ucfirst($abs->status ?? 'hadir') }}</span>
-                                                @if($abs->is_locked)
+                                                @if($abs->face_verified)
                                                     <i class="bi bi-lock-fill text-muted ms-1" title="Terkunci"></i>
                                                 @endif
                                             </td>
-                                            <td class="small text-muted">{{ $abs->recorder?->username ?? '-' }}</td>
+                                            {{-- <td class="small text-muted">{{ $abs->recorder?->username ?? '-' }}</td>
                                             <td>
                                                 @if($abs->face_verified)
                                                     <span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>{{ number_format($abs->face_confidence ?? 0, 1) }}%</span>
@@ -87,14 +87,14 @@
                                                 @endif
                                             </td>
                                             <td class="small">
-                                                @if($abs->gps_lat && $abs->gps_lng)
-                                                    <a href="https://maps.google.com/?q={{ $abs->gps_lat }},{{ $abs->gps_lng }}" target="_blank" class="text-decoration-none">
+                                                @if($abs->tanggal && $abs->tanggal)
+                                                    <a href="https://maps.google.com/?q={{ $abs->tanggal }},{{ $abs->tanggal }}" target="_blank" class="text-decoration-none">
                                                         <i class="bi bi-geo-alt-fill text-success"></i>
                                                     </a>
                                                 @else
                                                     <span class="text-muted">-</span>
                                                 @endif
-                                            </td>
+                                            </td> --}}
                                         </tr>
                                     @endforeach
                                 </tbody>

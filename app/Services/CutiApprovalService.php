@@ -30,7 +30,7 @@ class CutiApprovalService
      */
     public function pendingQueryFor(User $user): Builder
     {
-        $query = Cuti::with(['karyawan.devisi', 'karyawan.jabatan', 'atasan'])
+        $query = Cuti::with(['karyawan.divisi', 'karyawan.jabatan', 'atasan'])
             ->where('status_persetujuan', 'pending')
             ->orderBy('created_at', 'desc');
 
@@ -40,13 +40,13 @@ class CutiApprovalService
 
         $approver = $this->employeeFor($user);
 
-        if (!$user->hasRole('atasan_divisi') || !$approver?->id_devisi) {
+        if (!$user->hasRole('atasan_divisi') || !$approver?->id_divisi) {
             return $query->whereRaw('1 = 0');
         }
 
         return $query
             ->where('id_karyawan', '!=', $approver->id_karyawan)
-            ->whereHas('karyawan', fn ($employeeQuery) => $employeeQuery->where('id_devisi', $approver->id_devisi));
+            ->whereHas('karyawan', fn ($employeeQuery) => $employeeQuery->where('id_divisi', $approver->id_divisi));
     }
 
     /**
@@ -71,8 +71,8 @@ class CutiApprovalService
 
         return $approver
             && $employee
-            && $approver->id_devisi
-            && (int) $approver->id_devisi === (int) $employee->id_devisi
+            && $approver->id_divisi
+            && (int) $approver->id_divisi === (int) $employee->id_divisi
             && (int) $approver->id_karyawan !== (int) $employee->id_karyawan;
     }
 
@@ -81,12 +81,12 @@ class CutiApprovalService
      */
     public function findDivisionHeadFor(Karyawan $employee): ?Karyawan
     {
-        if (!$employee->id_devisi) {
+        if (!$employee->id_divisi) {
             return null;
         }
 
         return Karyawan::with('user')
-            ->where('id_devisi', $employee->id_devisi)
+            ->where('id_divisi', $employee->id_divisi)
             ->where('id_karyawan', '!=', $employee->id_karyawan)
             ->whereHas('user.roles', fn ($query) => $query->where('name', 'atasan_divisi'))
             ->orderBy('nama')
@@ -95,6 +95,6 @@ class CutiApprovalService
 
     public function employeeFor(User $user): ?Karyawan
     {
-        return Karyawan::with(['devisi', 'jabatan'])->where('id_user', $user->id_user)->first();
+        return Karyawan::with(['divisi', 'jabatan'])->where('id_user', $user->id_user)->first();
     }
 }

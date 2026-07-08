@@ -17,8 +17,8 @@ return new class extends Migration
 
         Schema::create('menu_items', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
-            $table->string('route')->unique();
+            $table->string('name');
+            $table->string('route');
             $table->string('icon');
             $table->integer('order')->default(0);
             $table->boolean('is_admin_only')->default(false);

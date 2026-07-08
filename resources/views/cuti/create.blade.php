@@ -21,7 +21,7 @@
                             <option value="">-- Pilih Karyawan --</option>
                             @foreach($karyawanList as $item)
                                 <option value="{{ $item->id_karyawan }}" {{ old('id_karyawan') == $item->id_karyawan ? 'selected' : '' }}>
-                                    {{ $item->nama }} (Sisa Kuota: {{ $item->remaining_leave_quota ?? 0 }} hari)
+                                    {{ $item->nama }} (Sisa Kuota: {{ $item->status_karyawan ?? 0 }} hari)
                                 </option>
                             @endforeach
                         </select>
@@ -35,8 +35,8 @@
                         <h5 class="mb-2">Informasi Karyawan</h5>
                         <p class="mb-1"><strong>Nama:</strong> {{ $karyawan->nama }}</p>
                         <p class="mb-1"><strong>Jabatan:</strong> {{ $karyawan->jabatan->nama_jabatan ?? '-' }}</p>
-                        <p class="mb-1"><strong>Divisi:</strong> {{ $karyawan->devisi->nama_devisi ?? '-' }}</p>
-                        <p class="mb-2"><strong>Sisa Kuota Cuti Tahunan:</strong> {{ $karyawan->remaining_leave_quota ?? 0 }} hari</p>
+                        <p class="mb-1"><strong>Divisi:</strong> {{ $karyawan->divisi->nama_divisi ?? '-' }}</p>
+                        <p class="mb-2"><strong>Sisa Kuota Cuti Tahunan:</strong> {{ $karyawan->status_karyawan ?? 0 }} hari</p>
                         @if(($leaveBalances ?? collect())->isNotEmpty())
                             <div class="d-flex flex-wrap gap-2">
                                 @foreach($leaveBalances as $balance)

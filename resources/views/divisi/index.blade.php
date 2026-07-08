@@ -54,7 +54,7 @@
                             @foreach($divisi as $d)
                             <tr>
                                 <td class="align-middle">{{ $loop->iteration }}</td>
-                                <td class="align-middle fw-semibold">{{ $d->nama_devisi }}</td>
+                                <td class="align-middle fw-semibold">{{ $d->nama_divisi }}</td>
                                 <td class="align-middle">
                                     <span class="badge bg-primary rounded-pill">{{ $d->karyawan_count }} Karyawan</span>
                                 </td>

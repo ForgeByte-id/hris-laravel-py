@@ -370,11 +370,10 @@ class AttendanceController extends Controller
     }
 
     /**
-     * Admin records an attendance entry with full audit trail.
-     * Immutable after saving (is_locked = true).
+     * Admin records an attendance entry.
      *
      * POST /api/attendance/admin-record
-     * Body: { id_karyawan, photo?, status, jam_masuk?, gps_lat?, gps_lng?, device_info? }
+     * Body: { id_karyawan, photo?, status, jam_masuk? }
      */
     public function adminRecord(Request $request): JsonResponse
     {
@@ -385,9 +384,6 @@ class AttendanceController extends Controller
             'photo'       => 'nullable|string',
             'status'      => 'required|in:hadir,terlambat,remote,tidak_hadir',
             'jam_masuk'   => 'nullable|date_format:H:i',
-            'gps_lat'     => 'nullable|numeric|between:-90,90',
-            'gps_lng'     => 'nullable|numeric|between:-180,180',
-            'device_info' => 'nullable|string|max:500',
         ]);
 
         try {
@@ -431,14 +427,10 @@ class AttendanceController extends Controller
             $result = $this->attendanceService->adminRecord($idKaryawan, [
                 'status'          => $status,
                 'jam_masuk'       => $request->jam_masuk,
-                'recorded_by'     => Auth::user()->id,
+                'recorded_by'     => Auth::user()->id_user,
                 'face_verified'   => $faceVerified,
                 'face_confidence' => $faceConfidence,
                 'photo_hash'      => $photoHash,
-                'gps_lat'         => $request->gps_lat,
-                'gps_lng'         => $request->gps_lng,
-                'device_info'     => $request->device_info,
-                'ip_address'      => $request->ip(),
             ]);
 
             $karyawan = \App\Models\Karyawan::find($idKaryawan);

@@ -16,8 +16,7 @@ return new class extends Migration
 
             $table->unsignedBigInteger('id_karyawan');
             $table->date('tanggal');
-            $table->string('jam_kerja');
-            $table->text('keterangan')->nullable();
+            $table->string('id_shift', 2)->nullable();
 
             $table->timestamps();
 

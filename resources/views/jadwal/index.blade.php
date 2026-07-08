@@ -61,7 +61,7 @@
             <div class="d-flex flex-wrap gap-3 mb-3 p-3 bg-light rounded-3">
                 @forelse($shiftLegend as $shift)
                     <div>
-                        <span class="badge" style="background: {{ $shift->color_hex }};">{{ $shift->kode_shift }}</span>
+                        <span class="badge" style="background: {{ $shift->color_hex }};">{{ $shift->id_shift }}</span>
                         = {{ $shift->label }}
                     </div>
                 @empty
@@ -136,7 +136,7 @@
                                         </span>
                                     @elseif($jadwal)
                                         <a href="{{ route('jadwal.edit', $jadwal->id_jadwal) }}"
-                                           title="{{ $jadwal->jam_kerja }}"
+                                           title="{{ $jadwal->id_shift }}"
                                            style="display: block; text-decoration: none; color: white; background: {{ $jadwal->shift_color }}; padding: 8px; border-radius: 5px; font-weight: 600;">
                                             {{ $jadwal->shift_short }}
                                         </a>
@@ -178,11 +178,7 @@
                 <input type="date" name="tanggal" required
                        style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
             </div>
-            <div style="margin-bottom: 20px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Keterangan:</label>
-                <input type="text" name="keterangan" placeholder="Contoh: Hari Libur Nasional"
-                       style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
-            </div>
+
             <div style="display: flex; gap: 10px;">
                 <button type="submit"
                         style="flex: 1; padding: 12px; background: #dc3545; color: white; border: none; border-radius: 8px; cursor: pointer;">

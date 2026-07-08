@@ -21,12 +21,7 @@ class Shift extends Model
 
     public function jadwalKerja()
     {
-        return $this->hasMany(JadwalKerja::class, 'kode_shift', 'kode_shift');
-    }
-
-    public function karyawan()
-    {
-        return $this->hasMany(Karyawan::class, 'kode_shift', 'kode_shift');
+        return $this->hasMany(JadwalKerja::class, 'id_shift', 'kode_shift');
     }
 
     public function isLiburLike(): bool
@@ -46,12 +41,10 @@ class Shift extends Model
     public function getColorHexAttribute(): string
     {
         return match ($this->kode_shift) {
-            'P' => '#4CAF50',
-            'M' => '#FF9800',
-            'S' => '#2196F3',
+            'Pa' => '#4CAF50',
+            'Si' => '#2196F3',
             'L' => '#f44336',
             'C' => '#6f42c1',
-            'H' => '#212529',
             default => '#9E9E9E',
         };
     }

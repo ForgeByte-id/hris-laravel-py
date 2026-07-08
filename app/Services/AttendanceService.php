@@ -348,7 +348,7 @@ class AttendanceService
             return $referenceShift->jam_masuk;
         }
 
-        $jamKerja = $schedule?->jam_kerja;
+        $jamKerja = $schedule?->id_shift;
         if ($jamKerja && preg_match('/\((\d{2}):(\d{2})-/', $jamKerja, $matches)) {
             return "{$matches[1]}:{$matches[2]}:00";
         }
@@ -365,7 +365,7 @@ class AttendanceService
             return $referenceShift->jam_pulang;
         }
 
-        $jamKerja = $schedule?->jam_kerja;
+        $jamKerja = $schedule?->id_shift;
         if ($jamKerja && preg_match('/-(\d{2}):(\d{2})\)/', $jamKerja, $matches)) {
             return "{$matches[1]}:{$matches[2]}:00";
         }
@@ -379,11 +379,7 @@ class AttendanceService
             return $schedule->shift;
         }
 
-        if ($karyawan->relationLoaded('shift')) {
-            return $karyawan->shift;
-        }
-
-        return $karyawan->shift()->first();
+        return Shift::first();
     }
 
     private function resolveClockOutAvailability(Karyawan $karyawan, Absensi $attendance): array
@@ -488,8 +484,7 @@ class AttendanceService
      *
      * @param int   $idKaryawan
      * @param array $data  Keys: status, jam_masuk, recorded_by, face_verified,
-     *                     face_confidence, photo_hash, gps_lat, gps_lng,
-     *                     device_info, ip_address
+     *                     face_confidence, photo_hash
      * @return array ['success' => bool, 'message' => string, 'attendance' => Absensi|null]
      */
     public function adminRecord(int $idKaryawan, array $data): array
@@ -502,12 +497,11 @@ class AttendanceService
 
             $today = Carbon::today();
 
-            // Prevent duplicate / editing locked records
             $existing = Absensi::where('id_karyawan', $idKaryawan)
                 ->whereDate('tanggal', $today)
                 ->first();
 
-            if ($existing && $existing->is_locked) {
+            if ($existing && $existing->face_verified) {
                 return [
                     'success'    => false,
                     'message'    => 'Absensi hari ini sudah dikunci dan tidak dapat diubah.',
@@ -518,10 +512,8 @@ class AttendanceService
             $status   = $data['status'];
             $jamMasuk = null;
 
-            // Only set jam_masuk for statuses where employee is present/working
             if (in_array($status, ['hadir', 'terlambat', 'remote'])) {
                 $jamMasuk = $data['jam_masuk'] ?? Carbon::now()->format('H:i:s');
-                // Normalise H:i → H:i:s
                 if (strlen($jamMasuk) === 5) {
                     $jamMasuk .= ':00';
                 }
@@ -537,11 +529,6 @@ class AttendanceService
                     'face_verified'   => $data['face_verified'] ?? false,
                     'face_confidence' => $data['face_confidence'] ?? null,
                     'photo_hash'      => $data['photo_hash'] ?? null,
-                    'gps_lat'         => $data['gps_lat'] ?? null,
-                    'gps_lng'         => $data['gps_lng'] ?? null,
-                    'device_info'     => $data['device_info'] ?? null,
-                    'ip_address'      => $data['ip_address'] ?? null,
-                    'is_locked'       => true,
                 ]
             );
 

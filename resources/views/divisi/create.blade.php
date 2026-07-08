@@ -18,9 +18,9 @@
                             <label class="form-label fw-semibold">
                                 Nama Divisi <span class="text-danger">*</span>
                             </label>
-                            <input type="text" name="nama_devisi" class="form-control @error('nama_devisi') is-invalid @enderror"
-                                   value="{{ old('nama_devisi') }}" placeholder="Contoh: IT, Marketing, HRD" required>
-                            @error('nama_devisi')
+                            <input type="text" name="nama_divisi" class="form-control @error('nama_divisi') is-invalid @enderror"
+                                   value="{{ old('nama_divisi') }}" placeholder="Contoh: IT, Marketing, HRD" required>
+                            @error('nama_divisi')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>

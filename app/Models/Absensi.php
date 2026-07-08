@@ -20,16 +20,10 @@ class Absensi extends Model
         'jam_pulang',
         'status',
         'menit_terlambat',
-        // audit fields
         'recorded_by',
         'face_verified',
         'face_confidence',
         'photo_hash',
-        'gps_lat',
-        'gps_lng',
-        'device_info',
-        'ip_address',
-        'is_locked',
     ];
 
     protected $casts = [
@@ -37,12 +31,8 @@ class Absensi extends Model
         'menit_terlambat'  => 'integer',
         'face_verified'    => 'boolean',
         'face_confidence'  => 'float',
-        'gps_lat'          => 'float',
-        'gps_lng'          => 'float',
-        'is_locked'        => 'boolean',
     ];
 
-    // Statuses available for admin-recorded attendance
     const STATUSES = [
         'hadir'        => 'Hadir',
         'terlambat'    => 'Terlambat',
@@ -50,32 +40,23 @@ class Absensi extends Model
         'tidak_hadir'  => 'Tidak Hadir',
     ];
 
-    // Statuses that require face verification
     const FACE_REQUIRED_STATUSES = ['hadir', 'terlambat', 'remote'];
 
-    // Relationship ke Karyawan
     public function karyawan()
     {
         return $this->belongsTo(Karyawan::class, 'id_karyawan', 'id_karyawan');
     }
 
-    // Relationship ke User (admin who recorded)
     public function recorder()
     {
         return $this->belongsTo(User::class, 'recorded_by', 'id_user');
     }
 
-    /**
-     * Human-readable status label
-     */
     public function getStatusLabelAttribute(): string
     {
         return self::STATUSES[$this->status] ?? ucfirst($this->status ?? '-');
     }
 
-    /**
-     * Bootstrap colour for the status badge
-     */
     public function getStatusColorAttribute(): string
     {
         return match ($this->status) {
@@ -83,7 +64,6 @@ class Absensi extends Model
             'terlambat'   => 'warning',
             'remote'      => 'info',
             'tidak_hadir' => 'danger',
-            // legacy values kept working
             'tepat_waktu' => 'success',
             default       => 'secondary',
         };

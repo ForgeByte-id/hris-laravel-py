@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\JadwalKerja;
 use App\Models\Karyawan;
-use App\Models\Devisi;
+use App\Models\Divisi;
 use App\Models\Absensi;
 use App\Models\Cuti;
 use App\Models\Shift;
@@ -14,18 +14,15 @@ use Carbon\Carbon;
 
 class JadwalKerjaController extends Controller
 {
-    // Halaman utama jadwal (kalender view)
     public function index(Request $request)
     {
         $bulan = $request->get('bulan', date('Y-m'));
         $tanggalAwal = Carbon::parse($bulan . '-01')->startOfMonth();
         $tanggalAkhir = Carbon::parse($bulan . '-01')->endOfMonth();
 
-        // Get semua karyawan
         $karyawanList = Karyawan::orderBy('nama')->get();
 
-        // Get jadwal bulan ini - PENTING: Format tanggal harus match
-        $jadwalList = JadwalKerja::with('karyawan')
+        $jadwalList = JadwalKerja::with('karyawan', 'shift')
                                 ->whereDate('tanggal', '>=', $tanggalAwal->format('Y-m-d'))
                                 ->whereDate('tanggal', '<=', $tanggalAkhir->format('Y-m-d'))
                                 ->get()
@@ -45,12 +42,9 @@ class JadwalKerjaController extends Controller
 
         $shiftLegend = $this->getScheduleShiftOptions();
 
-        // Debug - uncomment jika perlu cek data
-        // dd($jadwalList->toArray());
-
         return view('jadwal.index', compact(
-            'karyawanList', 
-            'jadwalList', 
+            'karyawanList',
+            'jadwalList',
             'absensiList',
             'cutiList',
             'shiftLegend',
@@ -60,7 +54,6 @@ class JadwalKerjaController extends Controller
         ));
     }
 
-    // Form create jadwal (single/multiple)
     public function create()
     {
         $karyawanList = Karyawan::orderBy('nama')->get();
@@ -70,17 +63,14 @@ class JadwalKerjaController extends Controller
         return view('jadwal.create', compact('karyawanList', 'jamKerjaOptions'));
     }
 
-    // Store jadwal baru
     public function store(Request $request)
     {
         $request->validate([
             'id_karyawan' => 'required|exists:karyawan,id_karyawan',
             'tanggal' => 'required|date',
-            'kode_shift' => 'required|exists:shifts,kode_shift',
-            'keterangan' => 'nullable|string|max:500',
+            'id_shift' => 'required|exists:shifts,kode_shift',
         ]);
 
-        // Cek duplikasi
         $existing = JadwalKerja::where('id_karyawan', $request->id_karyawan)
                               ->whereDate('tanggal', $request->tanggal)
                               ->first();
@@ -91,61 +81,45 @@ class JadwalKerjaController extends Controller
                            ->with('error', 'Jadwal untuk karyawan ini di tanggal tersebut sudah ada!');
         }
 
-        $shift = Shift::where('kode_shift', $request->kode_shift)->firstOrFail();
-
-        // Create jadwal
         $jadwal = JadwalKerja::create([
             'id_karyawan' => $request->id_karyawan,
             'tanggal' => $request->tanggal,
-            'jam_kerja' => $shift->label,
-            'kode_shift' => $shift->kode_shift,
-            'keterangan' => $request->keterangan,
+            'id_shift' => $request->id_shift,
         ]);
 
-        // Redirect ke bulan yang sesuai dengan tanggal jadwal
         $bulan = Carbon::parse($request->tanggal)->format('Y-m');
 
         return redirect()->route('jadwal.index', ['bulan' => $bulan])
                         ->with('success', 'Jadwal berhasil ditambahkan!');
     }
 
-    // Bulk create jadwal (untuk semua karyawan sekaligus)
     public function bulkCreate()
     {
-        $karyawanList = Karyawan::with(['jabatan', 'devisi'])->orderBy('nama')->get();
-        $divisiList = Devisi::orderBy('nama_devisi')->get();
+        $karyawanList = Karyawan::with(['jabatan', 'divisi'])->orderBy('nama')->get();
+        $divisiList = Divisi::orderBy('nama_divisi')->get();
 
         $jamKerjaOptions = $this->getScheduleShiftOptions();
 
         return view('jadwal.bulk_create', compact('karyawanList', 'divisiList', 'jamKerjaOptions'));
     }
 
-    // Store bulk jadwal
     public function bulkStore(Request $request)
     {
         $request->validate([
             'tanggal' => 'required|date',
             'jadwal' => 'required|array',
             'jadwal.*.id_karyawan' => 'required|exists:karyawan,id_karyawan',
-            'jadwal.*.kode_shift' => 'required|exists:shifts,kode_shift',
+            'jadwal.*.id_shift' => 'required|exists:shifts,kode_shift',
         ]);
 
         $sukses = 0;
         $duplikat = 0;
-        $shiftMap = Shift::get()->keyBy('kode_shift');
 
         foreach ($request->jadwal as $item) {
-            // Skip jika kode_shift kosong
-            if (empty($item['kode_shift'])) {
+            if (empty($item['id_shift'])) {
                 continue;
             }
 
-            $shift = $shiftMap->get($item['kode_shift']);
-            if (!$shift) {
-                continue;
-            }
-
-            // Cek duplikasi
             $existing = JadwalKerja::where('id_karyawan', $item['id_karyawan'])
                                   ->whereDate('tanggal', $request->tanggal)
                                   ->first();
@@ -158,9 +132,7 @@ class JadwalKerjaController extends Controller
             JadwalKerja::create([
                 'id_karyawan' => $item['id_karyawan'],
                 'tanggal' => $request->tanggal,
-                'jam_kerja' => $shift->label,
-                'kode_shift' => $shift->kode_shift,
-                'keterangan' => $item['keterangan'] ?? null,
+                'id_shift' => $item['id_shift'],
             ]);
 
             $sukses++;
@@ -171,7 +143,6 @@ class JadwalKerjaController extends Controller
             $message .= " {$duplikat} jadwal sudah ada (duplikat).";
         }
 
-        // Redirect ke bulan yang sesuai
         $bulan = Carbon::parse($request->tanggal)->format('Y-m');
 
         return redirect()->route('jadwal.index', ['bulan' => $bulan])
@@ -184,15 +155,14 @@ class JadwalKerjaController extends Controller
             'tanggal_mulai' => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
             'target_type' => 'required|in:all,divisi,karyawan',
-            'id_devisi' => 'required_if:target_type,divisi|nullable|exists:devisis,id',
+            'id_divisi' => 'required_if:target_type,divisi|nullable|exists:divisis,id',
             'karyawan_ids' => 'required_if:target_type,karyawan|array',
             'karyawan_ids.*' => 'exists:karyawan,id_karyawan',
-            'kode_shift' => 'required|exists:shifts,kode_shift',
+            'id_shift' => 'required|exists:shifts,kode_shift',
             'overwrite' => 'nullable|boolean',
-            'keterangan' => 'nullable|string|max:500',
         ], [
             'tanggal_selesai.after_or_equal' => 'Tanggal selesai tidak boleh sebelum tanggal mulai.',
-            'id_devisi.required_if' => 'Pilih divisi untuk target by divisi.',
+            'id_divisi.required_if' => 'Pilih divisi untuk target by divisi.',
             'karyawan_ids.required_if' => 'Pilih minimal satu karyawan.',
         ]);
 
@@ -208,28 +178,24 @@ class JadwalKerjaController extends Controller
             ->with('bulk_range_month', $bulan);
     }
 
-    // Form edit jadwal
     public function edit($id_jadwal)
     {
-        $jadwal = JadwalKerja::with('karyawan')->findOrFail($id_jadwal);
+        $jadwal = JadwalKerja::with('karyawan', 'shift')->findOrFail($id_jadwal);
 
         $jamKerjaOptions = $this->getScheduleShiftOptions();
 
         return view('jadwal.edit', compact('jadwal', 'jamKerjaOptions'));
     }
 
-    // Update jadwal
     public function update(Request $request, $id_jadwal)
     {
         $request->validate([
             'tanggal' => 'required|date',
-            'kode_shift' => 'required|exists:shifts,kode_shift',
-            'keterangan' => 'nullable|string|max:500',
+            'id_shift' => 'required|exists:shifts,kode_shift',
         ]);
 
         $jadwal = JadwalKerja::findOrFail($id_jadwal);
 
-        // Cek duplikasi (kecuali diri sendiri)
         $existing = JadwalKerja::where('id_karyawan', $jadwal->id_karyawan)
                               ->whereDate('tanggal', $request->tanggal)
                               ->where('id_jadwal', '!=', $id_jadwal)
@@ -241,23 +207,17 @@ class JadwalKerjaController extends Controller
                            ->with('error', 'Jadwal sudah ada di tanggal tersebut!');
         }
 
-        $shift = Shift::where('kode_shift', $request->kode_shift)->firstOrFail();
-
         $jadwal->update([
             'tanggal' => $request->tanggal,
-            'jam_kerja' => $shift->label,
-            'kode_shift' => $shift->kode_shift,
-            'keterangan' => $request->keterangan,
+            'id_shift' => $request->id_shift,
         ]);
 
-        // Redirect ke bulan yang sesuai
         $bulan = Carbon::parse($request->tanggal)->format('Y-m');
 
         return redirect()->route('jadwal.index', ['bulan' => $bulan])
                         ->with('success', 'Jadwal berhasil diupdate!');
     }
 
-    // Delete jadwal
     public function destroy($id_jadwal)
     {
         $jadwal = JadwalKerja::findOrFail($id_jadwal);
@@ -268,36 +228,34 @@ class JadwalKerjaController extends Controller
                         ->with('success', 'Jadwal berhasil dihapus!');
     }
 
-    // Lihat jadwal karyawan tertentu
     public function show($id_karyawan, Request $request)
     {
         $karyawan = Karyawan::findOrFail($id_karyawan);
-        
+
         $bulan = $request->get('bulan', date('Y-m'));
         $tanggalAwal = Carbon::parse($bulan . '-01')->startOfMonth();
         $tanggalAkhir = Carbon::parse($bulan . '-01')->endOfMonth();
 
-        $jadwalList = JadwalKerja::where('id_karyawan', $id_karyawan)
+        $jadwalList = JadwalKerja::with('shift')
+                                ->where('id_karyawan', $id_karyawan)
                                 ->whereDate('tanggal', '>=', $tanggalAwal->format('Y-m-d'))
                                 ->whereDate('tanggal', '<=', $tanggalAkhir->format('Y-m-d'))
                                 ->orderBy('tanggal')
                                 ->get();
 
         return view('jadwal.show', compact(
-            'karyawan', 
-            'jadwalList', 
+            'karyawan',
+            'jadwalList',
             'bulan',
             'tanggalAwal',
             'tanggalAkhir'
         ));
     }
 
-    // Set hari libur untuk semua karyawan
     public function setLiburMassal(Request $request)
     {
         $request->validate([
             'tanggal' => 'required|date',
-            'keterangan' => 'nullable|string',
         ]);
 
         $karyawanList = Karyawan::all();
@@ -305,35 +263,27 @@ class JadwalKerjaController extends Controller
         $updated = 0;
 
         foreach ($karyawanList as $karyawan) {
-            // Cek apakah sudah ada jadwal
             $existing = JadwalKerja::where('id_karyawan', $karyawan->id_karyawan)
                                   ->whereDate('tanggal', $request->tanggal)
                                   ->first();
 
             if ($existing) {
-                // Update jadi libur
                 $existing->update([
-                    'jam_kerja' => 'Libur',
-                    'kode_shift' => 'L',
-                    'keterangan' => $request->keterangan,
+                    'id_shift' => 'L',
                 ]);
                 $updated++;
             } else {
-                // Create baru
                 JadwalKerja::create([
                     'id_karyawan' => $karyawan->id_karyawan,
                     'tanggal' => $request->tanggal,
-                    'jam_kerja' => 'Libur',
-                    'kode_shift' => 'L',
-                    'keterangan' => $request->keterangan,
+                    'id_shift' => 'L',
                 ]);
                 $sukses++;
             }
         }
 
         $message = "Berhasil set libur: {$sukses} baru, {$updated} diupdate.";
-        
-        // Redirect ke bulan yang sesuai
+
         $bulan = Carbon::parse($request->tanggal)->format('Y-m');
 
         return redirect()->route('jadwal.index', ['bulan' => $bulan])
@@ -342,7 +292,7 @@ class JadwalKerjaController extends Controller
 
     private function getScheduleShiftOptions()
     {
-        return Shift::whereIn('kode_shift', ['P', 'M', 'S', 'L'])
+        return Shift::whereIn('kode_shift', ['Pa', 'Si', 'L'])
             ->orderByRaw("CASE kode_shift WHEN 'P' THEN 1 WHEN 'M' THEN 2 WHEN 'S' THEN 3 WHEN 'L' THEN 4 ELSE 5 END")
             ->get();
     }

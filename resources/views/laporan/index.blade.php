@@ -113,7 +113,7 @@
                                     </div>
                                 </td>
                                 <td class="align-middle small">{{ $k->jabatan?->nama_jabatan ?? '-' }}</td>
-                                <td class="align-middle small text-muted">{{ $k->devisi?->nama_devisi ?? '-' }}</td>
+                                <td class="align-middle small text-muted">{{ $k->divisi?->nama_divisi ?? '-' }}</td>
                                 <td class="align-middle text-center">
                                     <span class="badge bg-success">{{ $absensi?->hadir ?? 0 }}</span>
                                 </td>

@@ -52,7 +52,7 @@
                     <div class="text-start">
                         <div class="mb-2 d-flex justify-content-between">
                             <span class="text-muted small">Divisi</span>
-                            <span class="fw-semibold small">{{ $karyawan->devisi?->nama_devisi ?? '-' }}</span>
+                            <span class="fw-semibold small">{{ $karyawan->divisi?->nama_divisi ?? '-' }}</span>
                         </div>
                         <div class="mb-2 d-flex justify-content-between">
                             <span class="text-muted small">Tanggal Masuk</span>
@@ -79,7 +79,7 @@
                         @endif
                         <div class="mt-2 d-flex justify-content-between">
                             <span class="text-muted small">Kuota Cuti</span>
-                            <span class="fw-semibold small">{{ $karyawan->remaining_leave_quota ?? 0 }}/{{ $karyawan->yearly_leave_quota ?? 0 }} hari</span>
+                            <span class="fw-semibold small">{{ $karyawan->status_karyawan ?? 0 }}/{{ $karyawan->status_karyawan ?? 0 }} hari</span>
                         </div>
                     </div>
 

@@ -8,14 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (Schema::hasTable('karyawan_leave_quotas')) {
+        if (Schema::hasTable('kuota_cuti_karyawan')) {
             return;
         }
 
-        Schema::create('karyawan_leave_quotas', function (Blueprint $table) {
+        Schema::create('kuota_cuti_karyawan', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('id_karyawan');
-            $table->foreignId('leave_type_id')->constrained('leave_types')->cascadeOnDelete();
+            $table->unsignedBigInteger('leave_type_id');
             $table->unsignedSmallInteger('year');
             $table->unsignedInteger('quota')->default(0);
             $table->unsignedInteger('remaining_quota')->default(0);
@@ -26,11 +26,15 @@ return new class extends Migration
                 ->references('id_karyawan')
                 ->on('karyawan')
                 ->cascadeOnDelete();
+            $table->foreign('leave_type_id')
+                ->references('id')
+                ->on('tipe_cuti')
+                ->cascadeOnDelete();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('karyawan_leave_quotas');
+        Schema::dropIfExists('kuota_cuti_karyawan');
     }
 };

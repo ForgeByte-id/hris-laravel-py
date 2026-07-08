@@ -23,9 +23,9 @@
                     <a href="{{ route('karyawan.import') }}" class="btn btn-outline-primary">
                         <i class="bi bi-filetype-csv me-2"></i>Import Karyawan
                     </a>
-                    <a href="{{ route('karyawan.import-face') }}" class="btn btn-outline-primary">
+                    {{-- <a href="{{ route('karyawan.import-face') }}" class="btn btn-outline-primary">
                         <i class="bi bi-image me-2"></i>Import Wajah
-                    </a>
+                    </a> --}}
                     <a href="{{ route('karyawan.create') }}" class="btn btn-primary">
                         <i class="bi bi-plus-circle me-2"></i>Tambah Karyawan
                     </a>
@@ -114,7 +114,7 @@
                                             <span class="small">{{ $k->jabatan?->nama_jabatan ?? 'N/A' }}</span>
                                         </td>
                                         <td class="align-middle">
-                                            <span class="small text-muted">{{ $k->devisi->nama_devisi ?? 'N/A'}}</span>
+                                            <span class="small text-muted">{{ $k->divisi->nama_divisi ?? 'N/A'}}</span>
                                         </td>
                                         <td class="align-middle">
                                             @if($k->face_embedding)
@@ -141,10 +141,10 @@
                                                    class="btn btn-outline-info" title="Daftar/Update Wajah">
                                                     <i class="bi bi-camera"></i>
                                                 </a>
-                                                <a href="{{ route('karyawan.import-face', ['id_karyawan' => $k->id_karyawan]) }}"
+                                                {{-- <a href="{{ route('karyawan.import-face', ['id_karyawan' => $k->id_karyawan]) }}"
                                                    class="btn btn-outline-primary" title="Import Wajah dari Image">
                                                     <i class="bi bi-image"></i>
-                                                </a>
+                                                </a> --}}
                                                 @if($k->face_embedding)
                                                     <button class="btn btn-outline-danger"
                                                             onclick="deleteFace({{ $k->id_karyawan }})"

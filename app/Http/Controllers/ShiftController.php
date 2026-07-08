@@ -9,7 +9,7 @@ class ShiftController extends Controller
 {
     public function index()
     {
-        $shifts = Shift::withCount(['jadwalKerja', 'karyawan'])->orderBy('kode_shift')->get();
+        $shifts = Shift::withCount('jadwalKerja')->orderBy('kode_shift')->get();
 
         return view('shift.index', compact('shifts'));
     }
@@ -64,7 +64,7 @@ class ShiftController extends Controller
 
     public function destroy(Shift $shift)
     {
-        if ($shift->jadwalKerja()->count() > 0 || $shift->karyawan()->count() > 0) {
+        if ($shift->jadwalKerja()->count() > 0) {
             return redirect()->route('shift.index')
                 ->with('error', 'Shift tidak dapat dihapus karena masih digunakan.');
         }

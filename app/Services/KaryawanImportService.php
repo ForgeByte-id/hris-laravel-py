@@ -2,10 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\Devisi;
+use App\Models\Divisi;
 use App\Models\Jabatan;
 use App\Models\Karyawan;
-use App\Models\Shift;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -219,7 +218,6 @@ class KaryawanImportService
         $nama = trim((string) ($row['nama'] ?? ''));
         $username = trim((string) ($row['username'] ?? ''));
         $email = trim((string) ($row['email'] ?? ''));
-        $kodeShift = strtoupper(trim((string) ($row['kode_shift'] ?? 'P')));
 
         if ($nama === '') {
             throw new RuntimeException('Nama wajib diisi.');
@@ -227,15 +225,6 @@ class KaryawanImportService
 
         if ($username === '') {
             $username = $this->usernameFromName($nama);
-        }
-
-        if ($kodeShift === '') {
-            throw new RuntimeException('Kode shift wajib diisi.');
-        }
-
-        $shift = Shift::where('kode_shift', $kodeShift)->first();
-        if (!$shift) {
-            throw new RuntimeException("Kode shift {$kodeShift} tidak ditemukan.");
         }
 
         if ($this->hasExistingEmployee($username, $email, $nama)) {
@@ -267,25 +256,17 @@ class KaryawanImportService
         $jabatan = $this->resolveJabatan($row);
         $statusAktif = $this->statusOrDefault($row['status_aktif'] ?? null, ['Aktif', 'Nonaktif'], 'Aktif', 'status aktif');
         $statusKaryawan = $this->statusOrDefault($row['status_karyawan'] ?? null, ['Tetap', 'Kontrak', 'Training'], 'Tetap', 'status karyawan');
-        $defaultAnnualQuota = $statusKaryawan === 'Tetap' ? 12 : 0;
-        $yearlyLeaveQuota = $this->integerOrDefault($row['yearly_leave_quota'] ?? null, $defaultAnnualQuota);
-        $remainingLeaveQuota = $this->integerOrDefault($row['remaining_leave_quota'] ?? null, $yearlyLeaveQuota);
         $tanggalMasuk = $this->normalizeDateValue($row['tanggal_masuk'] ?? null)
             ?: $this->normalizeDateValue($row['tanggal_mulai_kerja'] ?? null);
-        $tanggalMulaiKerja = $this->normalizeDateValue($row['tanggal_mulai_kerja'] ?? null) ?: $tanggalMasuk;
 
         $karyawan = new Karyawan(['id_user' => $user->id_user]);
         $karyawan->fill([
             'nama' => $nama,
-            'id_devisi' => $divisi?->id,
+            'id_divisi' => $divisi?->id,
             'id_jabatan' => $jabatan?->id,
-            'kode_shift' => $shift->kode_shift,
             'tanggal_masuk' => $tanggalMasuk,
-            'tanggal_mulai_kerja' => $tanggalMulaiKerja,
             'status_aktif' => $statusAktif,
             'status_karyawan' => $statusKaryawan,
-            'yearly_leave_quota' => $yearlyLeaveQuota,
-            'remaining_leave_quota' => min($remainingLeaveQuota, $yearlyLeaveQuota),
         ]);
 
         $faceImagePath = $this->nullableValue($row['face_image_path'] ?? null);
@@ -309,21 +290,21 @@ class KaryawanImportService
     /**
      * @param array<string, string|null> $row
      */
-    private function resolveDivisi(array $row): ?Devisi
+    private function resolveDivisi(array $row): ?Divisi
     {
-        if ($this->nullableValue($row['id_devisi'] ?? null)) {
-            $divisi = Devisi::find((int) $row['id_devisi']);
+        if ($this->nullableValue($row['id_divisi'] ?? null)) {
+            $divisi = Divisi::find((int) $row['id_divisi']);
 
             if (!$divisi) {
-                throw new RuntimeException("Divisi dengan ID {$row['id_devisi']} tidak ditemukan.");
+                throw new RuntimeException("Divisi dengan ID {$row['id_divisi']} tidak ditemukan.");
             }
 
             return $divisi;
         }
 
-        $namaDevisi = $this->nullableValue($row['nama_devisi'] ?? null);
+        $namaDevisi = $this->nullableValue($row['nama_divisi'] ?? null);
 
-        return $namaDevisi ? Devisi::firstOrCreate(['nama_devisi' => $namaDevisi]) : null;
+        return $namaDevisi ? Divisi::firstOrCreate(['nama_divisi' => $namaDevisi]) : null;
     }
 
     /**
@@ -472,12 +453,12 @@ class KaryawanImportService
 
         return match ($header) {
             'nama lengkap' => 'nama',
-            'divisi' => 'nama_devisi',
+            'divisi' => 'nama_divisi',
             'posisi' => 'nama_jabatan',
-            'mulai kerja' => 'tanggal_mulai_kerja',
+            'mulai kerja' => 'tanggal_masuk',
             'aktif' => 'status_aktif',
             'status' => 'status_karyawan',
-            'id_devisi/nama_devisi' => 'nama_devisi',
+            'id_divisi/nama_divisi' => 'nama_divisi',
             'id_jabatan/nama_jabatan' => 'nama_jabatan',
             default => $header,
         };

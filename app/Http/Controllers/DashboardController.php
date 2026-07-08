@@ -16,7 +16,7 @@ class DashboardController extends Controller
         $user     = Auth::user();
         $isAdmin  = $user->hasRole('admin');
         $isHr     = $user->hasRole('hr');
-        $karyawan = $isAdmin ? null : Karyawan::with(['jabatan', 'devisi'])
+        $karyawan = $isAdmin ? null : Karyawan::with(['jabatan', 'divisi'])
                                               ->where('id_user', $user->id_user)
                                               ->first();
 
@@ -62,7 +62,7 @@ class DashboardController extends Controller
 
         if ($isAdmin || $isHr) {
             $today = Carbon::today();
-            $employees = Karyawan::with(['devisi', 'jabatan'])->orderBy('nama')->get();
+            $employees = Karyawan::with(['divisi', 'jabatan'])->orderBy('nama')->get();
             $todayAbsensi = Absensi::whereDate('tanggal', $today)->get()->keyBy('id_karyawan');
             $todayJadwal = JadwalKerja::with('shift')->whereDate('tanggal', $today)->get()->keyBy('id_karyawan');
             $cutiApprovedToday = Cuti::where('status_persetujuan', 'approved')

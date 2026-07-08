@@ -35,8 +35,6 @@ class DashboardDailyRecapTest extends TestCase
             'tanggal_masuk' => Carbon::today()->toDateString(),
             'status_aktif' => 'Aktif',
             'status_karyawan' => 'Tetap',
-            'yearly_leave_quota' => 12,
-            'remaining_leave_quota' => 12,
         ]);
         Absensi::create([
             'id_karyawan' => $employee->id_karyawan,
