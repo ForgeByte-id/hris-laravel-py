@@ -7,6 +7,8 @@ Jangan mengubah schema database (migration) maupun isi file PHPUnit test.
 Modifikasi HANYA diperbolehkan pada: Model (relationship), Service, Controller,
 Repository/Query, dan Seeder — agar seluruh test menjadi PASS.
 
+pada intinya migrationnya harus sama dengan `hris_db.sql`. jika beda perbaiki dan sesuaikan. jika sudah sama biarkan
+
 ## Gambaran Sistem
 
 Aplikasi ini adalah sistem administrasi SDM berbasis web (PHP/Laravel + MySQL) yang
