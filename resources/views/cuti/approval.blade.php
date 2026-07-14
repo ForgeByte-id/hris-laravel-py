@@ -42,6 +42,7 @@
                             <th>Durasi</th>
                             <th>Kuota</th>
                             <th>Keterangan</th>
+                            <th>Level</th>
                             <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
@@ -53,7 +54,7 @@
                                 <strong>{{ $cuti->karyawan->nama }}</strong>
                             </td>
                             <td>
-                                {{ $cuti->karyawan->jabatan->nama_jabatan ?? '-' }}
+                                {{ optional($cuti->karyawan->jabatan)->nama_jabatan ?? '-' }}
                             </td>
                             <td>
                                 <span class="badge text-bg-info">
@@ -79,6 +80,9 @@
                             </td>
                             <td class="text-truncate" style="max-width: 200px;">
                                 <small class="text-muted">{{ $cuti->keterangan ?? '-' }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-primary">{{ $levelLabels[$cuti->id_cuti] ?? 'Level' }}</span>
                             </td>
                             <td class="text-center">
                                 @if(($approvalPermissions[$cuti->id_cuti] ?? false) === true)

@@ -35,10 +35,14 @@ class Cuti extends Model
         return $this->belongsTo(Karyawan::class, 'id_karyawan', 'id_karyawan');
     }
 
-    // Relationship ke Atasan (yang menyetujui)
     public function atasan()
     {
         return $this->belongsTo(Karyawan::class, 'id_atasan', 'id_karyawan');
+    }
+
+    public function persetujuanCuti()
+    {
+        return $this->hasMany(PersetujuanCuti::class, 'id_cuti', 'id_cuti');
     }
 
     // Hitung jumlah hari cuti

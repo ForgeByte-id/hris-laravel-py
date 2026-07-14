@@ -386,26 +386,43 @@ class AttendanceService
     {
         $now = Carbon::now();
         $clockInAt = Carbon::today()->setTimeFromTimeString($attendance->jam_masuk);
-        $minimumClockOutAt = (clone $clockInAt)->addHours(5);
 
         $schedule = $this->getTodaySchedule($karyawan->id_karyawan);
         $referenceShift = $this->resolveReferenceShift($karyawan, $schedule);
-        $shiftWindowStart = null;
 
+        // Prefer shift-based rule if schedule exists
         if ($schedule && !$schedule->isLibur()) {
             $shiftEndTime = $this->extractShiftEndTime($schedule, $referenceShift);
             if ($shiftEndTime) {
+                $shiftEndTimeFormatted = substr($shiftEndTime, 0, 5);
                 $shiftWindowStart = Carbon::today()
                     ->setTimeFromTimeString($shiftEndTime)
                     ->subMinutes(30);
+
+                if ($now->lt($shiftWindowStart)) {
+                    $remainingMinutes = (int) round($now->diffInMinutes($shiftWindowStart));
+                    $namaShift = $schedule->shift?->nama_shift ?? '';
+                    return [
+                        'can_clock_out' => false,
+                        'reason' => "Absen pulang tersedia mendekati jam pulang shift {$namaShift} ({$shiftEndTimeFormatted}). Sisa {$remainingMinutes} menit lagi.",
+                        'available_at' => $shiftWindowStart,
+                    ];
+                }
+
+                return [
+                    'can_clock_out' => true,
+                    'reason' => null,
+                    'available_at' => $shiftWindowStart,
+                ];
             }
-        } elseif ($referenceShift && $referenceShift->jam_pulang) {
+        }
+
+        // Fallback: use reference shift if available (no jadwal_kerja record, but shift master exists)
+        if ($referenceShift && $referenceShift->jam_pulang && !$schedule) {
             $shiftWindowStart = Carbon::today()
                 ->setTimeFromTimeString($referenceShift->jam_pulang)
                 ->subMinutes(30);
-        }
 
-        if ($shiftWindowStart) {
             if ($now->lt($shiftWindowStart)) {
                 return [
                     'can_clock_out' => false,
@@ -421,19 +438,11 @@ class AttendanceService
             ];
         }
 
-        if ($now->lt($minimumClockOutAt)) {
-            $remainingMinutes = $now->diffInMinutes($minimumClockOutAt);
-            return [
-                'can_clock_out' => false,
-                'reason' => "Absen pulang tersedia minimal 5 jam setelah jam masuk. Sisa {$remainingMinutes} menit lagi.",
-                'available_at' => $minimumClockOutAt,
-            ];
-        }
-
+        // No schedule and no reference shift
         return [
-            'can_clock_out' => true,
-            'reason' => null,
-            'available_at' => $minimumClockOutAt,
+            'can_clock_out' => false,
+            'reason' => 'Belum ada jadwal kerja hari ini, hubungi Admin/SDM.',
+            'available_at' => null,
         ];
     }
 

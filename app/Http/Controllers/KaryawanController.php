@@ -126,8 +126,10 @@ class KaryawanController extends Controller
                 'role'     => $request->role,
             ]);
 
-            // Assign Spatie role so permissions work correctly
-            //$user->assignRole('role');
+            // Assign Spatie role based on jabatan -> role mapping
+            $jabatan = \App\Models\Jabatan::find($request->id_jabatan);
+            $roleName = app(\App\Services\AuthorizationService::class)->roleForJabatan($jabatan?->nama_jabatan ?? '');
+            $user->assignRole($roleName);
 
             // 2. Create karyawan linked to the new user
             $statusKaryawan      = $request->status_karyawan ?: 'Tetap';
@@ -156,10 +158,11 @@ class KaryawanController extends Controller
         }
     }
 
-    public function show($id_karyawan)
+    public function show($id_karyawan, \App\Services\LeaveQuotaService $leaveQuotaService)
     {
         $karyawan = Karyawan::with(['jabatan', 'divisi', 'absensi', 'cuti'])->findOrFail($id_karyawan);
-        return view('employees.karyawan_show', compact('karyawan'));
+        $leaveBalances = $leaveQuotaService->ensureBalancesFor($karyawan);
+        return view('employees.karyawan_show', compact('karyawan', 'leaveBalances'));
     }
 
     public function faceImage($id_karyawan)
@@ -236,8 +239,14 @@ class KaryawanController extends Controller
             'username' => $request->username,
             'role'     => $request->role
         ]);
+
+        // Assign Spatie role based on jabatan -> role mapping
+        $jabatan = \App\Models\Jabatan::find($request->id_jabatan);
+        $roleName = app(\App\Services\AuthorizationService::class)->roleForJabatan($jabatan?->nama_jabatan ?? '');
+        $karyawan->user->syncRoles([$roleName]);
+
         DB::commit();
-       
+        
         return redirect()->route('karyawan.index')
             ->with('success', 'Data karyawan berhasil diperbarui.');
         } catch (\Throwable $e) {

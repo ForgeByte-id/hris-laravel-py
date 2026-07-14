@@ -77,10 +77,19 @@
                                 Data wajah lama hanya menyimpan embedding, belum menyimpan file foto preview.
                             </div>
                         @endif
-                        <div class="mt-2 d-flex justify-content-between">
-                            <span class="text-muted small">Kuota Cuti</span>
-                            <span class="fw-semibold small">{{ $karyawan->status_karyawan ?? 0 }}/{{ $karyawan->status_karyawan ?? 0 }} hari</span>
-                        </div>
+                        @if(isset($leaveBalances) && $leaveBalances->isNotEmpty())
+                            @foreach($leaveBalances as $balance)
+                                <div class="mt-1 d-flex justify-content-between">
+                                    <span class="text-muted small">{{ $balance->leaveType->nama_cuti }}</span>
+                                    <span class="fw-semibold small">{{ $balance->remaining_quota }}/{{ $balance->quota }} hari</span>
+                                </div>
+                            @endforeach
+                        @else
+                            <div class="mt-2 d-flex justify-content-between">
+                                <span class="text-muted small">Kuota Cuti</span>
+                                <span class="fw-semibold small">0/0 hari</span>
+                            </div>
+                        @endif
                     </div>
 
                     <div class="mt-4">
@@ -160,6 +169,7 @@
                                         <th>Mulai</th>
                                         <th>Selesai</th>
                                         <th>Status</th>
+                                        <th>Disetujui Oleh</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -179,6 +189,7 @@
                                             @endphp
                                             <span class="badge bg-{{ $color }}">{{ ucfirst($cuti->status_persetujuan) }}</span>
                                         </td>
+                                        <td class="small">{{ $cuti->atasan?->nama ?? ($cuti->status_persetujuan === 'pending' ? '-' : 'Admin') }}</td>
                                     </tr>
                                     @endforeach
                                 </tbody>

@@ -14,6 +14,23 @@ use App\Models\User;
 class AuthorizationService
 {
     /**
+     * Mapping jabatan (position) name → Spatie role name.
+     */
+    public const JABATAN_ROLE_MAP = [
+        'SDM' => 'admin',
+        'Manager Umum' => 'atasan_divisi',
+        'Manager Divisi' => 'atasan_divisi',
+    ];
+
+    /**
+     * Get the Spatie role that should be assigned for a given jabatan name.
+     */
+    public function roleForJabatan(string $namaJabatan): string
+    {
+        return self::JABATAN_ROLE_MAP[$namaJabatan] ?? 'karyawan';
+    }
+
+    /**
      * Check if user can perform ANY attendance action (create, update, view, check-in).
      * Centralised rule: attendance management is exclusively for admins.
      *
@@ -75,6 +92,14 @@ class AuthorizationService
     public function canViewFullAttendanceHistory(User $user): bool
     {
         return $user->hasRole('admin') || $user->hasRole('hr');
+    }
+
+    /**
+     * Check if user is atasan (division head / manager) for approval purposes.
+     */
+    public function isAtasan(User $user): bool
+    {
+        return $user->hasRole('atasan_divisi');
     }
 
     /**
