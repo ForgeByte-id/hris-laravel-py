@@ -187,12 +187,14 @@ class CutiController extends Controller
                 $approverKaryawan = $approvalService->employeeFor($user);
                 $approverId = $approverKaryawan?->id_karyawan;
 
+                $catatan = $request->status === 'approved' ? 'Disetujui' : 'Ditolak';
+
                 \App\Models\PersetujuanCuti::create([
                     'id_cuti' => $cuti->id_cuti,
                     'id_penyetuju' => $approverId,
                     'status_persetujuan' => $request->status,
                     'tanggal_persetujuan' => Carbon::now(),
-                    'catatan' => null,
+                    'catatan' => $catatan,
                 ]);
 
                 $approvalCount = $cuti->persetujuanCuti()->where('status_persetujuan', 'approved')->count();

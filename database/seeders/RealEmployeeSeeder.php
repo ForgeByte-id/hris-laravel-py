@@ -49,7 +49,7 @@ class RealEmployeeSeeder extends Seeder
         $karyawan = Karyawan::where('nama', $employee['name'])->first();
         $user = User::where('username', $username)
             ->orWhere('email', $email)
-            ->when($karyawan?->id_user, fn ($query) => $query->orWhere('id_user', $karyawan->id_user))
+            ->when($karyawan?->id_user, fn($query) => $query->orWhere('id_user', $karyawan->id_user))
             ->first();
 
         if (!$user) {
@@ -110,13 +110,45 @@ class RealEmployeeSeeder extends Seeder
         }
     }
 
-    private function usernameFromName(string $name): string
+    private function usernameFromName(string $name, ?int $excludeUserId = null): string
     {
-        return Str::of($name)
+        $words = Str::of($name)
             ->lower()
-            ->replaceMatches('/[^a-z0-9]+/i', '.')
-            ->trim('.')
-            ->value();
+            ->replaceMatches('/[^a-z0-9\s]+/', '')
+            ->squish()
+            ->explode(' ')
+            ->filter()
+            ->values();
+
+        // buang prefix gender/gelar 1 huruf khas nama Bali: "i", "ni"
+        while ($words->count() > 1 && in_array($words->first(), ['i', 'ni'], true)) {
+            $words = $words->slice(1)->values();
+        }
+
+        $base = $words->count() > 1
+            ? $words->first() . '.' . $words->last()
+            : ($words->first() ?: 'user');
+
+        $base = Str::limit($base, 20, '');
+
+        return $this->uniqueUsername($base, $excludeUserId);
+    }
+
+    private function uniqueUsername(string $base, ?int $excludeUserId = null): string
+    {
+        $username = $base;
+        $suffix = 1;
+
+        while (
+            User::where('username', $username)
+            ->when($excludeUserId, fn($query) => $query->where('id_user', '!=', $excludeUserId))
+            ->exists()
+        ) {
+            $suffix++;
+            $username = Str::limit($base, 20 - strlen((string) $suffix), '') . $suffix;
+        }
+
+        return $username;
     }
 
     private function employees(): array

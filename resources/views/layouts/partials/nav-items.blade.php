@@ -1,5 +1,5 @@
 @php
-    $userRole    = auth()->user()?->roles->first();   // null-safe, may be null
+    $userRole    = auth()->user()?->roles->first();
     $menuItems   = \App\Models\MenuItem::orderBy('order')->get();
     $menuVisibility = app(\App\Services\MenuVisibilityService::class);
     $menuItems = $menuItems->reject(fn($m) => $menuVisibility->isHidden($m));
@@ -14,7 +14,12 @@
 
     {{-- General / shared menu items (Dashboard, Cuti, etc.) --}}
     @foreach($generalItems as $menu)
-        @php $isActive = request()->is(ltrim($menu->route, '/') . '*'); @endphp
+        @php
+            $routePath = ltrim($menu->route, '/');
+            $isActive = $routePath === 'cuti'
+                ? request()->is('cuti') || request()->is('cuti/create') || request()->is('cuti/*/edit') || preg_match('#^cuti/\d+$#', $currentPath)
+                : request()->is($routePath . '*');
+        @endphp
         <li class="nav-item">
             <a class="nav-link d-flex align-items-center gap-3 px-3 py-2 rounded {{ $isActive ? 'active' : '' }}"
                href="{{ $menu->route }}">

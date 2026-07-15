@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'default_import_password' => env('HRIS_DEFAULT_IMPORT_PASSWORD'),
+    'default_import_password' => env('HRIS_DEFAULT_IMPORT_PASSWORD', "password123"),
 
     'flagging_secret' => env('HRIS_FLAGGING_SECRET'),
 
