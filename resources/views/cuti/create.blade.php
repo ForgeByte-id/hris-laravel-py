@@ -35,17 +35,29 @@
                     <label class="form-label fw-semibold">
                         Jenis Cuti <span class="text-danger">*</span>
                     </label>
+                    @php
+                        $leaveBalanceMap = ($leaveBalances ?? collect())->keyBy(fn ($balance) => strtolower(trim(preg_replace('/^cuti\s+/i', '', $balance->leaveType->nama_cuti ?? ''))));
+                        $annualLeaveBalance = $leaveBalanceMap->get('tahunan');
+                    @endphp
                     <select name="jenis_cuti" class="form-select" required>
                         <option value="">-- Pilih Jenis Cuti --</option>
                         @foreach($jenisCuti as $jenis)
-                            <option value="{{ $jenis }}" {{ old('jenis_cuti') == $jenis ? 'selected' : '' }}>
-                                {{ $jenis }}
+                            @php
+                                $normalizedJenis = strtolower(trim(preg_replace('/^cuti\s+/i', '', $jenis)));
+                                $balance = $leaveBalanceMap->get($normalizedJenis);
+                                $isUnavailable = $normalizedJenis === 'tahunan' && (!$balance || (int) $balance->remaining_quota <= 0);
+                            @endphp
+                            <option value="{{ $jenis }}" {{ old('jenis_cuti') == $jenis ? 'selected' : '' }} @disabled($isUnavailable)>
+                                {{ $jenis }}@if($isUnavailable) (Tidak tersedia)@endif
                             </option>
                         @endforeach
                     </select>
                     @error('jenis_cuti')
                         <small class="text-danger">{{ $message }}</small>
                     @enderror
+                    @if(!$annualLeaveBalance || (int) $annualLeaveBalance->remaining_quota <= 0)
+                        <small class="text-danger d-block mt-2">Cuti Tahunan tidak tersedia untuk status karyawan ini.</small>
+                    @endif
                 </div>
 
                 <!-- Tanggal Mulai -->

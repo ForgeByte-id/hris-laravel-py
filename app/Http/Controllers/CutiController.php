@@ -41,8 +41,8 @@ class CutiController extends Controller
         }
 
         $cutiList = Cuti::where('id_karyawan', $karyawan->id_karyawan)
-                        ->orderBy('created_at', 'desc')
-                        ->get();
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         return view('cuti.index', [
             'cutiList' => $cutiList,
@@ -61,7 +61,7 @@ class CutiController extends Controller
         if (!$karyawan) {
             return redirect()->route('cuti.index')->with('error', 'Data karyawan tidak ditemukan');
         }
-        
+
         $leaveBalances = $leaveQuotaService->ensureBalancesFor($karyawan);
         // Show all active leave types, not just applicable ones
         $jenisCuti = \App\Models\TipeCuti::where('is_active', true)->orderBy('nama_cuti')->pluck('nama_cuti');
@@ -104,7 +104,9 @@ class CutiController extends Controller
                 (int) Carbon::parse($request->tanggal_mulai)->year
             );
         } catch (RuntimeException $e) {
-            return redirect()->back()->withInput()->with('error', $e->getMessage());
+            return redirect()->back()->withInput()->withErrors([
+                'jenis_cuti' => $e->getMessage(),
+            ]);
         }
 
         try {
@@ -125,7 +127,7 @@ class CutiController extends Controller
         }
 
         return redirect()->route('cuti.index')
-                        ->with('success', 'Pengajuan cuti berhasil dikirim.');
+            ->with('success', 'Pengajuan cuti berhasil dikirim.');
     }
 
     // Halaman approval untuk atasan/HRD
@@ -155,11 +157,11 @@ class CutiController extends Controller
                 return [$cuti->id_cuti => null];
             }
         });
-        $approvalPermissions = $cutiList->mapWithKeys(fn ($cuti) => [
+        $approvalPermissions = $cutiList->mapWithKeys(fn($cuti) => [
             $cuti->id_cuti => $approvalService->canUpdateStatus($user, $cuti),
         ]);
-        $isReadonlyApproval = $user->hasAnyRole(['hr', 'hrd']) && !$user->hasRole('admin');
-        $levelLabels = $cutiList->mapWithKeys(fn ($cuti) => [
+        $isReadonlyApproval = $user->hasAnyRole(['hr', 'hrd', 'sdm']) && !$user->hasRole('admin');
+        $levelLabels = $cutiList->mapWithKeys(fn($cuti) => [
             $cuti->id_cuti => $approvalService->levelLabel($cuti),
         ]);
 
@@ -236,16 +238,16 @@ class CutiController extends Controller
 
         if ($request->status === 'rejected') {
             return redirect()->back()
-                            ->with('success', 'Pengajuan cuti berhasil ditolak.');
+                ->with('success', 'Pengajuan cuti berhasil ditolak.');
         }
 
         if ($cuti->status_persetujuan === 'approved') {
             return redirect()->back()
-                            ->with('success', 'Pengajuan cuti berhasil disetujui (level akhir).');
+                ->with('success', 'Pengajuan cuti berhasil disetujui (level akhir).');
         }
 
         return redirect()->back()
-                        ->with('success', "Pengajuan cuti diteruskan ke level berikutnya.");
+            ->with('success', "Pengajuan cuti diteruskan ke level berikutnya.");
     }
 
     // Riwayat semua cuti (untuk HRD/Admin)
@@ -285,15 +287,15 @@ class CutiController extends Controller
     public function cancel($id_cuti)
     {
         $cuti = Cuti::findOrFail($id_cuti);
-        
+
         if ($cuti->status_persetujuan !== 'pending') {
             return redirect()->back()
-                           ->with('error', 'Hanya bisa membatalkan pengajuan yang masih pending');
+                ->with('error', 'Hanya bisa membatalkan pengajuan yang masih pending');
         }
 
         $cuti->delete();
-        
+
         return redirect()->route('cuti.index')
-                        ->with('success', 'Pengajuan cuti berhasil dibatalkan');
+            ->with('success', 'Pengajuan cuti berhasil dibatalkan');
     }
 }
