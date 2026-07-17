@@ -459,6 +459,7 @@
             `).join('');
         } catch (err) {
             console.error('History error:', err);
+            Swal.fire({ icon: 'error', title: 'Gagal', text: 'Riwayat absensi gagal dimuat. Periksa koneksi atau hubungi admin.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
             tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-3">Gagal memuat riwayat</td></tr>';
         }
     }

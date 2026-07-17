@@ -2,10 +2,6 @@
 
 @section('content')
 <div class="hris-container" style="max-width: 1100px;">
-    @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-
     <div class="hris-card mb-4">
         <div class="hris-card-header">
             <h2 class="mb-0">Input Jadwal Massal</h2>

@@ -223,23 +223,29 @@
         });
         if (!isConfirmed) return;
 
-        try {
-            const response = await fetch(`/api/karyawan/${idKaryawan}/face`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Content-Type': 'application/json',
-                },
-            });
-            const data = await response.json();
-            if (data.success) {
-                Swal.fire({ icon: 'success', title: 'Berhasil', text: data.message }).then(() => location.reload());
-            } else {
-                Swal.fire({ icon: 'error', title: 'Gagal', text: data.message });
+            try {
+                const response = await fetch(`/api/karyawan/${idKaryawan}/face`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({ message: response.statusText }));
+                    throw new Error(errData.message || 'Gagal menghapus data wajah');
+                }
+
+                const data = await response.json();
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Berhasil', text: data.message }).then(() => location.reload());
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: data.message });
+                }
+            } catch (error) {
+                Swal.fire({ icon: 'error', title: 'Error', text: error.message });
             }
-        } catch (error) {
-            Swal.fire({ icon: 'error', title: 'Error', text: error.message });
-        }
     }
 </script>
 @endsection

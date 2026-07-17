@@ -17,12 +17,6 @@
                     <h5 class="mb-0"><i class="bi bi-file-earmark-arrow-up me-2"></i>Import Karyawan</h5>
                 </div>
                 <div class="hris-card-body">
-                    @if(session('success'))
-                        <div class="alert alert-success">{{ session('success') }}</div>
-                    @endif
-                    @if(session('error'))
-                        <div class="alert alert-danger">{{ session('error') }}</div>
-                    @endif
 
                     <form action="{{ route('karyawan.import.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf

@@ -3,20 +3,6 @@
 @section('content')
 <div class="hris-container cuti-container">
 
-    @if(session('success'))
-    <div class="alert alert-success">
-        <i class="bi bi-check-circle me-1"></i>
-        {{ session('success') }}
-    </div>
-    @endif
-
-    @if(session('error'))
-    <div class="alert alert-danger">
-        <i class="bi bi-x-circle me-1"></i>
-        {{ session('error') }}
-    </div>
-    @endif
-
     <div class="card hris-card">
         <div class="card-header card-header-custom hris-card-header d-flex justify-content-between align-items-center">
             <h2 class="card-title mb-0">Detail Pengajuan Cuti</h2>

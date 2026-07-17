@@ -127,10 +127,17 @@ class AttendanceController extends Controller
             }
 
             if (!$recognitionResult['matched']) {
+                $statusCode = !empty($recognitionResult['service_error']) ? 503 : 422;
+                $message = !empty($recognitionResult['service_error'])
+                    ? 'Layanan pengenalan wajah sedang tidak tersedia. Coba beberapa saat lagi.'
+                    : ($recognitionResult['error'] ?? 'Wajah tidak dikenali. Daftar dulu.');
+                $code = !empty($recognitionResult['service_error']) ? 'FACE_SERVICE_UNAVAILABLE' : 'FACE_NOT_RECOGNIZED';
+
                 return response()->json([
                     'success' => false,
-                    'message' => $recognitionResult['error'] ?? 'Wajah tidak dikenali. Daftar dulu.'
-                ], 422);
+                    'code'    => $code,
+                    'message' => $message,
+                ], $statusCode);
             }
 
             $idKaryawan = $recognitionResult['id_karyawan'];
@@ -189,7 +196,8 @@ class AttendanceController extends Controller
             Log::error("Attendance checkIn error: {$e->getMessage()}");
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                'code'    => 'SERVER_ERROR',
+                'message' => 'Terjadi kesalahan pada server. Silakan coba lagi.'
             ], 500);
         }
     }
@@ -357,6 +365,15 @@ class AttendanceController extends Controller
                 ]);
             }
 
+            if (!empty($result['service_error'])) {
+                return response()->json([
+                    'verified'   => false,
+                    'mismatch'   => false,
+                    'confidence' => 0,
+                    'message'    => 'Layanan pengenalan wajah sedang tidak tersedia. Coba beberapa saat lagi.',
+                ], 503);
+            }
+
             return response()->json([
                 'verified'   => false,
                 'mismatch'   => false,
@@ -365,7 +382,7 @@ class AttendanceController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error("verifyFace error: {$e->getMessage()}");
-            return response()->json(['verified' => false, 'message' => 'Terjadi kesalahan verifikasi.'], 500);
+            return response()->json(['verified' => false, 'message' => 'Terjadi kesalahan pada server. Silakan coba lagi.'], 500);
         }
     }
 
@@ -406,6 +423,14 @@ class AttendanceController extends Controller
 
                 if (file_exists($tempPath)) {
                     unlink($tempPath);
+                }
+
+                if (!empty($recognitionResult['service_error'])) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Layanan pengenalan wajah sedang tidak tersedia. Coba beberapa saat lagi.',
+                        'code'    => 'FACE_SERVICE_UNAVAILABLE',
+                    ], 503);
                 }
 
                 if ($recognitionResult['matched']) {

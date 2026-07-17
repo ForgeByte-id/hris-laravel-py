@@ -9,10 +9,6 @@
             <h5 class="mb-0"><i class="bi bi-sliders me-2"></i>Flagging Menu</h5>
         </div>
         <div class="hris-card-body">
-            @if(session('success'))
-                <div class="alert alert-success">{{ session('success') }}</div>
-            @endif
-
             @unless($secretConfigured)
                 <div class="alert alert-warning small">
                     <strong>HRIS_FLAGGING_SECRET belum diset.</strong>

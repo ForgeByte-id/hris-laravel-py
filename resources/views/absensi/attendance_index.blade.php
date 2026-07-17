@@ -535,6 +535,7 @@ async function loadEmployeeCurrentStatus() {
     } catch (error) {
         setPulangAvailability(false, 'Gagal memuat status absensi karyawan.');
         setAttendanceAction('masuk');
+        Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal memuat status: ' + (error.message || 'Error tidak diketahui'), toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
     }
 }
 
@@ -567,12 +568,12 @@ function captureFrame() {
 
 // ── Face verification ─────────────────────────────────────────────────────────
 async function verifyFace() {
-    if (!selectedEmployee)            return Swal.fire({ icon: 'warning', title: 'Pilih karyawan terlebih dahulu.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 });
-    if (!selectedEmployee.hasFace)    return Swal.fire({ icon: 'warning', title: 'Karyawan belum mendaftarkan wajah.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 });
-    if (!serviceOk)                   return Swal.fire({ icon: 'error', title: 'Face recognition service tidak aktif.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 });
+    if (!selectedEmployee)            return Swal.fire({ icon: 'warning', title: 'Pilih karyawan terlebih dahulu.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+    if (!selectedEmployee.hasFace)    return Swal.fire({ icon: 'warning', title: 'Karyawan belum mendaftarkan wajah.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+    if (!serviceOk)                   return Swal.fire({ icon: 'error', title: 'Face recognition service tidak aktif.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
 
     const photo = captureFrame();
-    if (!photo) return Swal.fire({ icon: 'warning', title: 'Kamera belum siap. Tunggu sebentar dan coba lagi.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 });
+    if (!photo) return Swal.fire({ icon: 'warning', title: 'Kamera belum siap. Tunggu sebentar dan coba lagi.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
 
     capturedPhoto = photo;
     faceVerified  = false;
@@ -649,8 +650,8 @@ function setVerificationUI(state, confidence = 0, message = '') {
 
 // ── Save attendance ───────────────────────────────────────────────────────────
 async function saveAttendance() {
-    if (!selectedEmployee) return Swal.fire({ icon: 'warning', title: 'Pilih karyawan terlebih dahulu.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 });
-    if (!faceVerified) return Swal.fire({ icon: 'warning', title: 'Selesaikan verifikasi wajah terlebih dahulu.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 });
+    if (!selectedEmployee) return Swal.fire({ icon: 'warning', title: 'Pilih karyawan terlebih dahulu.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+    if (!faceVerified) return Swal.fire({ icon: 'warning', title: 'Selesaikan verifikasi wajah terlebih dahulu.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
 
     const btnSave = document.getElementById('btnSave');
     btnSave.disabled = true;

@@ -128,7 +128,8 @@ class FaceRecognitionService
      *     success: bool,
      *     encoding?: array,
      *     face_location?: mixed,
-     *     error?: string|null
+     *     error?: string|null,
+     *     service_error?: bool
      * }
      */
     public function encodeFace(string $imagePath): array
@@ -165,6 +166,7 @@ class FaceRecognitionService
                 return [
                     'success' => false,
                     'error' => $error,
+                    'service_error' => true,
                 ];
             }
 
@@ -185,6 +187,7 @@ class FaceRecognitionService
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
+                'service_error' => true,
             ];
         }
     }
@@ -230,7 +233,7 @@ class FaceRecognitionService
                     'image_path' => $imagePath,
                 ]);
 
-                return $this->recognitionFailure($error);
+                return $this->recognitionFailure($error, true);
             }
 
             $data = $response->json();
@@ -258,7 +261,7 @@ class FaceRecognitionService
                 'message' => $e->getMessage(),
             ]);
 
-            return $this->recognitionFailure($e->getMessage());
+            return $this->recognitionFailure($e->getMessage(), true);
         }
     }
 
@@ -300,16 +303,18 @@ class FaceRecognitionService
      *     matched: false,
      *     id_karyawan: null,
      *     confidence: int,
-     *     error: string
+     *     error: string,
+     *     service_error?: bool
      * }
      */
-    private function recognitionFailure(string $error): array
+    private function recognitionFailure(string $error, bool $serviceError = false): array
     {
         return [
             'matched' => false,
             'id_karyawan' => null,
             'confidence' => 0,
             'error' => $error,
+            'service_error' => $serviceError,
         ];
     }
 }

@@ -367,10 +367,16 @@ class KaryawanController extends Controller
             }
 
             if (!$result['success']) {
+                $statusCode = !empty($result['service_error']) ? 503 : 400;
+                $message = !empty($result['service_error'])
+                    ? 'Layanan pengenalan wajah sedang tidak tersedia. Coba beberapa saat lagi.'
+                    : ($result['error'] ?? 'Gagal deteksi wajah. Pastikan wajah jelas.');
+
                 return response()->json([
                     'success' => false,
-                    'message' => $result['error'] ?? 'Gagal deteksi wajah. Pastikan wajah jelas.'
-                ], 400);
+                    'code' => !empty($result['service_error']) ? 'FACE_SERVICE_UNAVAILABLE' : 'FACE_ENCODING_FAILED',
+                    'message' => $message,
+                ], $statusCode);
             }
 
             if (!isset($result['encoding'])) {
@@ -392,7 +398,7 @@ class KaryawanController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan pada server. Silakan coba lagi.'
             ], 500);
         }
     }

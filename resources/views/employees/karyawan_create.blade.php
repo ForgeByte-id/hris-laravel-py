@@ -20,12 +20,6 @@
                 </div>
                 <div class="hris-card-body">
 
-                    @if(session('error'))
-                        <div class="alert alert-danger mb-3">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ session('error') }}
-                        </div>
-                    @endif
-
                     <form action="{{ route('karyawan.store') }}" method="POST">
                         @csrf
 
@@ -171,8 +165,8 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Role</label>
-                            <input type="role" name="role"
-                                   class="form-control"
+                            <input type="text" name="role"
+                                   class="form-control @error('role') is-invalid @enderror"
                                    placeholder="Admin/Atasan/Karyawan">
                             @error('role')
                                 <div class="invalid-feedback">{{ $message }}</div>

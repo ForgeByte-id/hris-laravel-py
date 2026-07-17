@@ -32,7 +32,7 @@ class PermissionController extends Controller
             'guard_name' => 'web',
         ]);
 
-        return redirect()->route('admin.permissions.index')->with('success', 'Permission created');
+        return redirect()->route('admin.permissions.index')->with('success', 'Permission berhasil dibuat.');
     }
 
     public function edit(Permission $permission)
@@ -48,14 +48,14 @@ class PermissionController extends Controller
 
         $permission->update($validated);
 
-        return redirect()->route('admin.permissions.index')->with('success', 'Permission updated');
+        return redirect()->route('admin.permissions.index')->with('success', 'Permission berhasil diperbarui.');
     }
 
     public function destroy(Permission $permission)
     {
         $permission->delete();
 
-        return redirect()->route('admin.permissions.index')->with('success', 'Permission deleted');
+        return redirect()->route('admin.permissions.index')->with('success', 'Permission berhasil dihapus.');
     }
 }
 

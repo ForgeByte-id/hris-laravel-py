@@ -2,13 +2,6 @@
 
 @section('content')
 <div class="hris-container">
-    @if(session('error'))
-    <div class="alert alert-danger d-flex gap-2 align-items-start">
-        <i class="bi bi-x-circle-fill" style="font-size: 1.1rem; flex-shrink: 0;"></i>
-        <div>{{ session('error') }}</div>
-    </div>
-    @endif
-
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="hris-card">

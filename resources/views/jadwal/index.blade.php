@@ -3,20 +3,6 @@
 @section('content')
 <div class="hris-container" style="max-width: 1400px;">
 
-    @if(session('success'))
-    <div class="alert alert-success d-flex gap-2 align-items-start">
-        <i class="bi bi-check-circle-fill" style="font-size: 1.1rem; flex-shrink: 0;"></i>
-        <div>{{ session('success') }}</div>
-    </div>
-    @endif
-
-    @if(session('error'))
-    <div class="alert alert-danger d-flex gap-2 align-items-start">
-        <i class="bi bi-x-circle-fill" style="font-size: 1.1rem; flex-shrink: 0;"></i>
-        <div>{{ session('error') }}</div>
-    </div>
-    @endif
-
     <div class="hris-card">
         <div class="hris-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h2 class="mb-0">Jadwal Kerja Karyawan</h2>

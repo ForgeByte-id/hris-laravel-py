@@ -92,15 +92,4 @@
             });
         }
     </script>
-    @if(session('error'))
-        <script>
-            Swal.fire({
-                icon: 'error',
-                title: 'Login Gagal',
-                text: '{{ session('error') }}',
-                confirmButtonColor: '#3085d6',
-                confirmButtonText: 'Coba Lagi'
-            });
-        </script>
-    @endif
 @endsection

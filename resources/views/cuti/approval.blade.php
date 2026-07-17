@@ -2,12 +2,6 @@
 
 @section('content')
 <div class="hris-container">
-    @if(session('success'))
-    <div class="alert alert-success d-flex gap-2 align-items-start">
-        <i class="bi bi-check-circle-fill" style="font-size: 1.1rem; flex-shrink: 0;"></i>
-        <div>{{ session('success') }}</div>
-    </div>
-    @endif
     @if($isReadonlyApproval ?? false)
     <div class="alert alert-info d-flex gap-2 align-items-start">
         <i class="bi bi-info-circle-fill" style="font-size: 1.1rem; flex-shrink: 0;"></i>

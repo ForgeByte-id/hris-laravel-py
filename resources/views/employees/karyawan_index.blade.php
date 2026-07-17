@@ -197,6 +197,11 @@
                     }
                 });
 
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({ message: response.statusText }));
+                    throw new Error(errData.message || 'Gagal menghapus data wajah');
+                }
+
                 const data = await response.json();
 
                 if (data.success) {
