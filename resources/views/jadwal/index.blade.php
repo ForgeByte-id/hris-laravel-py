@@ -21,12 +21,16 @@
         <div class="hris-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h2 class="mb-0">Jadwal Kerja Karyawan</h2>
             <div class="d-flex flex-wrap gap-2">
+                @can('create-jadwal')
                 <a href="{{ route('jadwal.create') }}" class="btn btn-primary">
                     Tambah Jadwal
                 </a>
+                @endcan
+                @can('bulk-create-jadwal')
                 <a href="{{ route('jadwal.bulk-create') }}" class="btn btn-success">
                     Input Massal
                 </a>
+                @endcan
             </div>
         </div>
 
@@ -52,9 +56,11 @@
                     <button type="submit" class="btn btn-primary">Tampilkan</button>
                 </form>
 
+                @can('set-libur-massal')
                 <button onclick="showLiburModal()" class="btn btn-danger">
                     Set Libur Massal
                 </button>
+                @endcan
             </div>
 
             <!-- Legend -->
@@ -135,11 +141,18 @@
                                             C
                                         </span>
                                     @elseif($jadwal)
+                                        @can('edit-jadwal')
                                         <a href="{{ route('jadwal.edit', $jadwal->id_jadwal) }}"
                                            title="{{ $jadwal->id_shift }}"
                                            style="display: block; text-decoration: none; color: white; background: {{ $jadwal->shift_color }}; padding: 8px; border-radius: 5px; font-weight: 600;">
                                             {{ $jadwal->shift_short }}
                                         </a>
+                                        @else
+                                        <span title="{{ $jadwal->id_shift }}"
+                                              style="display: block; color: white; background: {{ $jadwal->shift_color }}; padding: 8px; border-radius: 5px; font-weight: 600;">
+                                            {{ $jadwal->shift_short }}
+                                        </span>
+                                        @endcan
                                     @elseif($absensi)
                                         <span title="Absensi {{ $absensi->status }}" style="display: block; color: white; background: {{ $absensi->status === 'terlambat' ? '#ffc107' : '#212529' }}; padding: 8px; border-radius: 5px; font-weight: 600;">
                                             H

@@ -567,12 +567,12 @@ function captureFrame() {
 
 // ── Face verification ─────────────────────────────────────────────────────────
 async function verifyFace() {
-    if (!selectedEmployee)            return alert('Pilih karyawan terlebih dahulu.');
-    if (!selectedEmployee.hasFace)    return alert('Karyawan belum mendaftarkan wajah.');
-    if (!serviceOk)                   return alert('Face recognition service tidak aktif.');
+    if (!selectedEmployee)            return Swal.fire({ icon: 'warning', title: 'Pilih karyawan terlebih dahulu.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 });
+    if (!selectedEmployee.hasFace)    return Swal.fire({ icon: 'warning', title: 'Karyawan belum mendaftarkan wajah.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 });
+    if (!serviceOk)                   return Swal.fire({ icon: 'error', title: 'Face recognition service tidak aktif.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 });
 
     const photo = captureFrame();
-    if (!photo) return alert('Kamera belum siap. Tunggu sebentar dan coba lagi.');
+    if (!photo) return Swal.fire({ icon: 'warning', title: 'Kamera belum siap. Tunggu sebentar dan coba lagi.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 });
 
     capturedPhoto = photo;
     faceVerified  = false;
@@ -649,8 +649,8 @@ function setVerificationUI(state, confidence = 0, message = '') {
 
 // ── Save attendance ───────────────────────────────────────────────────────────
 async function saveAttendance() {
-    if (!selectedEmployee) return alert('Pilih karyawan terlebih dahulu.');
-    if (!faceVerified) return alert('Selesaikan verifikasi wajah terlebih dahulu.');
+    if (!selectedEmployee) return Swal.fire({ icon: 'warning', title: 'Pilih karyawan terlebih dahulu.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 });
+    if (!faceVerified) return Swal.fire({ icon: 'warning', title: 'Selesaikan verifikasi wajah terlebih dahulu.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 });
 
     const btnSave = document.getElementById('btnSave');
     btnSave.disabled = true;
@@ -679,10 +679,10 @@ async function saveAttendance() {
             );
             resetForm();
         } else {
-            alert(res.message || 'Gagal menyimpan absensi.');
+            Swal.fire({ icon: 'error', title: 'Gagal', text: res.message || 'Gagal menyimpan absensi.', confirmButtonColor: '#3085d6' });
         }
     } catch (err) {
-        alert(err.message);
+        Swal.fire({ icon: 'error', title: 'Error', text: err.message, confirmButtonColor: '#3085d6' });
     } finally {
         btnSave.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Konfirmasi &amp; Simpan';
         updateButtons();

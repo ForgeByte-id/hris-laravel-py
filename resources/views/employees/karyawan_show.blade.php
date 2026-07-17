@@ -213,7 +213,15 @@
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
     async function deleteFace(idKaryawan) {
-        if (!confirm('Yakin ingin menghapus data wajah karyawan ini?')) return;
+        const { isConfirmed } = await Swal.fire({
+            title: 'Hapus Data Wajah?',
+            text: 'Data wajah karyawan ini akan dihapus permanen.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Hapus',
+            cancelButtonText: 'Batal',
+        });
+        if (!isConfirmed) return;
 
         try {
             const response = await fetch(`/api/karyawan/${idKaryawan}/face`, {
@@ -225,13 +233,12 @@
             });
             const data = await response.json();
             if (data.success) {
-                alert(data.message);
-                location.reload();
+                Swal.fire({ icon: 'success', title: 'Berhasil', text: data.message }).then(() => location.reload());
             } else {
-                alert('Gagal: ' + data.message);
+                Swal.fire({ icon: 'error', title: 'Gagal', text: data.message });
             }
         } catch (error) {
-            alert('Terjadi kesalahan: ' + error.message);
+            Swal.fire({ icon: 'error', title: 'Error', text: error.message });
         }
     }
 </script>

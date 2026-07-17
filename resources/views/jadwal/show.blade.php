@@ -19,7 +19,7 @@
                         <strong>Jabatan:</strong> {{ $karyawan->jabatan->nama_jabatan ?? '-' }}
                     </div>
                     <div class="col-md-4">
-                        <strong>Divisi:</strong> {{ $karyawan->divisi }}
+                         <strong>Divisi:</strong> {{ $karyawan->divisi->nama_divisi ?? '-' }}
                     </div>
                 </div>
             </div>
@@ -106,9 +106,11 @@
             </div>
 
             <!-- Back Button -->
+            @can('create-jadwal')
             <a href="{{ route('jadwal.index') }}" class="btn hris-btn hris-btn-secondary w-100 mt-3">
                 ← Kembali ke Jadwal Semua Karyawan
             </a>
+            @endcan
         </div>
     </div>
 </div>

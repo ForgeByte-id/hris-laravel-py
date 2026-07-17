@@ -17,6 +17,18 @@ class JadwalKerjaController extends Controller
     public function index(Request $request)
     {
         $bulan = $request->get('bulan', date('Y-m'));
+
+        if ($request->user()->cannot('create-jadwal')) {
+            $karyawan = Karyawan::where('id_user', $request->user()->id_user)->first();
+
+            if ($karyawan) {
+                return redirect()->route('jadwal.show', [
+                    'id_karyawan' => $karyawan->id_karyawan,
+                    'bulan' => $bulan,
+                ]);
+            }
+        }
+
         $tanggalAwal = Carbon::parse($bulan . '-01')->startOfMonth();
         $tanggalAkhir = Carbon::parse($bulan . '-01')->endOfMonth();
 
@@ -54,8 +66,10 @@ class JadwalKerjaController extends Controller
         ));
     }
 
-    public function create()
+    public function create(Request $request)
     {
+        abort_unless($request->user()->can('create-jadwal'), 403);
+
         $karyawanList = Karyawan::orderBy('nama')->get();
 
         $jamKerjaOptions = $this->getScheduleShiftOptions();
@@ -65,6 +79,8 @@ class JadwalKerjaController extends Controller
 
     public function store(Request $request)
     {
+        abort_unless($request->user()->can('create-jadwal'), 403);
+
         $request->validate([
             'id_karyawan' => 'required|exists:karyawan,id_karyawan',
             'tanggal' => 'required|date',
@@ -93,8 +109,10 @@ class JadwalKerjaController extends Controller
                         ->with('success', 'Jadwal berhasil ditambahkan!');
     }
 
-    public function bulkCreate()
+    public function bulkCreate(Request $request)
     {
+        abort_unless($request->user()->can('create-jadwal'), 403);
+
         $karyawanList = Karyawan::with(['jabatan', 'divisi'])->orderBy('nama')->get();
         $divisiList = Divisi::orderBy('nama_divisi')->get();
 
@@ -105,6 +123,8 @@ class JadwalKerjaController extends Controller
 
     public function bulkStore(Request $request)
     {
+        abort_unless($request->user()->can('bulk-create-jadwal'), 403);
+
         $request->validate([
             'tanggal' => 'required|date',
             'jadwal' => 'required|array',
@@ -151,6 +171,8 @@ class JadwalKerjaController extends Controller
 
     public function bulkRangeStore(Request $request, JadwalBulkService $jadwalBulkService)
     {
+        abort_unless($request->user()->can('bulk-create-jadwal'), 403);
+
         $validated = $request->validate([
             'tanggal_mulai' => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
@@ -178,8 +200,10 @@ class JadwalKerjaController extends Controller
             ->with('bulk_range_month', $bulan);
     }
 
-    public function edit($id_jadwal)
+    public function edit(Request $request, $id_jadwal)
     {
+        abort_unless($request->user()->can('edit-jadwal'), 403);
+
         $jadwal = JadwalKerja::with('karyawan', 'shift')->findOrFail($id_jadwal);
 
         $jamKerjaOptions = $this->getScheduleShiftOptions();
@@ -189,6 +213,8 @@ class JadwalKerjaController extends Controller
 
     public function update(Request $request, $id_jadwal)
     {
+        abort_unless($request->user()->can('edit-jadwal'), 403);
+
         $request->validate([
             'tanggal' => 'required|date',
             'id_shift' => 'required|exists:shifts,kode_shift',
@@ -218,8 +244,10 @@ class JadwalKerjaController extends Controller
                         ->with('success', 'Jadwal berhasil diupdate!');
     }
 
-    public function destroy($id_jadwal)
+    public function destroy(Request $request, $id_jadwal)
     {
+        abort_unless($request->user()->can('delete-jadwal'), 403);
+
         $jadwal = JadwalKerja::findOrFail($id_jadwal);
         $bulan = $jadwal->tanggal->format('Y-m');
         $jadwal->delete();
@@ -254,6 +282,8 @@ class JadwalKerjaController extends Controller
 
     public function setLiburMassal(Request $request)
     {
+        abort_unless($request->user()->can('set-libur-massal'), 403);
+
         $request->validate([
             'tanggal' => 'required|date',
         ]);
