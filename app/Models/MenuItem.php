@@ -16,9 +16,9 @@ class MenuItem extends Model
 
     public function isAccessibleByRole(?Role $role): bool
     {
-        // Admin-only items: admin, plus HR-family (hr, hrd) dan role "sdm"
+        // Admin-only items: admin, HR-family (hr, hrd), role "sdm", and top-level Management
         if ($this->is_admin_only) {
-            return $role && in_array(strtolower($role->name), ['admin', 'hr', 'hrd', 'sdm'], true);
+            return $role && in_array(strtolower($role->name), ['admin', 'hr', 'hrd', 'sdm', 'management'], true);
         }
 
         // If no roles are explicitly assigned in the pivot, treat the item

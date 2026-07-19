@@ -36,5 +36,6 @@ class DatabaseSeeder extends Seeder
         $this->call(RealEmployeeSeeder::class);
 
         $this->call(BackfillEmployeeRolesSeeder::class);
+        $this->call(ManagementDummySeeder::class);
     }
 }

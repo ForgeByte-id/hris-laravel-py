@@ -15,13 +15,74 @@ class CutiApprovalService
         1 => 'SDM',
         2 => 'Manager Divisi',
         3 => 'Manager Umum',
+        4 => 'Management',
     ];
+
+    /**
+     * Applicant starts at a level above their own position:
+     * - Regular employee / Staff → Level 1 (SDM)
+     * - SDM                      → Level 2 (Manager Divisi)
+     * - Manager Divisi          → Level 3 (Manager Umum)
+     * - Manager Umum            → Level 4 (Management)
+     */
+    private function startingLevel(Karyawan $applicant): int
+    {
+        return match ($applicant->jabatan?->nama_jabatan) {
+            'SDM'            => 2,
+            'Manager Divisi' => 3,
+            'Manager Umum'   => 4,
+            default          => 1,
+        };
+    }
 
     public function canViewApproval(User $user): bool
     {
         return $user->hasRole('admin')
             || $user->hasRole('atasan_divisi')
+            || $user->hasRole('Management')
             || $user->hasAnyRole(['hr', 'hrd']);
+    }
+
+    /**
+     * Filter query to only show leaves currently at the target level.
+     */
+    private function queryForLevel(Builder $query, int $targetLevel): Builder
+    {
+        return $query->where(function ($q) use ($targetLevel) {
+            // Case 1: Staff (start = 1) -> count = targetLevel - 1
+            $q->where(function ($sub) use ($targetLevel) {
+                $sub->whereHas('karyawan.jabatan', function ($j) {
+                    $j->whereNotIn('nama_jabatan', ['SDM', 'Manager Divisi', 'Manager Umum']);
+                })->has('persetujuanCuti', '=', $targetLevel - 1);
+            });
+
+            // Case 2: SDM (start = 2) -> count = targetLevel - 2
+            if ($targetLevel >= 2) {
+                $q->orWhere(function ($sub) use ($targetLevel) {
+                    $sub->whereHas('karyawan.jabatan', function ($j) {
+                        $j->where('nama_jabatan', 'SDM');
+                    })->has('persetujuanCuti', '=', $targetLevel - 2);
+                });
+            }
+
+            // Case 3: Manager Divisi (start = 3) -> count = targetLevel - 3
+            if ($targetLevel >= 3) {
+                $q->orWhere(function ($sub) use ($targetLevel) {
+                    $sub->whereHas('karyawan.jabatan', function ($j) {
+                        $j->where('nama_jabatan', 'Manager Divisi');
+                    })->has('persetujuanCuti', '=', $targetLevel - 3);
+                });
+            }
+
+            // Case 4: Manager Umum (start = 4) -> count = targetLevel - 4
+            if ($targetLevel >= 4) {
+                $q->orWhere(function ($sub) use ($targetLevel) {
+                    $sub->whereHas('karyawan.jabatan', function ($j) {
+                        $j->where('nama_jabatan', 'Manager Umum');
+                    })->has('persetujuanCuti', '=', $targetLevel - 4);
+                });
+            }
+        });
     }
 
     public function pendingQueryFor(User $user): Builder
@@ -42,11 +103,12 @@ class CutiApprovalService
         $approver = $this->employeeFor($user);
 
         if ($user->hasRole('admin')) {
-            $level = $approver ? $this->approverLevel($approver) : null;
-            if ($level === null) {
-                return $query;
-            }
-            return $query->has('persetujuanCuti', '=', $level - 1);
+            $level = $approver ? $this->approverLevel($approver) : 1;
+            return $this->queryForLevel($query, $level);
+        }
+
+        if ($user->hasRole('Management')) {
+            return $this->queryForLevel($query, 4);
         }
 
         if (!$user->hasRole('atasan_divisi') || !$approver) {
@@ -58,8 +120,8 @@ class CutiApprovalService
             return $query->whereRaw('1 = 0');
         }
 
-        $query->where('id_karyawan', '!=', $approver->id_karyawan)
-              ->has('persetujuanCuti', '=', $level - 1);
+        $query = $this->queryForLevel($query, $level);
+        $query->where('id_karyawan', '!=', $approver->id_karyawan);
 
         if ($level === 2) {
             $query->whereHas('karyawan', fn ($q) => $q->where('id_divisi', $approver->id_divisi));
@@ -79,13 +141,22 @@ class CutiApprovalService
         }
 
         $approver = $this->employeeFor($user);
-        $level = $approver ? $this->approverLevel($approver) : null;
-
+        
         if ($user->hasRole('admin')) {
-            return $level === null || $this->currentLevel($cuti) === $level;
+            $userLevel = $approver ? $this->approverLevel($approver) : 1;
+            return $this->currentLevel($cuti) === $userLevel;
         }
 
-        if (!$user->hasRole('atasan_divisi') || !$approver || $level === null) {
+        if ($user->hasRole('Management')) {
+            return $this->currentLevel($cuti) === 4;
+        }
+
+        if (!$user->hasRole('atasan_divisi') || !$approver) {
+            return false;
+        }
+
+        $userLevel = $this->approverLevel($approver);
+        if ($userLevel === null) {
             return false;
         }
 
@@ -93,11 +164,11 @@ class CutiApprovalService
             return false;
         }
 
-        if ($level === 2 && (int) $approver->id_divisi !== (int) $cuti->karyawan?->id_divisi) {
+        if ($userLevel === 2 && (int) $approver->id_divisi !== (int) $cuti->karyawan?->id_divisi) {
             return false;
         }
 
-        return $this->currentLevel($cuti) === $level;
+        return $this->currentLevel($cuti) === $userLevel;
     }
 
     public function recordApproval(Cuti $cuti, User $user, string $status, ?string $catatan = null): void
@@ -123,11 +194,15 @@ class CutiApprovalService
 
     public function currentLevel(Cuti $cuti): int
     {
-        $count = $cuti->relationLoaded('persetujuanCuti')
-            ? $cuti->persetujuanCuti->where('status_persetujuan', 'approved')->count()
-            : $cuti->persetujuanCuti()->where('status_persetujuan', 'approved')->count();
+        $count = $cuti->persetujuanCuti()->where('status_persetujuan', 'approved')->count();
 
-        return min($count + 1, 3);
+        $applicant = $cuti->karyawan;
+        if (!$applicant) {
+            $applicant = Karyawan::with('jabatan')->find($cuti->id_karyawan);
+        }
+
+        $start = $applicant ? $this->startingLevel($applicant) : 1;
+        return $start + $count;
     }
 
     public function levelLabel(Cuti $cuti): string
@@ -135,18 +210,25 @@ class CutiApprovalService
         return self::LEVEL_LABELS[$this->currentLevel($cuti)] ?? 'Unknown';
     }
 
-    public function finalApprovalLevel(): int
+    public function finalApprovalLevel(Cuti $cuti): int
     {
-        return 3;
+        $applicant = $cuti->karyawan;
+        if (!$applicant) {
+            $applicant = Karyawan::with('jabatan')->find($cuti->id_karyawan);
+        }
+
+        $start = $applicant ? $this->startingLevel($applicant) : 1;
+        return ($start === 4) ? 5 : 4;
     }
 
     private function approverLevel(Karyawan $approver): ?int
     {
         return match ($approver->jabatan?->nama_jabatan) {
-            'SDM' => 1,
+            'SDM'            => 1,
             'Manager Divisi' => 2,
-            'Manager Umum' => 3,
-            default => null,
+            'Manager Umum'   => 3,
+            'Management'     => 4,
+            default          => null,
         };
     }
 }

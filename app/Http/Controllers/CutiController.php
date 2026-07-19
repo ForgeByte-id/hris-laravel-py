@@ -207,7 +207,7 @@ class CutiController extends Controller
                         'tanggal_persetujuan' => Carbon::now(),
                         'id_atasan' => $approverId,
                     ]);
-                } elseif ($approvalCount >= $approvalService->finalApprovalLevel()) {
+                } elseif ($approvalService->currentLevel($cuti) >= $approvalService->finalApprovalLevel($cuti)) {
                     $durasiCuti = $cuti->tanggal_mulai->diffInDays($cuti->tanggal_selesai) + 1;
 
                     $leaveQuotaService->assertAvailable(

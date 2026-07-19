@@ -64,6 +64,7 @@ class RolePermissionSeeder extends Seeder
         $manager = Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'web']);
         $supervisor = Role::firstOrCreate(['name' => 'supervisor', 'guard_name' => 'web']);
         $karyawan = Role::firstOrCreate(['name' => 'karyawan', 'guard_name' => 'web']);
+        $management = Role::firstOrCreate(['name' => 'Management', 'guard_name' => 'web']);
 
         // ========================
         // ASSIGN PERMISSIONS
@@ -123,5 +124,9 @@ class RolePermissionSeeder extends Seeder
             'view-cuti-history',
             'view-jadwal',
         ]);
+
+        // Management = top-level approval (Manager Umum's leave approver).
+        // Same effective access as admin for cuti approval + full menu visibility.
+        $management->givePermissionTo($permissions);
     }
 }

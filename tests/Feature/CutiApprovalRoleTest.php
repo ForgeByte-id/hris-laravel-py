@@ -17,25 +17,28 @@ class CutiApprovalRoleTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_division_head_only_sees_pending_leave_from_same_division(): void
+    public function test_division_head_only_sees_pending_leave_from_same_division_after_sdm_approval(): void
     {
         $this->seedLeaveTypes();
         $divisionA = Divisi::firstOrCreate(['nama_divisi' => 'Divisi A']);
         $divisionB = Divisi::firstOrCreate(['nama_divisi' => 'Divisi B']);
-        $head = $this->createEmployeeWithRole('atasan_divisi', $divisionA, 'Atasan A');
-        $employeeA = $this->createEmployeeWithRole('karyawan', $divisionA, 'Employee A');
-        $employeeB = $this->createEmployeeWithRole('karyawan', $divisionB, 'Employee B');
+        
+        $head = $this->createEmployeeWithRole('atasan_divisi', $divisionA, 'Atasan A', 'Manager Divisi');
+        $sdmA = $this->createEmployeeWithRole('admin', $divisionA, 'SDM A', 'SDM');
+        $employeeA = $this->createEmployeeWithRole('karyawan', $divisionA, 'Employee A', 'Staff');
+        $employeeB = $this->createEmployeeWithRole('karyawan', $divisionB, 'Employee B', 'Staff');
 
         $cutiA = $this->createPendingLeave($employeeA['karyawan']);
         $cutiB = $this->createPendingLeave($employeeB['karyawan']);
+
+        // SDM approves Cuti A first so it moves to level 2 (Division Head)
+        $this->actingAs($sdmA['user'])->patch(route('cuti.update-status', $cutiA->id_cuti), ['status' => 'approved']);
 
         $response = $this->actingAs($head['user'])->get(route('cuti.approval'));
 
         $response->assertOk();
         $response->assertSee($employeeA['karyawan']->nama);
         $response->assertDontSee($employeeB['karyawan']->nama);
-        $this->assertDatabaseHas('cuti', ['id_cuti' => $cutiA->id_cuti]);
-        $this->assertDatabaseHas('cuti', ['id_cuti' => $cutiB->id_cuti]);
     }
 
     public function test_hr_cannot_update_leave_status(): void
@@ -61,15 +64,78 @@ class CutiApprovalRoleTest extends TestCase
     {
         $this->seedLeaveTypes();
         $division = Divisi::firstOrCreate(['nama_divisi' => 'Divisi Admin Test']);
-        $admin = $this->createUserWithRole('admin');
+        
+        $sdm = $this->createEmployeeWithRole('admin', $division, 'SDM Admin Test', 'SDM');
+        $md = $this->createEmployeeWithRole('atasan_divisi', $division, 'MD Admin Test', 'Manager Divisi');
+        $mu = $this->createEmployeeWithRole('atasan_divisi', $division, 'MU Admin Test', 'Manager Umum');
+        
         $employee = $this->createEmployeeWithRole('karyawan', $division, 'Employee Admin Test');
         $cuti = $this->createPendingLeave($employee['karyawan']);
 
-        $response = $this->actingAs($admin)->patch(route('cuti.update-status', $cuti->id_cuti), [
+        // Level 1: SDM approval
+        $response1 = $this->actingAs($sdm['user'])->patch(route('cuti.update-status', $cuti->id_cuti), [
             'status' => 'approved',
         ]);
+        $response1->assertRedirect();
 
-        $response->assertRedirect();
+        // Level 2: Manager Divisi approval
+        $response2 = $this->actingAs($md['user'])->patch(route('cuti.update-status', $cuti->id_cuti), [
+            'status' => 'approved',
+        ]);
+        $response2->assertRedirect();
+
+        // Level 3: Manager Umum approval (final approval)
+        $response3 = $this->actingAs($mu['user'])->patch(route('cuti.update-status', $cuti->id_cuti), [
+            'status' => 'approved',
+        ]);
+        $response3->assertRedirect();
+
+        $this->assertDatabaseHas('cuti', [
+            'id_cuti' => $cuti->id_cuti,
+            'status_persetujuan' => 'approved',
+        ]);
+    }
+
+    public function test_manager_divisi_leave_goes_directly_to_manager_umum(): void
+    {
+        $this->seedLeaveTypes();
+        $division = Divisi::firstOrCreate(['nama_divisi' => 'Divisi Manager']);
+
+        $managerDivisi = $this->createEmployeeWithRole('atasan_divisi', $division, 'Manager Divisi A', 'Manager Divisi');
+        $managerUmum = $this->createEmployeeWithRole('atasan_divisi', $division, 'Manager Umum A', 'Manager Umum');
+        $cuti = $this->createPendingLeave($managerDivisi['karyawan']);
+
+        $response = $this->actingAs($managerUmum['user'])->get(route('cuti.approval'));
+        $response->assertOk();
+        $response->assertSee($managerDivisi['karyawan']->nama);
+
+        $this->actingAs($managerUmum['user'])->patch(route('cuti.update-status', $cuti->id_cuti), [
+            'status' => 'approved',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('cuti', [
+            'id_cuti' => $cuti->id_cuti,
+            'status_persetujuan' => 'approved',
+        ]);
+    }
+
+    public function test_manager_umum_leave_goes_directly_to_management(): void
+    {
+        $this->seedLeaveTypes();
+        $division = Divisi::firstOrCreate(['nama_divisi' => 'Divisi Management']);
+
+        $managerUmum = $this->createEmployeeWithRole('atasan_divisi', $division, 'Manager Umum B', 'Manager Umum');
+        $management = $this->createEmployeeWithRole('Management', $division, 'BOD A', 'Staff');
+        $cuti = $this->createPendingLeave($managerUmum['karyawan']);
+
+        $response = $this->actingAs($management['user'])->get(route('cuti.approval'));
+        $response->assertOk();
+        $response->assertSee($managerUmum['karyawan']->nama);
+
+        $this->actingAs($management['user'])->patch(route('cuti.update-status', $cuti->id_cuti), [
+            'status' => 'approved',
+        ])->assertRedirect();
+
         $this->assertDatabaseHas('cuti', [
             'id_cuti' => $cuti->id_cuti,
             'status_persetujuan' => 'approved',
@@ -88,10 +154,10 @@ class CutiApprovalRoleTest extends TestCase
         ]);
     }
 
-    private function createEmployeeWithRole(string $role, Divisi $division, string $name): array
+    private function createEmployeeWithRole(string $role, Divisi $division, string $name, string $namaJabatan = 'Staff'): array
     {
         $user = $this->createUserWithRole($role, str($name)->slug('_')->value());
-        $jabatan = Jabatan::firstOrCreate(['nama_jabatan' => 'Staff']);
+        $jabatan = Jabatan::firstOrCreate(['nama_jabatan' => $namaJabatan]);
 
         $karyawan = Karyawan::create([
             'id_user' => $user->id_user,
