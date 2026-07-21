@@ -2,7 +2,7 @@ name: Build & Deploy HRIS
 
 on:
   push:
-    branches: [main]
+    branches: [master]
 
 env:
   APP_IMAGE: ghcr.io/forgebyte-id/hris-app
