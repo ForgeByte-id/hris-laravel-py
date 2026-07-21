@@ -25,7 +25,7 @@ class JadwalBulkService
      *
      * @return array{created:int,updated:int,skipped:int,failed:int,details:array<int, array{status:string,message:string}>}
      */
-    public function storeRange(array $payload): array
+    public function storeRange(array $payload, ?int $scopedDivisiId = null): array
     {
         $summary = [
             'created' => 0,
@@ -35,8 +35,9 @@ class JadwalBulkService
             'details' => [],
         ];
 
-        $shift = Shift::where('kode_shift', $payload['id_shift'])->firstOrFail();
-        $employees = $this->resolveEmployees($payload);
+        //$shift = Shift::where('id_shift', $payload['id_shift'])->firstOrFail();
+        $shift = Shift::findOrFail($payload['id_shift']);
+        $employees = $this->resolveEmployees($payload, $scopedDivisiId);
 
         if ($employees->isEmpty()) {
             $summary['failed']++;
@@ -87,9 +88,10 @@ class JadwalBulkService
     /**
      * @param array<string, mixed> $payload
      */
-    private function resolveEmployees(array $payload)
+    private function resolveEmployees(array $payload, ?int $scopedDivisiId = null)
     {
-        $query = Karyawan::query()->orderBy('nama');
+        $query = Karyawan::query()->orderBy('nama')
+            ->when($scopedDivisiId, fn ($q) => $q->where('id_divisi', $scopedDivisiId));
 
         if ($payload['target_type'] === 'divisi') {
             $query->where('id_divisi', $payload['id_divisi']);

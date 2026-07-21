@@ -7,15 +7,20 @@
         <div class="hris-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h2 class="mb-0">Jadwal Kerja Karyawan</h2>
             <div class="d-flex flex-wrap gap-2">
-                @can('create-jadwal')
+                {{-- @can('create-jadwal')
                 <a href="{{ route('jadwal.create') }}" class="btn btn-primary">
                     Tambah Jadwal
                 </a>
-                @endcan
+                @endcan --}}
                 @can('bulk-create-jadwal')
                 <a href="{{ route('jadwal.bulk-create') }}" class="btn btn-success">
-                    Input Massal
+                    Tambah Jadwal
                 </a>
+                @endcan
+                @can('set-libur-massal')
+                <button onclick="showLiburModal()" class="btn btn-danger">
+                    Set Libur Massal
+                </button>
                 @endcan
             </div>
         </div>
@@ -34,26 +39,48 @@
             </div>
             --}}
 
-            <!-- Filter Bulan -->
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <!-- Filter -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center">
                 <form method="GET" class="d-flex flex-wrap gap-2 align-items-center">
-                    <label class="fw-semibold">Pilih Bulan:</label>
-                    <input type="month" name="bulan" value="{{ $bulan }}" class="form-control" style="max-width: 220px;">
-                    <button type="submit" class="btn btn-primary">Tampilkan</button>
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-4">
+                            <label class="fw-semibold">Pilih Bulan:</label>
+                            <input type="month" name="bulan" value="{{ $bulan }}" class="form-control" style="max-width: 220px;">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="fw-semibold">Nama Karyawan:</label>
+                            <select name="id_karyawan" class="form-select" style="max-width: 200px;">
+                                <option value="">-- Semua Karyawan --</option>
+                                @foreach($karyawanOptions as $opt)
+                                    <option value="{{ $opt->id_karyawan }}" @selected((string) $idKaryawan === (string) $opt->id_karyawan)>
+                                        {{ $opt->nama }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="fw-semibold">Divisi:</label>
+                            <select name="id_divisi" class="form-select" style="max-width: 200px;">
+                                <option value="">-- Semua Divisi --</option>
+                                @foreach($divisiList as $divisi)
+                                    <option value="{{ $divisi->id }}" @selected((string) $idDivisi === (string) $divisi->id)>
+                                        {{ $divisi->nama_divisi }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary">Tampilkan</button>
+                        </div>
+                    </div>
                 </form>
-
-                @can('set-libur-massal')
-                <button onclick="showLiburModal()" class="btn btn-danger">
-                    Set Libur Massal
-                </button>
-                @endcan
             </div>
 
             <!-- Legend -->
-            <div class="d-flex flex-wrap gap-3 mb-3 p-3 bg-light rounded-3">
+            <div class="d-flex flex-wrap gap-3 p-3 bg-light rounded-3">
                 @forelse($shiftLegend as $shift)
                     <div>
-                        <span class="badge" style="background: {{ $shift->color_hex }};">{{ $shift->id_shift }}</span>
+                        <span class="badge" style="background: {{ $shift->color_hex }};">{{ $shift->shift_short }}</span>
                         = {{ $shift->label }}
                     </div>
                 @empty

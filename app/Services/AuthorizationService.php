@@ -185,4 +185,74 @@ class AuthorizationService
     {
         return !$this->isAdmin($user) && !$this->isHr($user);
     }
+
+    public const JADWAL_MANAGE_FULL_ACCESS_JABATAN = ['Manager Umum', 'SDM'];
+    public const JADWAL_MANAGE_DIVISI_SCOPED_JABATAN = ['Manager Divisi'];
+
+    /**
+     * Resolve whether the user may create/edit jadwal, and for which divisi.
+     *
+     * @return array{allowed: bool, id_divisi: int|null} id_divisi is null for full access.
+     */
+    public function getJadwalManageScope(User $user): array
+    {
+        if ($user->hasRole('admin')) {
+            return ['allowed' => true, 'id_divisi' => null];
+        }
+
+        $karyawan = Karyawan::with('jabatan')->where('id_user', $user->id_user)->first();
+        $nama = $karyawan?->jabatan?->nama_jabatan;
+
+        if (in_array($nama, self::JADWAL_MANAGE_FULL_ACCESS_JABATAN, true)) {
+            return ['allowed' => true, 'id_divisi' => null];
+        }
+
+        if (in_array($nama, self::JADWAL_MANAGE_DIVISI_SCOPED_JABATAN, true)) {
+            return ['allowed' => true, 'id_divisi' => $karyawan->id_divisi];
+        }
+
+        return ['allowed' => false, 'id_divisi' => null];
+    }
+
+    /**
+     * Resolve whether the user may view the company-wide laporan (report), and for which divisi.
+     * Same tiering as jadwal management: Manager Umum/SDM get full access, Manager Divisi is
+     * scoped to their own divisi, everyone else is denied entirely.
+     *
+     * @return array{allowed: bool, id_divisi: int|null}
+     */
+    public function getLaporanViewScope(User $user): array
+    {
+        return $this->getJadwalManageScope($user);
+    }
+
+    public const JADWAL_VIEW_FULL_ACCESS_JABATAN = ['Manager Umum', 'Wakil Manager Umum', 'SDM'];
+    public const JADWAL_VIEW_DIVISI_SCOPED_JABATAN = ['Manager Divisi', 'Wakil Manager Divisi'];
+
+    /**
+     * Resolve whether the user may view the team jadwal calendar, and for which divisi.
+     * allowed=false means the caller should fall back to viewing only their own schedule.
+     *
+     * @return array{allowed: bool, id_divisi: int|null} id_divisi is null for full access.
+     */
+    public function getJadwalViewScope(User $user): array
+    {
+        if ($user->hasRole('admin')) {
+            return ['allowed' => true, 'id_divisi' => null];
+        }
+
+        $karyawan = Karyawan::with('jabatan')->where('id_user', $user->id_user)->first();
+        $nama = $karyawan?->jabatan?->nama_jabatan;
+
+        if (in_array($nama, self::JADWAL_VIEW_FULL_ACCESS_JABATAN, true)) {
+            return ['allowed' => true, 'id_divisi' => null];
+        }
+
+        if (in_array($nama, self::JADWAL_VIEW_DIVISI_SCOPED_JABATAN, true)) {
+            return ['allowed' => true, 'id_divisi' => $karyawan->id_divisi];
+        }
+
+        return ['allowed' => false, 'id_divisi' => null];
+    }
+
 }

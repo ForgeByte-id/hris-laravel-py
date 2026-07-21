@@ -26,3 +26,5 @@ repomix*
 repomix-.*
 /karyawan-dataset/img/*
 /.tmp
+app.env
+face-service.env

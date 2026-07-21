@@ -1,0 +1,38 @@
+services:
+  app:
+    image: ghcr.io/forgebyte-id/hris-app:latest
+    container_name: hris-app
+    restart: unless-stopped
+    env_file:
+      - ./app.env
+    volumes:
+      - hris_storage:/var/www/html/storage
+    ports:
+      - "8090:80"
+    depends_on:
+      - python
+    networks:
+      - default
+      - shared-net
+
+  python:
+    image: ghcr.io/forgebyte-id/hris-face-service:latest
+    container_name: hris-face-service
+    restart: unless-stopped
+    env_file:
+      - ./face-service.env
+    environment:
+      ALLOWED_IMAGE_TMP_DIR: /var/www/html/storage/app/temp
+    volumes:
+      - hris_storage:/var/www/html/storage
+    networks:
+      - default
+      - shared-net
+
+networks:
+  default:
+  shared-net:
+    external: true
+
+volumes:
+  hris_storage:

@@ -11,14 +11,43 @@
             <form action="{{ route('jadwal.bulk-store') }}" method="POST">
                 @csrf
 
-                <div class="alert alert-warning d-flex align-items-center gap-3" role="alert">
-                    <div>
-                        <h5 class="mb-1">Pilih Tanggal</h5>
-                        <input type="date" name="tanggal" required class="form-control" style="max-width: 250px;">
+                 <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Pilih Tanggal</label>
+                        <input type="date" name="tanggal" required class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Divisi</label>
+                        <select id="filterDivisi" name="id_divisi" class="form-select">
+                            <option value="">-- Pilih Divisi --</option>
+                            @foreach($divisiList as $divisi)
+                                <option value="{{ $divisi->id }}" @selected((string) old('id_divisi') === (string) $divisi->id)>
+                                    {{ $divisi->nama_divisi }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Jabatan</label>
+                        <select id="filterJabatan" class="form-select">
+                            <option value="">-- Pilih Jabatan --</option>
+                            @foreach($jabatanList as $jabatan)
+                                <option value="{{ $jabatan->id }}">{{ $jabatan->nama_jabatan }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                <div>
+                    <h5>Atur Jadwal untuk Semua Karyawan:</h5>
+                </div>
+                <div class="mt-3 bg-light rounded-3">
+                    <label class="form-label fw-semibold">Quick Set (Set Semua Sekaligus):</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" onclick="setAllShift('1')" class="btn btn-success">Set Semua Pagi</button>
+                        <button type="button" onclick="setAllShift('2')" class="btn btn-warning">Set Semua Siang</button>
+                        <button type="button" onclick="setAllShift('3')" class="btn btn-primary">Set Semua Libur</button>
+                        <button type="button" onclick="clearAllShift()" class="btn btn-outline-secondary">Clear Semua</button>
                     </div>
                 </div>
-
-                <h5 class="mb-3">Atur Jadwal untuk Semua Karyawan:</h5>
                 <div class="table-responsive">
                     <table class="table table-hover hris-table align-middle">
                         <thead>
@@ -31,7 +60,7 @@
                         </thead>
                         <tbody>
                             @foreach($karyawanList as $index => $k)
-                            <tr>
+                            <tr data-id-divisi="{{ $k->id_divisi }}" data-id-jabatan="{{ $k->id_jabatan }}">
                                 <td>{{ $index + 1 }}</td>
                                 <td>
                                     <strong>{{ $k->nama }}</strong>
@@ -42,7 +71,7 @@
                                      <select name="jadwal[{{ $index }}][id_shift]" required class="form-select">
                                          <option value="">-- Pilih --</option>
                                          @foreach($jamKerjaOptions as $option)
-                                             <option value="{{ $option->id_shift }}">{{ $option->id_shift }} - {{ $option->label }}</option>
+                                             <option value="{{ $option->id_shift }}">{{ $option->label }}</option>
                                          @endforeach
                                      </select>
                                 </td>
@@ -51,17 +80,6 @@
                         </tbody>
                     </table>
                 </div>
-
-                <div class="mt-3 p-3 bg-light rounded-3">
-                    <h6 class="mb-2">Quick Set (Set Semua Sekaligus):</h6>
-                    <div class="d-flex flex-wrap gap-2">
-                        <button type="button" onclick="setAllShift('P')" class="btn btn-success">Set Semua Pagi</button>
-                        <button type="button" onclick="setAllShift('M')" class="btn btn-warning">Set Semua Siang</button>
-                        <button type="button" onclick="setAllShift('S')" class="btn btn-primary">Set Semua Malam</button>
-                        <button type="button" onclick="setAllShift('L')" class="btn btn-danger">Set Semua Libur</button>
-                    </div>
-                </div>
-
                 <div class="d-flex gap-2 mt-4">
                     <button type="submit" class="btn hris-btn hris-btn-primary flex-fill">
                         Simpan Semua Jadwal
@@ -74,7 +92,7 @@
         </div>
     </div>
 
-    <div class="hris-card">
+    {{-- <div class="hris-card">
         <div class="hris-card-header">
             <h5 class="mb-0"><i class="bi bi-calendar-range me-2"></i>Bulk Range Jadwal</h5>
         </div>
@@ -167,7 +185,7 @@
                 </div>
             </form>
         </div>
-    </div>
+    </div> --}}
 </div>
 @endsection
 
@@ -179,14 +197,67 @@ function setAllShift(shift) {
         select.value = shift;
     });
 }
-
-function syncTargetPanels() {
-    const type = document.getElementById('targetType')?.value;
-    document.getElementById('targetDivisi').style.display = type === 'divisi' ? 'block' : 'none';
-    document.getElementById('targetKaryawan').style.display = type === 'karyawan' ? 'block' : 'none';
+function clearAllShift() {
+    const selects = document.querySelectorAll('select[name*="[id_shift]"]');
+    selects.forEach(select => {
+        select.value = '';
+    });
 }
 
-document.getElementById('targetType')?.addEventListener('change', syncTargetPanels);
-syncTargetPanels();
+const allJabatanOptions = @json($jabatanList->map(fn($j) => ['id' => (string) $j->id, 'nama' => $j->nama_jabatan]));
+
+function updateJabatanOptions(divisiVal) {
+    const jabatanSelect = document.getElementById('filterJabatan');
+    let allowedIds = null;
+
+    if (divisiVal) {
+        allowedIds = new Set();
+        document.querySelectorAll('tbody tr[data-id-divisi="' + divisiVal + '"]').forEach(row => {
+            if (row.dataset.idJabatan) {
+                allowedIds.add(row.dataset.idJabatan);
+            }
+        });
+    }
+
+    jabatanSelect.innerHTML = '<option value="">-- Pilih Jabatan --</option>';
+    allJabatanOptions.forEach(jabatan => {
+        if (!allowedIds || allowedIds.has(jabatan.id)) {
+            const opt = document.createElement('option');
+            opt.value = jabatan.id;
+            opt.textContent = jabatan.nama;
+            jabatanSelect.appendChild(opt);
+        }
+    });
+}
+
+
+function applyFilters() {
+    const divisiVal = document.getElementById('filterDivisi').value;
+    const jabatanVal = document.getElementById('filterJabatan').value;
+
+    document.querySelectorAll('tbody tr[data-id-divisi]').forEach(row => {
+        const matches = (!divisiVal || row.dataset.idDivisi === divisiVal)
+                      && (!jabatanVal || row.dataset.idJabatan === jabatanVal);
+
+        row.style.display = matches ? '' : 'none';
+        row.querySelectorAll('select, input').forEach(field => field.disabled = !matches);
+    });
+}
+
+document.getElementById('filterDivisi').addEventListener('change', function () {
+    updateJabatanOptions(this.value);
+    applyFilters();
+});
+document.getElementById('filterJabatan').addEventListener('change', applyFilters);
+
+// function syncTargetPanels() {
+//     const type = document.getElementById('targetType')?.value;
+//     document.getElementById('targetDivisi').style.display = type === 'divisi' ? 'block' : 'none';
+//     document.getElementById('targetKaryawan').style.display = type === 'karyawan' ? 'block' : 'none';
+// }
+
+// document.getElementById('targetType')?.addEventListener('change', syncTargetPanels);
+// syncTargetPanels();
+
 </script>
 @endsection

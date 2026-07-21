@@ -34,10 +34,10 @@
             <!-- Summary -->
             <div class="row g-3 mb-4">
                 @php
-                    $totalPagi = $jadwalList->where('id_shift', 'P')->count();
-                    $totalSiang = $jadwalList->where('id_shift', 'M')->count();
-                    $totalMalam = $jadwalList->where('id_shift', 'S')->count();
-                    $totalLibur = $jadwalList->where('id_shift', 'L')->count();
+                    $totalPagi = $jadwalList->where('id_shift', '1')->count();
+                    $totalSiang = $jadwalList->where('id_shift', '2')->count();
+                    $totalLibur = $jadwalList->where('id_shift', '3')->count();
+                    $totalCuti = $jadwalList->where('id_shift', '4')->count();
                 @endphp
                 <div class="col-6 col-lg-3">
                     <div class="p-3 rounded-3 text-center text-white" style="background: #4CAF50;">
@@ -53,13 +53,13 @@
                 </div>
                 <div class="col-6 col-lg-3">
                     <div class="p-3 rounded-3 text-center text-white" style="background: #2196F3;">
-                        <h3 class="mb-0">{{ $totalMalam }}</h3>
+                        <h3 class="mb-0">{{ $totalLibur }}</h3>
                         <small>Shift Malam</small>
                     </div>
                 </div>
                 <div class="col-6 col-lg-3">
                     <div class="p-3 rounded-3 text-center text-white" style="background: #f44336;">
-                        <h3 class="mb-0">{{ $totalLibur }}</h3>
+                        <h3 class="mb-0">{{ $totalCuti }}</h3>
                         <small>Hari Libur</small>
                     </div>
                 </div>

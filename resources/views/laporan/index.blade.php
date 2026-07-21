@@ -14,13 +14,6 @@
                     </h2>
                     <p class="text-muted small mb-0">Rekap data kehadiran dan cuti karyawan</p>
                 </div>
-                <form method="GET" class="d-flex align-items-center gap-2">
-                    <label class="fw-semibold small">Bulan:</label>
-                    <input type="month" name="bulan" value="{{ $bulan }}" class="form-control" style="max-width: 200px;">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search me-1"></i>Tampilkan
-                    </button>
-                </form>
             </div>
         </div>
     </div>
@@ -73,6 +66,45 @@
         </div>
     </div>
 
+    {{-- Filter --}}
+    <div class="row g-3 mb-4">
+        <form method="GET" class="d-flex align-items-center gap-2 flex-wrap">
+                <label class="fw-semibold small">Bulan:</label>
+                <input type="month" name="bulan" value="{{ $bulan }}" class="form-control" style="max-width: 200px;">
+
+                <label class="fw-semibold small">Karyawan:</label>
+                <select id="filterKaryawan" class="form-select" style="max-width: 180px;">
+                    <option value="">-- Semua --</option>
+                    @foreach($karyawanOptions as $opt)
+                        <option value="{{ $opt->id_karyawan }}">{{ $opt->nama }}</option>
+                    @endforeach
+                </select>
+
+                <label class="fw-semibold small">Divisi:</label>
+                <select id="filterDivisi" class="form-select" style="max-width: 180px;">
+                    <option value="">-- Semua --</option>
+                    @foreach($divisiList as $divisi)
+                        <option value="{{ $divisi->id }}">{{ $divisi->nama_divisi }}</option>
+                    @endforeach
+                </select>
+
+                <label class="fw-semibold small">Jabatan:</label>
+                <select id="filterJabatan" class="form-select" style="max-width: 180px;">
+                    <option value="">-- Semua --</option>
+                    @foreach($jabatanList as $jabatan)
+                        <option value="{{ $jabatan->id }}">{{ $jabatan->nama_jabatan }}</option>
+                    @endforeach
+                </select>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-search me-1"></i>Tampilkan
+                </button>
+                <button type="button" id="exportBtn" class="btn btn-success">
+                    <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export
+                </button>
+            </form>
+    </div>
+
     {{-- Table --}}
     <div class="hris-card">
         <div class="hris-card-header">
@@ -83,7 +115,7 @@
         <div class="hris-card-body p-0">
             @if($karyawanList->count() > 0)
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0 datatable">
+                    <table id="laporanTable" class="table table-hover mb-0 datatable">
                         <thead class="table-light">
                             <tr>
                                 <th style="width: 50px;">No</th>
@@ -102,7 +134,7 @@
                                 $absensi = $absensiRekap->get($k->id_karyawan);
                                 $cuti = $cutiRekap->get($k->id_karyawan);
                             @endphp
-                            <tr>
+                            <tr data-id-karyawan="{{ $k->id_karyawan }}" data-id-divisi="{{ $k->id_divisi }}" data-id-jabatan="{{ $k->id_jabatan }}">
                                 <td class="align-middle">{{ $loop->iteration }}</td>
                                 <td class="align-middle">
                                     <div class="d-flex align-items-center gap-2">
@@ -141,3 +173,81 @@
     </div>
 </div>
 @endsection
+
+@section('scripts')
+<script>
+$(document).ready(function () {
+    const table = $('#laporanTable').DataTable();
+    const allJabatanOptions = @json($jabatanList->map(fn($j) => ['id' => (string) $j->id, 'nama' => $j->nama_jabatan]));
+
+    function updateJabatanOptions(divisiVal) {
+        const jabatanSelect = document.getElementById('filterJabatan');
+        const currentVal = jabatanSelect.value;
+        let allowedIds = null;
+
+        if (divisiVal) {
+            allowedIds = new Set();
+            table.rows().nodes().each(function (row) {
+                if (row.dataset.idDivisi === divisiVal && row.dataset.idJabatan) {
+                    allowedIds.add(row.dataset.idJabatan);
+                }
+            });
+        }
+
+        jabatanSelect.innerHTML = '<option value="">-- Semua --</option>';
+        allJabatanOptions.forEach(jabatan => {
+            if (!allowedIds || allowedIds.has(jabatan.id)) {
+                const opt = document.createElement('option');
+                opt.value = jabatan.id;
+                opt.textContent = jabatan.nama;
+                jabatanSelect.appendChild(opt);
+            }
+        });
+
+        if (allowedIds === null || allowedIds.has(currentVal)) {
+            jabatanSelect.value = currentVal;
+        }
+    }
+
+    $.fn.dataTable.ext.search.push(function (settings, searchData, index) {
+        if (settings.nTable.id !== 'laporanTable') {
+            return true;
+        }
+
+        const row = table.row(index).node();
+        const karyawanVal = document.getElementById('filterKaryawan').value;
+        const divisiVal = document.getElementById('filterDivisi').value;
+        const jabatanVal = document.getElementById('filterJabatan').value;
+
+        return (!karyawanVal || row.dataset.idKaryawan === karyawanVal)
+            && (!divisiVal || row.dataset.idDivisi === divisiVal)
+            && (!jabatanVal || row.dataset.idJabatan === jabatanVal);
+    });
+
+    document.getElementById('filterKaryawan').addEventListener('change', () => table.draw());
+    document.getElementById('filterDivisi').addEventListener('change', function () {
+        updateJabatanOptions(this.value);
+        table.draw();
+    });
+    document.getElementById('filterJabatan').addEventListener('change', () => table.draw());
+
+    document.getElementById('exportBtn').addEventListener('click', function () {
+        const params = new URLSearchParams();
+        const bulan = document.querySelector('input[name="bulan"]').value;
+        const idKaryawan = document.getElementById('filterKaryawan').value;
+        const idDivisi = document.getElementById('filterDivisi').value;
+        const idJabatan = document.getElementById('filterJabatan').value;
+
+        if (bulan) params.set('bulan', bulan);
+        if (idKaryawan) params.set('id_karyawan', idKaryawan);
+        if (idDivisi) params.set('id_divisi', idDivisi);
+        if (idJabatan) params.set('id_jabatan', idJabatan);
+
+        window.location.href = '{{ route('laporan.export') }}?' + params.toString();
+    });
+});
+</script>
+@endsection
+
+
+

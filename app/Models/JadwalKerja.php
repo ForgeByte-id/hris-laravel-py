@@ -29,21 +29,21 @@ class JadwalKerja extends Model
 
     public function shift()
     {
-        return $this->belongsTo(Shift::class, 'id_shift', 'kode_shift');
+        return $this->belongsTo(Shift::class, 'id_shift', 'id_shift');
     }
 
     public function isLibur()
     {
-        return $this->id_shift === 'L';
+        return $this->id_shift === '3';
     }
 
     public function getShiftColorAttribute()
     {
         return match($this->id_shift) {
-            'P' => '#4CAF50',
-            'S' => '#2196F3',
-            'L' => '#f44336',
-            'C' => '#6f42c1',
+            '1' => '#4CAF50',
+            '2' => '#2196F3',
+            '3' => '#f44336',
+            '4' => '#6f42c1',
             default => '#9E9E9E'
         };
     }
@@ -51,10 +51,10 @@ class JadwalKerja extends Model
     public function getShiftShortAttribute()
     {
         return match($this->id_shift) {
-            'P' => 'P',
-            'S' => 'S',
-            'L' => 'L',
-            'C' => 'C',
+            '1' => 'P',
+            '2' => 'S',
+            '3' => 'L',
+            '4' => 'C',
             default => '-'
         };
     }

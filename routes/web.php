@@ -116,6 +116,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Laporan Routes
     Route::get('/laporan', [LaporanController::class, 'index'])->name('laporan.index');
+    Route::get('/laporan/export', [LaporanController::class, 'export'])->name('laporan.export');
 
     // Admin Routes
     Route::prefix('admin')->name('admin.')->group(function () {

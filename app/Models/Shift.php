@@ -21,7 +21,7 @@ class Shift extends Model
 
     public function jadwalKerja()
     {
-        return $this->hasMany(JadwalKerja::class, 'id_shift', 'kode_shift');
+        return $this->hasMany(JadwalKerja::class, 'id_shift', 'id_shift');
     }
 
     public function isLiburLike(): bool
@@ -46,6 +46,15 @@ class Shift extends Model
             'L' => '#f44336',
             'C' => '#6f42c1',
             default => '#9E9E9E',
+        };
+    }
+
+    public function getShiftShortAttribute(): string
+    {
+        return match ($this->kode_shift) {
+            'Pa' => 'P',
+            'Si' => 'S',
+            default => $this->kode_shift, // 'L' and 'C' are already single letters
         };
     }
 }

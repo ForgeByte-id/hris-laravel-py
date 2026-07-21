@@ -60,11 +60,11 @@
                                 <i class="bi bi-calendar-x text-muted"></i>
                             @endif
                         </div>
-                        <div class="fw-semibold mb-1">Jadwal Hari Ini</div>
+                        <div class="h3 mb-1 fw-bold">Jadwal Hari Ini</div>
                         @if ($todayJadwal)
                             <span class="badge"
                                   style="background-color:{{ $todayJadwal->shift_color }};font-size:0.8rem;">
-                                {{ $todayJadwal->id_shift }}
+                                {{ $todayJadwal->shift->nama_shift ?? '-' }}
                             </span>
                         @else
                             <span class="text-muted small">Tidak ada jadwal</span>

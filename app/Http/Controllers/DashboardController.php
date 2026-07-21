@@ -32,7 +32,8 @@ class DashboardController extends Controller
         $todayAttendanceRows = collect();
 
         if ($karyawan) {
-            $todayJadwal = JadwalKerja::where('id_karyawan', $karyawan->id_karyawan)
+            $todayJadwal = JadwalKerja::with('shift')
+                ->where('id_karyawan', $karyawan->id_karyawan)
                 ->whereDate('tanggal', today())
                 ->first();
 
