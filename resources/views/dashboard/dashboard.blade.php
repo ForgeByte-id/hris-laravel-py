@@ -4,7 +4,7 @@
 <div class="hris-container">
 
     {{-- ── Profile / greeting card ─────────────────────────────────────── --}}
-    <div class="row g-3 align-items-center mb-4">
+    <div class="row g-3 align-items-center mb-1">
         <div class="col-12">
             <div class="hris-card">
                 <div class="hris-card-body d-flex align-items-center gap-3 flex-wrap">
@@ -16,11 +16,11 @@
                     </div>
 
                     <div class="flex-grow-1">
-                        @if ($karyawan)
-                            <h2 class="h4 mb-1">{{ $karyawan->nama ?? $user->username }}</h2>
+                        @if ($profileKaryawan)
+                            <h2 class="h4 mb-1">{{ $profileKaryawan->nama }}</h2>
                             <span class="text-muted small">
-                                {{ $karyawan->jabatan?->nama_jabatan ?? 'Karyawan' }}
-                                &mdash; {{ $karyawan->divisi?->nama_divisi ?? 'Tanpa Divisi' }}
+                                {{ $profileKaryawan->jabatan?->nama_jabatan ?? 'Karyawan' }}
+                                &mdash; {{ $profileKaryawan->divisi?->nama_divisi ?? 'Tanpa Divisi' }}
                             </span>
                         @else
                             <h2 class="h4 mb-1">{{ $user->username }}</h2>
@@ -43,7 +43,7 @@
     @if ($karyawan)
 
         {{-- ── Quick-stats row ─────────────────────────────────────────── --}}
-        <div class="row g-3 mb-3">
+        <div class="row g-3 mb-1">
 
             {{-- Today's shift --}}
             <div class="col-md-4">
@@ -246,15 +246,15 @@
     @if ($isAdmin || $isHr)
 
         {{-- Daily attendance summary --}}
-        <div class="row g-3 mb-3">
+        <div class="row g-3 mt-1">
             @foreach([
                 ['icon' => 'bi-people-fill', 'label' => 'Total Karyawan', 'value' => $dailyAttendanceSummary['total_karyawan'] ?? 0, 'color' => 'var(--hris-primary)'],
                 ['icon' => 'bi-person-check-fill', 'label' => 'Sudah Absen Masuk', 'value' => $dailyAttendanceSummary['sudah_absen_masuk'] ?? 0, 'color' => '#198754'],
                 ['icon' => 'bi-person-x-fill', 'label' => 'Belum Absen', 'value' => $dailyAttendanceSummary['belum_absen'] ?? 0, 'color' => '#dc3545'],
                 ['icon' => 'bi-exclamation-circle-fill', 'label' => 'Terlambat', 'value' => $dailyAttendanceSummary['terlambat'] ?? 0, 'color' => '#ff9800'],
-                ['icon' => 'bi-check-circle-fill', 'label' => 'Tepat Waktu/Hadir', 'value' => $dailyAttendanceSummary['tepat_waktu'] ?? 0, 'color' => '#20c997'],
-                ['icon' => 'bi-slash-circle-fill', 'label' => 'Tidak Hadir', 'value' => $dailyAttendanceSummary['tidak_hadir'] ?? 0, 'color' => '#6c757d'],
-                ['icon' => 'bi-calendar-check-fill', 'label' => 'Cuti Approved', 'value' => $dailyAttendanceSummary['cuti_approved'] ?? 0, 'color' => '#6f42c1'],
+                // ['icon' => 'bi-check-circle-fill', 'label' => 'Tepat Waktu/Hadir', 'value' => $dailyAttendanceSummary['tepat_waktu'] ?? 0, 'color' => '#20c997'],
+                // ['icon' => 'bi-slash-circle-fill', 'label' => 'Tidak Hadir', 'value' => $dailyAttendanceSummary['tidak_hadir'] ?? 0, 'color' => '#6c757d'],
+                // ['icon' => 'bi-calendar-check-fill', 'label' => 'Cuti Approved', 'value' => $dailyAttendanceSummary['cuti_approved'] ?? 0, 'color' => '#6f42c1'],
             ] as $card)
                 <div class="col-6 col-lg-3">
                     <div class="hris-card h-100">
@@ -271,7 +271,7 @@
         </div>
 
         {{-- Today's attendance table --}}
-        <div class="row g-3 mb-3">
+        {{-- <div class="row g-3 mb-3">
             <div class="col-12">
                 <div class="hris-card">
                     <div class="hris-card-header">
@@ -324,7 +324,7 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </div> --}}
 
     @endif {{-- end admin / HR daily recap --}}
 
@@ -345,7 +345,7 @@
         </div>
 
         {{-- Attendance history (all employees, JS-loaded) --}}
-        <div class="row g-3 mt-3">
+        <div class="row g-3 mt-1">
             <div class="col-12">
                 <div class="hris-card">
                     <div class="hris-card-header">

@@ -53,6 +53,12 @@
                                 @endif
                             </td>
                         </tr>
+                        @if($cuti->status_persetujuan === 'pending')
+                        <tr>
+                            <th>Level Approval</th>
+                            <td><span class="badge bg-primary">{{ $levelLabel ?? 'Level' }}</span></td>
+                        </tr>
+                        @endif
                         @if($cuti->keterangan)
                         <tr>
                             <th>Keterangan</th>
@@ -75,13 +81,12 @@
                 </div>
             </div>
 
-            @if($cuti->status_persetujuan === 'pending')
+            @if($cuti->status_persetujuan === 'pending' && $isOwner)
             <div class="d-flex gap-2">
-                <form action="{{ route('cuti.cancel', $cuti->id_cuti) }}" method="POST">
+                <form id="cancelCutiForm" action="{{ route('cuti.cancel', $cuti->id_cuti) }}" method="POST">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="btn btn-danger"
-                            onclick="return confirm('Yakin ingin membatalkan pengajuan ini?')">
+                    <button type="submit" class="btn btn-danger">
                         <i class="bi bi-trash me-1"></i>Batalkan Pengajuan
                     </button>
                 </form>
@@ -90,4 +95,24 @@
         </div>
     </div>
 </div>
+@endsection
+@section('scripts')
+<script>
+    document.getElementById('cancelCutiForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const form = this;
+        Swal.fire({
+            title: 'Batalkan Pengajuan?',
+            text: 'Yakin ingin membatalkan pengajuan ini?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Batalkan',
+            cancelButtonText: 'Batal',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
+    });
+</script>
 @endsection

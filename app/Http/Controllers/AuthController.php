@@ -15,7 +15,7 @@ class AuthController extends Controller
                 ]))  
             {
                 $request->session()->regenerate();    
-                return redirect('/dashboard');
+                return redirect('/dashboard')->with('success', 'Login berhasil, selamat datang!');
             
             } else {
                 return redirect('/')->with('error', 'Username atau password salah.');

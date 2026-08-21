@@ -16,7 +16,7 @@
                 <h5 class="mb-2"><i class="bi bi-person-fill" style="margin-right: 0.5rem;"></i>Karyawan</h5>
                 <p class="mb-1"><strong>Nama:</strong> {{ $jadwal->karyawan->nama }}</p>
                 <p class="mb-1"><strong>Jabatan:</strong> {{ $jadwal->karyawan->jabatan->nama_jabatan ?? '-' }}</p>
-                <p class="mb-0"><strong>Divisi:</strong> {{ $jadwal->karyawan->divisi }}</p>
+                <p class="mb-0"><strong>Divisi:</strong> {{ $jadwal->karyawan->divisi->nama_divisi }}</p>
             </div>
 
             <form action="{{ route('jadwal.update', $jadwal->id_jadwal) }}" method="POST">
@@ -28,7 +28,7 @@
                     <label class="form-label fw-semibold">
                         Tanggal <span class="text-danger">*</span>
                     </label>
-                    <input type="date" name="tanggal" required
+                    <input type="date" name="tanggal" required readonly
                            value="{{ old('tanggal', $jadwal->tanggal->format('Y-m-d')) }}" class="form-control">
                     @error('tanggal')
                         <small class="text-danger">{{ $message }}</small>

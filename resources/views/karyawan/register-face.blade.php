@@ -151,6 +151,7 @@ const cameraOverlay = document.getElementById('cameraOverlay');
 const cameraStatus  = document.getElementById('cameraStatus');
 const csrfToken     = document.querySelector('meta[name="csrf-token"]')?.content;
 const idKaryawan    = @json($karyawan->id_karyawan);
+const backUrl       = @json($backUrl);
 
 async function startCamera() {
     try {
@@ -198,17 +199,14 @@ async function registerFace() {
         const data = await res.json();
 
         if (data.success) {
-            showMessage('success',
-                '<div class="d-flex align-items-start gap-2">' +
-                '  <i class="bi bi-check-circle-fill text-success fs-5 mt-1"></i>' +
-                '  <div>' +
-                '    <div class="fw-semibold">' + data.message + '</div>' +
-                '    <a href="/karyawan" class="small text-success fw-semibold mt-1 d-inline-block">' +
-                '      <i class="bi bi-arrow-left me-1"></i>Kembali ke Daftar Karyawan' +
-                '    </a>' +
-                '  </div>' +
-                '</div>'
-            );
+            Swal.fire({
+                icon: 'success',
+                title: 'Wajah Berhasil Didaftarkan!',
+                text: data.message,
+                confirmButtonText: 'OK',
+            }).then(() => {
+                window.location.href = backUrl;
+            });
         } else {
             showMessage('error',
                 '<div class="d-flex align-items-start gap-2">' +

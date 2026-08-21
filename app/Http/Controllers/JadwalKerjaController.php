@@ -25,6 +25,7 @@ class JadwalKerjaController extends Controller
         $idKaryawan = $request->get('id_karyawan');
 
         $viewScope = $this->authService->getJadwalViewScope($request->user());
+        $canManageJadwal = $this->authService->getJadwalManageScope($request->user())['allowed'];
 
         if (!$viewScope['allowed']) {
             $karyawan = Karyawan::where('id_user', $request->user()->id_user)->first();
@@ -72,7 +73,6 @@ class JadwalKerjaController extends Controller
             ->get()
             ->groupBy('id_karyawan');
 
-        $shiftLegend = $this->getScheduleShiftOptions();
         $shiftLegend = $this->getShiftLegendOptions();
 
         return view('jadwal.index', compact(
@@ -87,9 +87,94 @@ class JadwalKerjaController extends Controller
             'idDivisi',
             'divisiList',
             'tanggalAwal',
-            'tanggalAkhir'
+            'tanggalAkhir',
+            'canManageJadwal'
         ));
     }
+
+    public function export(Request $request)
+    {
+        $bulan = $request->get('bulan', date('Y-m'));
+        $idDivisi = $request->get('id_divisi');
+        $idKaryawan = $request->get('id_karyawan');
+
+        $viewScope = $this->authService->getJadwalViewScope($request->user());
+        abort_unless($viewScope['allowed'], 403);
+
+        $tanggalAwal = Carbon::parse($bulan . '-01')->startOfMonth();
+        $tanggalAkhir = Carbon::parse($bulan . '-01')->endOfMonth();
+
+        $karyawanList = Karyawan::orderBy('nama')
+            ->when($viewScope['id_divisi'], fn ($q) => $q->where('id_divisi', $viewScope['id_divisi']))
+            ->when($idKaryawan, fn ($q) => $q->where('id_karyawan', $idKaryawan))
+            ->when($idDivisi, fn ($q) => $q->where('id_divisi', $idDivisi))
+            ->get();
+
+        $jadwalList = JadwalKerja::whereDate('tanggal', '>=', $tanggalAwal->format('Y-m-d'))
+            ->whereDate('tanggal', '<=', $tanggalAkhir->format('Y-m-d'))
+            ->get()
+            ->groupBy('id_karyawan');
+
+        $absensiList = Absensi::whereDate('tanggal', '>=', $tanggalAwal->format('Y-m-d'))
+            ->whereDate('tanggal', '<=', $tanggalAkhir->format('Y-m-d'))
+            ->get()
+            ->groupBy('id_karyawan');
+
+        $cutiList = Cuti::where('status_persetujuan', 'approved')
+            ->whereDate('tanggal_mulai', '<=', $tanggalAkhir->format('Y-m-d'))
+            ->whereDate('tanggal_selesai', '>=', $tanggalAwal->format('Y-m-d'))
+            ->get()
+            ->groupBy('id_karyawan');
+
+        $filename = 'jadwal-kerja-' . $bulan . '.csv';
+
+        return response()->streamDownload(function () use ($karyawanList, $jadwalList, $absensiList, $cutiList, $tanggalAwal, $tanggalAkhir) {
+            $handle = fopen('php://output', 'w');
+
+            $header = ['Nama Karyawan'];
+            for ($date = $tanggalAwal->copy(); $date->lte($tanggalAkhir); $date->addDay()) {
+                $header[] = $date->format('j-M');
+            }
+            fputcsv($handle, $header);
+
+            foreach ($karyawanList as $karyawan) {
+                $jadwalKaryawan = $jadwalList->get($karyawan->id_karyawan, collect());
+                $absensiKaryawan = $absensiList->get($karyawan->id_karyawan, collect());
+                $cutiKaryawan = $cutiList->get($karyawan->id_karyawan, collect());
+
+                $row = [$karyawan->nama];
+
+                for ($date = $tanggalAwal->copy(); $date->lte($tanggalAkhir); $date->addDay()) {
+                    $tanggalString = $date->format('Y-m-d');
+
+                    $cuti = $cutiKaryawan->first(fn ($item) =>
+                        $item->tanggal_mulai->format('Y-m-d') <= $tanggalString
+                        && $item->tanggal_selesai->format('Y-m-d') >= $tanggalString
+                    );
+
+                    if ($cuti) {
+                        $row[] = 'C';
+                        continue;
+                    }
+
+                    $jadwal = $jadwalKaryawan->first(fn ($item) => $item->tanggal->format('Y-m-d') === $tanggalString);
+
+                    if ($jadwal) {
+                        $row[] = $jadwal->shift_short;
+                        continue;
+                    }
+
+                    $absensi = $absensiKaryawan->first(fn ($item) => $item->tanggal->format('Y-m-d') === $tanggalString);
+                    $row[] = $absensi ? 'H' : '-';
+                }
+
+                fputcsv($handle, $row);
+            }
+
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
 
     public function create(Request $request)
     {
@@ -232,7 +317,7 @@ class JadwalKerjaController extends Controller
             'id_divisi' => 'required_if:target_type,divisi|nullable|exists:divisis,id',
             'karyawan_ids' => 'required_if:target_type,karyawan|array',
             'karyawan_ids.*' => 'exists:karyawan,id_karyawan',
-            'id_shift' => 'required|exists:shifts,kode_shift',
+            'id_shift' => 'required|exists:shifts,id_shift',
             'overwrite' => 'nullable|boolean',
         ], [
             'tanggal_selesai.after_or_equal' => 'Tanggal selesai tidak boleh sebelum tanggal mulai.',
@@ -252,7 +337,7 @@ class JadwalKerjaController extends Controller
             ->with('bulk_range_month', $bulan);
     }
 
-    public function edit(Request $request, $id_jadwal)
+    public function edit(Request $request, int $id_jadwal)
     {
         $scope = $this->authService->getJadwalManageScope($request->user());
         abort_unless($scope['allowed'], 403);
@@ -268,14 +353,14 @@ class JadwalKerjaController extends Controller
         return view('jadwal.edit', compact('jadwal', 'jamKerjaOptions'));
     }
 
-    public function update(Request $request, $id_jadwal)
+    public function update(Request $request, int $id_jadwal)
     {
         $scope = $this->authService->getJadwalManageScope($request->user());
         abort_unless($scope['allowed'], 403);
 
         $request->validate([
             'tanggal' => 'required|date',
-            'id_shift' => 'required|exists:shifts,kode_shift',
+            'id_shift' => 'required|exists:shifts,id_shift',
         ]);
 
         $jadwal = JadwalKerja::with('karyawan')->findOrFail($id_jadwal);
@@ -305,7 +390,7 @@ class JadwalKerjaController extends Controller
                         ->with('success', 'Jadwal berhasil diupdate!');
     }
 
-    public function destroy(Request $request, $id_jadwal)
+    public function destroy(Request $request, int $id_jadwal)
     {
         abort_unless($request->user()->can('delete-jadwal'), 403);
 
@@ -317,7 +402,7 @@ class JadwalKerjaController extends Controller
                         ->with('success', 'Jadwal berhasil dihapus!');
     }
 
-    public function show($id_karyawan, Request $request)
+    public function show(int $id_karyawan, Request $request)
     {
         $karyawan = Karyawan::findOrFail($id_karyawan);
 
@@ -340,6 +425,51 @@ class JadwalKerjaController extends Controller
             'tanggalAkhir'
         ));
     }
+    public function exportPersonal(int $id_karyawan, Request $request)
+    {
+        $karyawan = Karyawan::findOrFail($id_karyawan);
+
+        $user = $request->user();
+        $ownKaryawan = Karyawan::where('id_user', $user->id_user)->first();
+        $isOwner = $ownKaryawan && (int) $ownKaryawan->id_karyawan === (int) $id_karyawan;
+
+        if (!$isOwner) {
+            $viewScope = $this->authService->getJadwalViewScope($user);
+            abort_unless($viewScope['allowed'], 403);
+            abort_if($viewScope['id_divisi'] !== null && (int) $karyawan->id_divisi !== (int) $viewScope['id_divisi'], 403);
+        }
+
+        $bulan = $request->get('bulan', date('Y-m'));
+        $tanggalAwal = Carbon::parse($bulan . '-01')->startOfMonth();
+        $tanggalAkhir = Carbon::parse($bulan . '-01')->endOfMonth();
+
+        $jadwalList = JadwalKerja::with('shift')
+            ->where('id_karyawan', $id_karyawan)
+            ->whereDate('tanggal', '>=', $tanggalAwal->format('Y-m-d'))
+            ->whereDate('tanggal', '<=', $tanggalAkhir->format('Y-m-d'))
+            ->orderBy('tanggal')
+            ->get();
+
+        $filename = 'jadwal-' . str_replace(' ', '-', strtolower($karyawan->nama)) . '-' . $bulan . '.csv';
+
+        return response()->streamDownload(function () use ($jadwalList) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, ['Tanggal', 'Hari', 'Shift', 'Jam Kerja']);
+
+            foreach ($jadwalList as $jadwal) {
+                fputcsv($handle, [
+                    $jadwal->tanggal->format('d/m/Y'),
+                    $jadwal->tanggal->isoFormat('dddd'),
+                    $jadwal->shift?->nama_shift,
+                    $jadwal->shift?->label ?? '-',
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
 
     public function setLiburMassal(Request $request)
     {
@@ -384,14 +514,14 @@ class JadwalKerjaController extends Controller
     private function getShiftLegendOptions()
     {
         return Shift::whereIn('kode_shift', ['Pa', 'Si', 'L', 'C'])
-            ->orderByRaw("CASE kode_shift WHEN 'P' THEN 1 WHEN 'S' THEN 2 WHEN 'L' THEN 3 WHEN 'C' THEN 4 ELSE 5 END")
+            ->orderByRaw("CASE kode_shift WHEN 'Pa' THEN 1 WHEN 'Si' THEN 2 WHEN 'L' THEN 3 WHEN 'C' THEN 4 ELSE 5 END")
             ->get();
     }
     
     private function getScheduleShiftOptions()
     {
         return Shift::whereIn('kode_shift', ['Pa', 'Si', 'L'])
-            ->orderByRaw("CASE kode_shift WHEN 'P' THEN 1 WHEN 'S' THEN 2 WHEN 'L' THEN 3 ELSE 4 END")
+            ->orderByRaw("CASE kode_shift WHEN 'Pa' THEN 1 WHEN 'Si' THEN 2 WHEN 'L' THEN 3 ELSE 4 END")
             ->get();
     }
 }

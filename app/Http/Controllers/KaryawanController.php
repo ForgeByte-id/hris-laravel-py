@@ -9,6 +9,8 @@ use App\Models\Shift;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Hash;
 use App\Services\FaceRecognitionService;
 use App\Services\KaryawanFaceImportService;
 use App\Services\KaryawanImportService;
@@ -113,7 +115,7 @@ class KaryawanController extends Controller
             'username'              => 'required|string|max:255|unique:users,username',
             'email'                 => 'nullable|email|max:255|unique:users,email',
             'password'              => 'required|string|min:6|confirmed',
-            'role'                  => 'required|string|max:255',
+            'role'                  => 'Karyawan',
         ]);
 
         DB::beginTransaction();
@@ -123,7 +125,7 @@ class KaryawanController extends Controller
                 'username' => $request->username,
                 'email'    => $request->email ?: null,
                 'password' => $request->password,   // hashed automatically by User model cast
-                'role'     => $request->role,
+                'role'     => 'Karyawan',
             ]);
 
             // Assign Spatie role based on jabatan -> role mapping
@@ -214,9 +216,10 @@ class KaryawanController extends Controller
                 'string',
                 'max:255',
                 Rule::unique('users', 'username')
-                    ->ignore($karyawan->id_user, 'id_user')
+                    ->ignore($karyawan->id_user, 'id_user')          
             ],
-            'role'           => 'required|in:Admin,Atasan,Karyawan',
+            'password' => 'nullable|string|min:6',
+            // 'role'           => 'required|in:Admin,Atasan,Karyawan',
         ]);
 
         //$statusKaryawan = $request->status_karyawan ?: ($karyawan->status_karyawan ?: 'Tetap');
@@ -237,8 +240,10 @@ class KaryawanController extends Controller
 
         $karyawan->user->update([
             'username' => $request->username,
-            'role'     => $request->role
+            'role'     => 'Karyawan',
+            ...($request->filled('password') ? ['password' => Hash::make($request->password)] : []),
         ]);
+
 
         // Assign Spatie role based on jabatan -> role mapping
         $jabatan = \App\Models\Jabatan::find($request->id_jabatan);
@@ -280,7 +285,9 @@ class KaryawanController extends Controller
     public function registerFace($id_karyawan)
     {
         $karyawan = Karyawan::findOrFail($id_karyawan);
-        return view('karyawan.register-face', compact('karyawan'));
+        $backUrl = url()->previous();
+
+        return view('karyawan.register-face', compact('karyawan', 'backUrl'));
     }
 
     public function importFaceForm(Request $request)

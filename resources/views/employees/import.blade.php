@@ -32,7 +32,7 @@
                             @enderror
                         </div>
 
-                        <div class="alert alert-info small">
+                        <div class="alert alert-outline-info small mb-3">
                             <div class="fw-semibold mb-1">Catatan face image</div>
                             Kolom <code>face_image_path</code> menunjuk file di <code>storage/app/imports/faces</code>.
                             Contoh: <code>budi.jpg</code>, <code>subfolder/budi.png</code>, atau <code>subfolder/budi.webp</code>.

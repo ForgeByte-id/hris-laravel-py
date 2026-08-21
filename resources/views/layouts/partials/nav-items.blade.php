@@ -41,7 +41,12 @@
         </li>
 
         @foreach($adminItems as $menu)
-            @php $isActive = request()->is(ltrim($menu->route, '/') . '*'); @endphp
+            @php
+            $routePath = ltrim($menu->route, '/');
+            $isActive = $routePath === 'attendance'
+                ? request()->is('attendance')
+                : request()->is($routePath . '*');
+            @endphp
             <li class="nav-item">
                 <a class="nav-link d-flex align-items-center gap-3 px-3 py-2 rounded {{ $isActive ? 'active' : '' }}"
                    href="{{ $menu->route }}">

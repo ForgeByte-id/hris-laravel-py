@@ -47,32 +47,57 @@ class LaporanController extends Controller
         $karyawanList = $data['karyawanList'];
         $absensiRekap = $data['absensiRekap'];
         $cutiRekap = $data['cutiRekap'];
+        $periodeLabel = \Carbon\Carbon::parse($data['bulan'])->isoFormat('MMMM YYYY');
 
         $filename = 'laporan-kehadiran-' . $data['bulan'] . '.csv';
 
-        return response()->streamDownload(function () use ($karyawanList, $absensiRekap, $cutiRekap) {
+        return response()->streamDownload(function () use ($karyawanList, $absensiRekap, $cutiRekap, $periodeLabel) {
             $handle = fopen('php://output', 'w');
 
+            // UTF-8 BOM so Excel renders special characters correctly
+            fwrite($handle, "\xEF\xBB\xBF");
+
+            // ---- Title / header info rows ----
+            fputcsv($handle, ['LAPORAN KEHADIRAN KARYAWAN']);
+            fputcsv($handle, ['Periode: ' . $periodeLabel]);
+            fputcsv($handle, []); // blank spacer row
+
+            // ---- Column headers ----
             fputcsv($handle, ['No', 'Nama Karyawan', 'Jabatan', 'Divisi', 'Hadir', 'Terlambat', 'Absen', 'Cuti']);
+
+            $totalHadir = $totalTerlambat = $totalAbsen = $totalCuti = 0;
 
             foreach ($karyawanList as $index => $k) {
                 $absensi = $absensiRekap->get($k->id_karyawan);
                 $cuti = $cutiRekap->get($k->id_karyawan);
+
+                $hadir = $absensi?->hadir ?? 0;
+                $terlambat = $absensi?->terlambat ?? 0;
+                $absen = $absensi?->absen ?? 0;
+                $totalCutiRow = $cuti?->total_cuti ?? 0;
 
                 fputcsv($handle, [
                     $index + 1,
                     $k->nama,
                     $k->jabatan?->nama_jabatan ?? '-',
                     $k->divisi?->nama_divisi ?? '-',
-                    $absensi?->hadir ?? 0,
-                    $absensi?->terlambat ?? 0,
-                    $absensi?->absen ?? 0,
-                    $cuti?->total_cuti ?? 0,
+                    $hadir,
+                    $terlambat,
+                    $absen,
+                    $totalCutiRow,
                 ]);
+
+                $totalHadir += $hadir;
+                $totalTerlambat += $terlambat;
+                $totalAbsen += $absen;
+                $totalCuti += $totalCutiRow;
             }
 
+            // ---- Totals row ----
+            fputcsv($handle, ['', 'TOTAL', '', '', $totalHadir, $totalTerlambat, $totalAbsen, $totalCuti]);
+
             fclose($handle);
-        }, $filename, ['Content-Type' => 'text/csv']);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     private function resolveReportData(Request $request, array $scope): array

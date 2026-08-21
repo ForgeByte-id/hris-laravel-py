@@ -12,16 +12,19 @@
                     Tambah Jadwal
                 </a>
                 @endcan --}}
-                @can('bulk-create-jadwal')
+                @if($canManageJadwal)
                 <a href="{{ route('jadwal.bulk-create') }}" class="btn btn-success">
                     Tambah Jadwal
                 </a>
-                @endcan
+                @endif
                 @can('set-libur-massal')
                 <button onclick="showLiburModal()" class="btn btn-danger">
                     Set Libur Massal
                 </button>
                 @endcan
+                <button type="submit" form="filterForm" formaction="{{ route('jadwal.export') }}" class="btn btn-success">
+                    <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export Excel
+                </button>
             </div>
         </div>
 
@@ -41,7 +44,7 @@
 
             <!-- Filter -->
             <div class="d-flex flex-wrap justify-content-between align-items-center">
-                <form method="GET" class="d-flex flex-wrap gap-2 align-items-center">
+                <form id="filterForm" method="GET" class="d-flex flex-wrap gap-2 align-items-center">
                     <div class="row g-3 mt-1">
                         <div class="col-md-4">
                             <label class="fw-semibold">Pilih Bulan:</label>
@@ -88,7 +91,7 @@
                 @endforelse
             </div>
 
-            @php
+            {{-- @php
                 $cutiAktif = $cutiList->flatten();
             @endphp
             @if($cutiAktif->count() > 0)
@@ -96,7 +99,7 @@
                     <strong>Karyawan Cuti Bulan Ini:</strong>
                     {{ $cutiAktif->map(fn($cuti) => ($cuti->karyawan->nama ?? '-') . ' (' . $cuti->tanggal_mulai->format('d/m') . ' - ' . $cuti->tanggal_selesai->format('d/m') . ')')->implode(', ') }}
                 </div>
-            @endif
+            @endif --}}
 
             <!-- Tabel Jadwal -->
             @if($karyawanList->count() > 0)

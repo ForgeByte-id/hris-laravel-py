@@ -25,11 +25,20 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold">
-                                Nama Lengkap <span class="text-danger">*</span>
+                                Nama Lengkap
                             </label>
                             <input type="text" name="nama" class="form-control @error('nama') is-invalid @enderror"
                                    value="{{ old('nama', $karyawan->nama) }}" required>
                             @error('nama')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="mb-3">
+                           <label class="form-label fw-semibold">Tanggal Masuk</label>
+                            <input type="date" name="tanggal_masuk"
+                                    class="form-control @error('tanggal_masuk') is-invalid @enderror"
+                                    value="{{ old('tanggal_masuk', $karyawan->tanggal_masuk ? \Carbon\Carbon::parse($karyawan->tanggal_masuk)->format('Y-m-d') : '') }}">
+                            @error('tanggal_masuk')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -74,17 +83,6 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label fw-semibold">Tanggal Masuk</label>
-                                    <input type="date" name="tanggal_masuk"
-                                           class="form-control @error('tanggal_masuk') is-invalid @enderror"
-                                           value="{{ old('tanggal_masuk', $karyawan->tanggal_masuk ? \Carbon\Carbon::parse($karyawan->tanggal_masuk)->format('Y-m-d') : '') }}">
-                                    @error('tanggal_masuk')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
                                     <label class="form-label fw-semibold">Akun User</label>
                                     <input type="text" name="username" class="form-control @error('username') is-invalid @enderror"
                                    value="{{ old('username', $karyawan->user?->username) }}" required>
@@ -94,6 +92,17 @@
                                     @enderror
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Password Baru</label>
+                                    <input type="password" name="password" class="form-control @error('password') is-invalid @enderror"
+                                        placeholder="Kosongkan jika tidak ingin mengubah password">
+                                    @error('password')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
                         </div>
 
                         <div class="row g-3">
@@ -124,7 +133,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="mb-3">
+                        {{-- <div class="mb-3">
                             <label class="form-label fw-semibold">
                                 Role <span class="text-danger">*</span>
                             </label>
@@ -147,7 +156,7 @@
                             @error('role')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                        </div>
+                        </div> --}}
 
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary flex-fill">

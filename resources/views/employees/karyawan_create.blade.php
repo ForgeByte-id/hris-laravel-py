@@ -163,7 +163,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="mb-3">
+                        {{-- <div class="mb-3">
                             <label class="form-label fw-semibold">Role</label>
                             <input type="text" name="role"
                                    class="form-control @error('role') is-invalid @enderror"
@@ -171,7 +171,7 @@
                             @error('role')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
-                        </div>
+                        </div> --}}
 
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary flex-fill">

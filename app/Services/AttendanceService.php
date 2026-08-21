@@ -45,9 +45,10 @@ class AttendanceService
             $schedule = $this->getTodaySchedule($idKaryawan);
 
             if ($schedule && $schedule->isLibur()) {
+                $isCuti = $schedule->shift?->kode_shift === 'C';
                 return [
                     'success' => false,
-                    'message' => 'Today is a day off',
+                    'message' => $isCuti ? 'Anda sedang cuti hari ini, tidak bisa melakukan absensi.' : 'Hari ini adalah hari libur.',
                     'attendance' => null,
                 ];
             }

@@ -17,6 +17,7 @@
                         <h5 class="mb-2">Informasi Karyawan</h5>
                         <p class="mb-1"><strong>Nama:</strong> {{ $karyawan->nama }}</p>
                         <p class="mb-1"><strong>Jabatan:</strong> {{ $karyawan->jabatan->nama_jabatan ?? '-' }}</p>
+                        <p class="mb-1"><strong>Status Karyawan:</strong> {{ $karyawan->status_karyawan ?? '-' }}</p>
                         <p class="mb-1"><strong>Divisi:</strong> {{ $karyawan->divisi->nama_divisi ?? '-' }}</p>
                         @if(($leaveBalances ?? collect())->isNotEmpty())
                             <div class="d-flex flex-wrap gap-2">
@@ -89,7 +90,7 @@
                 <!-- Keterangan -->
                 <div class="mb-3">
                     <label class="form-label fw-semibold">
-                        Keterangan/Alasan
+                        Keterangan/Alasan <span class="text-danger">*</span>
                     </label>
                     <textarea name="keterangan" class="form-control" rows="4"
                               placeholder="Tuliskan alasan pengajuan cuti...">{{ old('keterangan') }}</textarea>

@@ -26,7 +26,7 @@
             @unless($isHrReadonly ?? false)
                 <a href="{{ route('cuti.create', $isAdmin ? ['mode' => 'admin'] : []) }}" class="btn hris-btn hris-btn-primary">
                     <i class="bi bi-plus-circle me-1"></i>
-                    {{ $isAdmin ? 'Buat Cuti Karyawan' : 'Ajukan Cuti Baru' }}
+                    {{ $isAdmin ? 'Ajukan Cuti Baru' : 'Ajukan Cuti Baru' }}
                 </a>
             @endunless
         </div>
@@ -69,14 +69,14 @@
                         </h3>
                     </div>
                 </div>
-                @if(!$isAdmin && !($isHrReadonly ?? false))
+                {{-- @if(!$isAdmin && !($isHrReadonly ?? false))
                 <div class="col-12 col-md-6 col-xl-3">
                     <div class="p-3 rounded-3 bg-info text-white shadow-sm">
                         <h6 class="mb-1 opacity-75">Sisa Kuota Cuti</h6>
                         <h3 class="mb-0 fw-bold">{{ $karyawan->status_karyawan ?? 0 }} hari</h3>
                     </div>
                 </div>
-                @endif
+                @endif --}}
 
             </div>
 
@@ -96,6 +96,7 @@
                             <th>Tanggal</th>
                             <th>Durasi</th>
                             <th>Status</th>
+                            <th>Level Approval</th>
                             <th>Aksi</th>
                         </tr>
                     </thead>
@@ -139,7 +140,13 @@
                                     </span>
                                 @endif
                             </td>
-
+                            <td>
+                                @if($cuti->status_persetujuan === 'pending')
+                                    <span class="badge bg-primary">{{ $levelLabels[$cuti->id_cuti] ?? 'Level' }}</span>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
+                            </td>
                             <td>
                                 <div class="d-flex gap-2">
 
@@ -148,17 +155,17 @@
                                         <i class="bi bi-eye"></i>
                                     </a>
 
-                                    @if($cuti->status_persetujuan === 'pending')
-                                    <form action="{{ route('cuti.cancel', $cuti->id_cuti) }}" method="POST">
-                                        @csrf
-                                        @method('DELETE')
+                                    @if($cuti->status_persetujuan === 'pending' && $karyawan && (int) $cuti->id_karyawan === (int) $karyawan->id_karyawan)
 
-                                        <button type="submit"
-                                                class="btn btn-sm btn-danger"
-                                                onclick="return confirm('Yakin ingin membatalkan pengajuan ini?')">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </form>
+                                       <form class="cancel-cuti-form" action="{{ route('cuti.cancel', $cuti->id_cuti) }}" method="POST">
+                                            @csrf
+                                            @method('DELETE')
+
+                                            <button type="submit" class="btn btn-sm btn-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+
                                     @endif
 
                                 </div>
@@ -184,4 +191,25 @@
         </div>
     </div>
 </div>
+@endsection
+@section('scripts')
+<script>
+    document.querySelectorAll('.cancel-cuti-form').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            Swal.fire({
+                title: 'Batalkan Pengajuan?',
+                text: 'Yakin ingin membatalkan pengajuan ini?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Batalkan',
+                cancelButtonText: 'Batal',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+        });
+    });
+</script>
 @endsection

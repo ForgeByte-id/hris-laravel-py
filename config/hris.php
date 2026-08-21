@@ -10,6 +10,7 @@ return [
         'Hak Akses',
         'Divisi',
         'Jabatan',
+        'Shift',
     ],
 
     'hidden_menus' => [
@@ -17,5 +18,6 @@ return [
         'Hak Akses',
         'Divisi',
         'Jabatan',
+        'Shift',
     ],
 ];

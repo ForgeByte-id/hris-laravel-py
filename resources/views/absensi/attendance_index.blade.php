@@ -142,7 +142,7 @@
                         <i class="bi bi-exclamation-triangle-fill me-1"></i>
                         Karyawan belum mendaftarkan wajah. Verifikasi wajah tidak tersedia.
                         <a id="registerFaceLink" href="javascript:void(0)" class="alert-link ms-1"
-                           onclick="goToRegisterFace()" target="_blank" rel="noopener">
+                           onclick="goToRegisterFace()">
                             Daftar sekarang &rarr;
                         </a>
                     </div>
@@ -481,7 +481,7 @@ async function onEmployeeChange() {
 // Navigate to the selected employee's face-registration page (new tab)
 function goToRegisterFace() {
     if (selectedEmployee?.registerUrl) {
-        window.open(selectedEmployee.registerUrl, '_blank', 'noopener');
+        window.location.href = selectedEmployee.registerUrl;
     }
 }
 

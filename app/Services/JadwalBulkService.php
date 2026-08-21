@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\JadwalKerja;
 use App\Models\Karyawan;
 use App\Models\Shift;
+use App\Models\Cuti;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -35,8 +36,10 @@ class JadwalBulkService
             'details' => [],
         ];
 
-        //$shift = Shift::where('id_shift', $payload['id_shift'])->firstOrFail();
-        $shift = Shift::findOrFail($payload['id_shift']);
+        // Resolve shift by kode_shift or numeric id (both are used across the app).
+        $shift = Shift::where('kode_shift', $payload['id_shift'])
+            ->orWhere('id_shift', $payload['id_shift'])
+            ->firstOrFail();
         $employees = $this->resolveEmployees($payload, $scopedDivisiId);
 
         if ($employees->isEmpty()) {
@@ -84,6 +87,31 @@ class JadwalBulkService
 
         return $summary;
     }
+
+    /**
+     * Sync the employee's JadwalKerja rows to the Cuti shift code for the
+     * whole approved leave range, so schedule/dashboard/attendance reads
+     * that hit JadwalKerja directly reflect the approved leave.
+     */
+    public function syncCutiSchedule(Cuti $cuti): void
+    {
+        $cutiShiftId = Shift::where('kode_shift', 'C')->value('id_shift');
+
+        if ($cutiShiftId === null) {
+            return;
+        }
+
+        $start = Carbon::parse($cuti->tanggal_mulai)->startOfDay();
+        $end = Carbon::parse($cuti->tanggal_selesai)->startOfDay();
+
+        for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
+            JadwalKerja::updateOrCreate(
+                ['id_karyawan' => $cuti->id_karyawan, 'tanggal' => $date->toDateString()],
+                ['id_shift' => (string) $cutiShiftId]
+            );
+        }
+    }
+
 
     /**
      * @param array<string, mixed> $payload

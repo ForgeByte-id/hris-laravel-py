@@ -166,7 +166,7 @@ class FaceRecognitionService
                 return [
                     'success' => false,
                     'error' => $error,
-                    'service_error' => true,
+                    'service_error' => $response->serverError(),
                 ];
             }
 
@@ -233,7 +233,7 @@ class FaceRecognitionService
                     'image_path' => $imagePath,
                 ]);
 
-                return $this->recognitionFailure($error, true);
+                return $this->recognitionFailure($error, $response->serverError());
             }
 
             $data = $response->json();

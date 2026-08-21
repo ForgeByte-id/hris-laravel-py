@@ -29,6 +29,9 @@
                 <label class="fw-semibold">Pilih Bulan:</label>
                 <input type="month" name="bulan" value="{{ $bulan }}" class="form-control" style="max-width: 220px;">
                 <button type="submit" class="btn btn-primary">Tampilkan</button>
+                <button type="submit" formaction="{{ route('jadwal.show.export', $karyawan->id_karyawan) }}" class="btn btn-success">
+                    <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export Excel
+                </button>
             </form>
 
             <!-- Summary -->
@@ -86,9 +89,11 @@
                                 {{ $jadwal->tanggal->isoFormat('dddd') }}
                             </td>
                             <td>
-                                <span class="text-white px-2 py-1 rounded-2 fw-semibold" style="background: {{ $jadwal->shift_color }};">
-                                    {{ $jadwal->id_shift }}
-                                </span>
+                                @if($jadwal->shift?->jam_masuk && $jadwal->shift?->jam_pulang)
+                                    {{ substr($jadwal->shift->jam_masuk, 0, 5) }} - {{ substr($jadwal->shift->jam_pulang, 0, 5) }}
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
                             </td>
                             <td>
                                 {{ $jadwal->shift?->nama_shift ?? '-' }}

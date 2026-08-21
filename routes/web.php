@@ -94,6 +94,9 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/jadwal/{id_jadwal}', [JadwalKerjaController::class, 'destroy'])->name('jadwal.destroy');
     Route::get('/jadwal/karyawan/{id_karyawan}', [JadwalKerjaController::class, 'show'])->name('jadwal.show');
     Route::post('/jadwal/libur-massal', [JadwalKerjaController::class, 'setLiburMassal'])->name('jadwal.libur-massal');
+    Route::get('/jadwal/export', [JadwalKerjaController::class, 'export'])->name('jadwal.export');
+    Route::get('/jadwal/karyawan/{id_karyawan}/export', [JadwalKerjaController::class, 'exportPersonal'])->name('jadwal.show.export');
+
 
     // Shift Routes
     Route::resource('shift', ShiftController::class)->except('show');
@@ -137,4 +140,5 @@ Route::middleware(['auth'])->group(function () {
     });
     // Profile Routes
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::post('/profile/change-password', [ProfileController::class, 'changePassword'])->name('profile.change-password');
 });

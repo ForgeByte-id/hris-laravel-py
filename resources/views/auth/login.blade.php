@@ -53,9 +53,9 @@
                             </button>
                         </div>
 
-                        <div class="d-flex justify-content-end mb-4">
+                        {{-- <div class="d-flex justify-content-end mb-4">
                             <a href="page-forgot-password.html" class="small text-decoration-none text-muted">Lupa Password?</a>
-                        </div>
+                        </div> --}}
 
                         <!-- Submit Button -->
                         <div class="d-grid">

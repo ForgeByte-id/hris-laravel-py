@@ -7,50 +7,63 @@ use App\Models\Karyawan;
 use App\Models\PersetujuanCuti;
 use App\Services\CutiApprovalService;
 use App\Services\LeaveQuotaService;
+use App\Services\JadwalBulkService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use RuntimeException;
 
 class CutiController extends Controller
 {
     // Halaman daftar cuti (untuk karyawan)
-    public function index()
-    {
-        $user = Auth::user();
-        $isAdmin = $user->hasRole('admin');
-        $isHrReadonly = $user->hasAnyRole(['hr', 'hrd']);
+    public function index(CutiApprovalService $approvalService)
+{
+    $user = Auth::user();
+    $isAdmin = $user->hasRole('admin');
+    $isHrReadonly = $user->hasAnyRole(['hr', 'hrd']);
+    $karyawan = Karyawan::where('id_user', $user->id_user)->first();
 
-        if ($isAdmin || $isHrReadonly) {
-            $cutiList = Cuti::with('karyawan')
-                ->orderBy('created_at', 'desc')
-                ->get();
-
-            return view('cuti.index', [
-                'cutiList' => $cutiList,
-                'karyawan' => null,
-                'isAdmin' => $isAdmin,
-                'isHrReadonly' => $isHrReadonly,
-            ]);
-        }
-
-        $karyawan = Karyawan::where('id_user', $user->id_user)->first();
-        if (!$karyawan) {
-            return redirect()->back()->with('error', 'Data karyawan tidak ditemukan');
-        }
-
-        $cutiList = Cuti::where('id_karyawan', $karyawan->id_karyawan)
+    if ($isAdmin || $isHrReadonly) {
+        $cutiList = Cuti::with(['karyawan', 'persetujuanCuti'])
             ->orderBy('created_at', 'desc')
             ->get();
+
+        $levelLabels = $cutiList->mapWithKeys(fn ($cuti) => [
+            $cuti->id_cuti => $cuti->status_persetujuan === 'pending' ? $approvalService->levelLabel($cuti) : null,
+        ]);
 
         return view('cuti.index', [
             'cutiList' => $cutiList,
             'karyawan' => $karyawan,
-            'isAdmin' => false,
-            'isHrReadonly' => false,
+            'isAdmin' => $isAdmin,
+            'isHrReadonly' => $isHrReadonly,
+            'levelLabels' => $levelLabels,
         ]);
     }
+
+    if (!$karyawan) {
+        return redirect()->back()->with('error', 'Data karyawan tidak ditemukan');
+    }
+
+    $cutiList = Cuti::with('persetujuanCuti')
+        ->where('id_karyawan', $karyawan->id_karyawan)
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    $levelLabels = $cutiList->mapWithKeys(fn ($cuti) => [
+        $cuti->id_cuti => $cuti->status_persetujuan === 'pending' ? $approvalService->levelLabel($cuti) : null,
+    ]);
+
+    return view('cuti.index', [
+        'cutiList' => $cutiList,
+        'karyawan' => $karyawan,
+        'isAdmin' => false,
+        'isHrReadonly' => false,
+        'levelLabels' => $levelLabels,
+    ]);
+}
 
     // Form pengajuan cuti
     public function create(LeaveQuotaService $leaveQuotaService)
@@ -78,7 +91,7 @@ class CutiController extends Controller
             'jenis_cuti' => 'required|string',
             'tanggal_mulai' => 'required|date',
             'tanggal_selesai' => 'required|date',
-            'keterangan' => 'nullable|string|max:500',
+            'keterangan' => 'required|string|max:500',
         ]);
 
         if (Carbon::parse($request->tanggal_selesai)->lt(Carbon::parse($request->tanggal_mulai))) {
@@ -169,7 +182,7 @@ class CutiController extends Controller
     }
 
     // Proses approval/reject
-    public function updateStatus(Request $request, $id_cuti, CutiApprovalService $approvalService, LeaveQuotaService $leaveQuotaService)
+    public function updateStatus(Request $request, $id_cuti, CutiApprovalService $approvalService, LeaveQuotaService $leaveQuotaService, JadwalBulkService $jadwalBulkService)
     {
         $request->validate([
             'status' => 'required|in:approved,rejected',
@@ -185,7 +198,7 @@ class CutiController extends Controller
         );
 
         try {
-            DB::transaction(function () use ($cuti, $request, $leaveQuotaService, $approvalService, $user) {
+            DB::transaction(function () use ($cuti, $request, $leaveQuotaService, $approvalService, $user, $jadwalBulkService) {
                 $approverKaryawan = $approvalService->employeeFor($user);
                 $approverId = $approverKaryawan?->id_karyawan;
 
@@ -224,6 +237,7 @@ class CutiController extends Controller
                     ]);
 
                     $leaveQuotaService->decrementForApprovedLeave($cuti);
+                    $jadwalBulkService->syncCutiSchedule($cuti);
                 } else {
                     $cuti->update([
                         'id_atasan' => $approverId,
@@ -277,16 +291,38 @@ class CutiController extends Controller
     }
 
     // Detail cuti
-    public function show($id_cuti)
+    public function show($id_cuti, CutiApprovalService $approvalService)
     {
-        $cuti = Cuti::with(['karyawan', 'atasan'])->findOrFail($id_cuti);
-        return view('cuti.show', compact('cuti'));
+        $cuti = Cuti::with(['karyawan', 'atasan', 'persetujuanCuti'])->findOrFail($id_cuti);
+
+        $karyawan = Karyawan::where('id_user', Auth::user()->id_user)->first();
+        $isOwner = $karyawan && (int) $cuti->id_karyawan === (int) $karyawan->id_karyawan;
+
+        $levelLabel = $cuti->status_persetujuan === 'pending' ? $approvalService->levelLabel($cuti) : null;
+
+        return view('cuti.show', compact('cuti', 'isOwner', 'levelLabel'));
     }
 
     // Cancel pengajuan (hanya bisa kalau masih pending)
     public function cancel($id_cuti)
     {
         $cuti = Cuti::findOrFail($id_cuti);
+
+        $karyawan = Karyawan::where('id_user', Auth::user()->id_user)->first();
+
+        Log::warning('cuti.cancel ownership check', [
+            'auth_id_user'        => Auth::id(),
+            'cuti_id_cuti'        => $cuti->id_cuti,
+            'cuti_id_karyawan'    => $cuti->id_karyawan,
+            'resolved_karyawan_id'=> $karyawan->id_karyawan ?? null,
+            'karyawan_found'      => (bool) $karyawan,
+        ]);
+
+        abort_unless(
+            $karyawan && (int) $cuti->id_karyawan === (int) $karyawan->id_karyawan,
+            403,
+            'Anda tidak berwenang membatalkan pengajuan cuti ini.'
+        );
 
         if ($cuti->status_persetujuan !== 'pending') {
             return redirect()->back()

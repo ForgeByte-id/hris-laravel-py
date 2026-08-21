@@ -34,7 +34,7 @@ class JadwalKerja extends Model
 
     public function isLibur()
     {
-        return $this->id_shift === '3';
+        return $this->shift?->isLiburLike() ?? false;
     }
 
     public function getShiftColorAttribute()

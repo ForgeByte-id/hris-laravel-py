@@ -80,21 +80,19 @@
                             </td>
                             <td class="text-center">
                                 @if(($approvalPermissions[$cuti->id_cuti] ?? false) === true)
-                                    <form action="{{ route('cuti.update-status', $cuti->id_cuti) }}" method="POST" class="d-inline-block">
+                                    <form action="{{ route('cuti.update-status', $cuti->id_cuti) }}" method="POST" class="d-inline-block approve-cuti-form">
                                         @csrf
                                         @method('PATCH')
                                         <input type="hidden" name="status" value="approved">
-                                        <button type="submit" class="btn btn-sm btn-success d-flex align-items-center gap-2"
-                                                onclick="return confirm('Setujui pengajuan cuti ini?')">
+                                        <button type="submit" class="btn btn-sm btn-success d-flex align-items-center gap-2">
                                             <i class="bi bi-check-circle-fill"></i> Setujui
                                         </button>
                                     </form>
-                                    <form action="{{ route('cuti.update-status', $cuti->id_cuti) }}" method="POST" class="d-inline-block">
+                                    <form action="{{ route('cuti.update-status', $cuti->id_cuti) }}" method="POST" class="d-inline-block reject-cuti-form">
                                         @csrf
                                         @method('PATCH')
                                         <input type="hidden" name="status" value="rejected">
-                                        <button type="submit" class="btn btn-sm btn-danger d-flex align-items-center gap-2"
-                                                onclick="return confirm('Tolak pengajuan cuti ini?')">
+                                        <button type="submit" class="btn btn-sm btn-danger d-flex align-items-center gap-2">
                                             <i class="bi bi-x-circle-fill"></i> Tolak
                                         </button>
                                     </form>
@@ -117,3 +115,30 @@
     </div>
 </div>
 @endsection
+@section('scripts')
+<script>
+    function bindConfirm(selector, title, confirmText, confirmColor) {
+        document.querySelectorAll(selector).forEach(function (form) {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                Swal.fire({
+                    title: title,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: confirmText,
+                    confirmButtonColor: confirmColor,
+                    cancelButtonText: 'Batal',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
+            });
+        });
+    }
+
+    bindConfirm('.approve-cuti-form', 'Setujui pengajuan cuti ini?', 'Ya, Setujui', '#28a745');
+    bindConfirm('.reject-cuti-form', 'Tolak pengajuan cuti ini?', 'Ya, Tolak', '#dc3545');
+</script>
+@endsection
+

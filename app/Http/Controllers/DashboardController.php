@@ -19,6 +19,10 @@ class DashboardController extends Controller
         $karyawan = $isAdmin ? null : Karyawan::with(['jabatan', 'divisi'])
                                               ->where('id_user', $user->id_user)
                                               ->first();
+        
+        $profileKaryawan = $karyawan ?? Karyawan::with(['jabatan', 'divisi'])
+                                      ->where('id_user', $user->id_user)
+                                      ->first();
 
         // Employee-only data — loaded server-side so no admin-only API call is needed
         $todayJadwal      = null;
@@ -66,20 +70,29 @@ class DashboardController extends Controller
             $employees = Karyawan::with(['divisi', 'jabatan'])->orderBy('nama')->get();
             $todayAbsensi = Absensi::whereDate('tanggal', $today)->get()->keyBy('id_karyawan');
             $todayJadwal = JadwalKerja::with('shift')->whereDate('tanggal', $today)->get()->keyBy('id_karyawan');
-            $cutiApprovedToday = Cuti::where('status_persetujuan', 'approved')
+            $cutiKaryawanIdsToday = Cuti::where('status_persetujuan', 'approved')
                 ->whereDate('tanggal_mulai', '<=', $today)
                 ->whereDate('tanggal_selesai', '>=', $today)
-                ->count();
+                ->pluck('id_karyawan');
+
+            $cutiApprovedToday = $cutiKaryawanIdsToday->count();
 
             $presentRows = $todayAbsensi->filter(fn ($absensi) => !empty($absensi->jam_masuk));
+
+            $belumAbsenCount = $employees->reject(function ($employee) use ($todayAbsensi, $todayJadwal, $cutiKaryawanIdsToday) {
+                $jadwal = $todayJadwal->get($employee->id_karyawan);
+
+                return $cutiKaryawanIdsToday->contains($employee->id_karyawan)
+                    || ($jadwal && $jadwal->isLibur())
+                    || !empty($todayAbsensi->get($employee->id_karyawan)?->jam_masuk);
+            })->count();
 
             $dailyAttendanceSummary = [
                 'total_karyawan' => $employees->count(),
                 'sudah_absen_masuk' => $presentRows->count(),
-                'belum_absen' => max(0, $employees->count() - $presentRows->count()),
+                'belum_absen' => $belumAbsenCount,
                 'terlambat' => $todayAbsensi->filter(fn ($absensi) => $absensi->status === 'terlambat' || ($absensi->menit_terlambat ?? 0) > 0)->count(),
                 'tepat_waktu' => $todayAbsensi->filter(fn ($absensi) => in_array($absensi->status, ['hadir', 'tepat_waktu'], true))->count(),
-                // Remote/WFH is kept as an optional legacy attendance status, but hidden from the main dashboard recap.
                 'remote' => $todayAbsensi->where('status', 'remote')->count(),
                 'tidak_hadir' => $todayAbsensi->where('status', 'tidak_hadir')->count(),
                 'cuti_approved' => $cutiApprovedToday,
@@ -93,11 +106,12 @@ class DashboardController extends Controller
                 ['status' => 'Cuti Approved', 'total' => $dailyAttendanceSummary['cuti_approved']],
             ];
 
-            $todayAttendanceRows = $employees->map(function ($employee) use ($todayAbsensi, $todayJadwal) {
+            $todayAttendanceRows = $employees->map(function ($employee) use ($todayAbsensi, $todayJadwal, $cutiKaryawanIdsToday) {
                 return [
                     'karyawan' => $employee,
                     'absensi' => $todayAbsensi->get($employee->id_karyawan),
                     'jadwal' => $todayJadwal->get($employee->id_karyawan),
+                    'on_cuti' => $cutiKaryawanIdsToday->contains($employee->id_karyawan),
                 ];
             });
         }
@@ -116,6 +130,7 @@ class DashboardController extends Controller
             'dailyAttendanceSummary',
             'dailyAttendanceChartData',
             'todayAttendanceRows',
+            'profileKaryawan',
         ));
     }
 }
