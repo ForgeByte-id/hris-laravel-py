@@ -67,11 +67,11 @@ class AttendanceController extends Controller
         $this->authorizeAdmin();
         $query = Absensi::with('karyawan');
 
-        if ($request->has('tanggal')) {
-            $query->where('tanggal', $request->tanggal);
+        if ($request->filled('tanggal')) {
+            $query->whereDate('tanggal', $request->tanggal);
         }
 
-        if ($request->has('id_karyawan')) {
+        if ($request->filled('id_karyawan')) {
             $query->where('id_karyawan', $request->id_karyawan);
         }
 
