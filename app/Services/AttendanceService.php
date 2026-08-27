@@ -67,17 +67,22 @@ class AttendanceService
                 if ($shiftTime) {
                     $expectedStartTime = $shiftTime;
                     $expectedStart = Carbon::today()->setTimeFromTimeString($shiftTime);
-                    if ($now->gt($expectedStart)) {
+                    // Grace period 15 menit inklusif: terlambat hanya jika melewati
+                    // expectedStart + 15 menit. menit_terlambat tetap dihitung dari
+                    // jam shift, bukan dari akhir grace period.
+                    $lateThreshold = $expectedStart->copy()->addMinutes(15);
+                    if ($now->gt($lateThreshold)) {
                         $isLate = true;
-                        $lateMinutes = $expectedStart->diffInMinutes($now);
+                        $lateMinutes = (int) floor($expectedStart->diffInMinutes($now));
                     }
                 }
             } else {
                 // No schedule found, allow check-in but mark as potentially flexible
                 $fallbackStart = Carbon::today()->setTimeFromTimeString('09:00:00');
-                if ($now->gt($fallbackStart)) {
+                $lateThreshold = $fallbackStart->copy()->addMinutes(15);
+                if ($now->gt($lateThreshold)) {
                     $isLate = true;
-                    $lateMinutes = $fallbackStart->diffInMinutes($now);
+                    $lateMinutes = (int) floor($fallbackStart->diffInMinutes($now));
                 }
             }
 
